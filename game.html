@@ -598,16 +598,16 @@ function leadGap(v, lane) {
 /* Reißverschluss: kleinere Lücken genügen */
 function laneFreeZip(v, l) {
   const lat = LAT[l];
-  for (const o of G.traf) if (o !== v && (o.lane === l || Math.abs(o.lat - lat) < (o.wid + v.wid) / 2)) { const ds = o.s - v.s, need = (v.len + o.len) / 2 + 7 + Math.max(0, (ds > 0 ? v.v - o.v : o.v - v.v)) * .35; if (Math.abs(ds) < need) return false; }
+  for (const o of G.traf) if (o !== v && (o.lane === l || Math.abs(o.lat - lat) < (o.wid + v.wid) / 2)) { const ds = o.s - v.s, need = (v.len + o.len) / 2 + 4 + Math.max(0, (ds > 0 ? v.v - o.v : o.v - v.v)) * .3; if (Math.abs(ds) < need) return false; }
   for (const u of G.units) if ((u.mode === 'hw' || u.mode === 'depart') && Math.abs(u.lat - lat) < (u.wid + v.wid) / 2 && Math.abs(u.s - v.s) < (u.len + v.len) / 2 + 10) return false;
   return true;
 }
 function seekGap(v) {
-  const L1 = G.traf.filter(o => o.lane === 1 && !o.wreck && Math.abs(o.s - v.s) < 160).sort((a, b) => a.s - b.s); if (!L1.length) return null; const need = v.len + 14; let best = null;
+  const L1 = G.traf.filter(o => o.lane === 1 && !o.wreck && Math.abs(o.s - v.s) < 160).sort((a, b) => a.s - b.s); if (!L1.length) return null; const need = v.len + 10; let best = null;
   for (let i = 0; i <= L1.length; i++) { const r = L1[i - 1], f = L1[i], s0 = r ? r.s + r.len / 2 : -1e9, s1 = f ? f.s - f.len / 2 : 1e9; if (s1 - s0 >= need) { const gc = r && f ? (s0 + s1) / 2 : r ? s0 + need / 2 + 2 : s1 - need / 2 - 2, d = Math.abs(gc - v.s); if (!best || d < best.d) best = { gc, d, u: (f || r).v }; } }
   return best ? clamp(best.u + .8 * (best.gc - v.s), 6, 60) : null;
 }
-const zoneAhead = v => G.zones.find(z => v.s > z.s0 - 240 && v.s < z.s0 + 6);
+const zoneAhead = v => G.zones.find(z => v.s > z.s0 - 260 - v.len * 3 && v.s < z.s0 + 6);
 function artic(v, hd, dt) {   // Auflieger folgt der Zugmaschine kinematisch (Deichsel ≈ 36 px)
   if (v.kind !== 'semi') return; if (v.th == null) v.th = hd;
   let d = hd - v.th; d = Math.atan2(Math.sin(d), Math.cos(d)); v.th += clamp((Math.max(v.v, 0) / 36) * Math.sin(d) * dt, -.2, .2);
@@ -617,7 +617,7 @@ function stepTraffic(dt) {
   const T = G.traf, hwU = G.units.filter(u => u.mode === 'hw' || u.mode === 'depart'), sirens = hwU.filter(u => u.siren), AO = allObs();
   const lam = [.3, .48, .38], alertOn = G.units.some(u => u.mode !== 'gone' && u.mode !== 'return' && !u.site && u.siren && G.acc);
   for (let l = 0; l < 3; l++) { G.spawn[l] -= dt; if (G.spawn[l] <= 0) { G.spawn[l] = rnd(.6, 1.4) / lam[l]; if (!T.some(v => v.lane === l && v.s < 70 + v.len)) T.push(newVeh(l, -30)); } }
-  const yielders = new Map(); for (const z of T) if (z.zwait && z.zip) { let y = null; for (const o of T) if (o.lane === 1 && !o.wreck && o.s < z.s + z.len / 2 && z.s - o.s < 150 && (!y || o.s > y.s)) y = o; if (y) yielders.set(y, z); }
+  const yielders = new Map(); for (const z of T) if (z.zwait && z.zip) { let y = null; for (const o of T) if (o.lane === 1 && !o.wreck && o.s < z.s - z.len / 2 - 2 && z.s - o.s < 150 && (!y || o.s > y.s)) y = o; if (y) yielders.set(y, z); }
   // Ausweich-Ausfahrt für diesen Moment: letzte Ausfahrt vor dem Stauende, Wiedereinfahrt hinter der Unfallstelle
   let dv = null; if (G.acc && !G.acc.cleared && G.jam.active) { const ex = OFFS.filter(o => o.s < G.jam.tail - 60).pop(), rk = RAMPS.findIndex(r => r.s > G.acc.s1 + 90); if (ex && rk >= 0) dv = { ex, rk }; }
   const mpts = []; for (const d of G.det) if (d.pd >= d.path.len - 60) mpts.push(RAMPS[d.k].s + 70); for (const u of G.units) if (u.mode === 'hw' && u.lat > 62 && !u.crossing) mpts.push(u.s);
@@ -723,7 +723,7 @@ function genZones(avoid) {
     if (avoid != null && s0 < avoid + 250 && s1 > avoid - 700) continue;
     G.zones.push({ id: G.zones.length + 1, s0, s1, vmax: rnd(34, 42), seed: (Math.random() * 9999) | 0 });
   }
-  G.zobs = G.zones.map(z => ({ s0: z.s0, s1: z.s1, l0: 44.6, l1: 58, zone: true }));
+  G.zobs = G.zones.map(z => ({ s0: z.s0, s1: z.s1, l0: 46.8, l1: 58, zone: true }));
 }
 function slowEvent() {
   const c = G.traf.filter(v => !v.hero && !v.wreck && v.lane < 2 && (v.kind === 'truck' || v.kind === 'semi') && v.s > 500 && v.s < Lh - 700 && !(G.acc && v.s > G.acc.front - 600));
@@ -900,7 +900,7 @@ function stepHW(u, dt) {
       else if (u.entW > 3 && !corr) { u.lat = gl; u.entW = 0; u.fade = .15; u.crossing = false; }
       else u.tlat = STRIP;
     }
-    if (u.crossing) { u.tlat = gl; if (u.lat <= 46) u.crossing = false; }
+    if (u.crossing) { u.tlat = gl; if (u.lat <= gl + 9) u.crossing = false; }
     else if (u.lat <= 62) u.tlat = gl;
   }
   if (u.mode === 'hw' && !u.site && u.lat <= 62 && !u.crossing && Math.abs(u.lat - gl) > 4 && u.v < 1) {   // zwischen den Spuren eingeklemmt
@@ -909,7 +909,7 @@ function stepHW(u, dt) {
   } else u.wedgeT = 0;
   const old = u.lat, nl = u.lat + clamp(u.tlat - u.lat, -36 * dt, 36 * dt); if (nl !== u.lat && !latBlocked(u, nl)) u.lat = nl;
   // Querung blockiert → zurück auf die Auffahrt und neu versuchen (nie auf Standstreifen weiterfahren)
-  if (u.crossing && u.lat > 46 && u.lat < 70) { u.blockT = (u.blockT || 0) + (u.v < 3 && latBlocked(u, u.lat - 1) ? dt : 0); if (u.blockT > 5) { u.crossing = false; u.tlat = STRIP; u.blockT = 0; u.entW = 0; } } else u.blockT = 0;
+  if (u.crossing && u.lat > gl + 9 && u.lat < 70) { u.blockT = (u.blockT || 0) + (u.v < 3 && latBlocked(u, u.lat - 1) ? dt : 0); if (u.blockT > 5) { u.crossing = false; u.tlat = STRIP; u.blockT = 0; u.entW = 0; } } else u.blockT = 0;
   let gap = 1e9, rear = 1e9;
   const nb = (o, r) => { if (o !== u && o.s > u.s && latOv(u, o)) { const g = r - (u.s + u.len / 2); if (g < gap) { gap = g; rear = r; } } };
   G.traf.forEach(o => nb(o, o.s - o.len / 2)); G.units.forEach(o => { if (o.mode === 'hw' || o.mode === 'depart') nb(o, o.s - o.len / 2); });
