@@ -189,6 +189,8 @@ input{font:inherit}
 .upg .ui{font-size:26px;width:40px;text-align:center}.upg .ut{flex:1;min-width:0}.upg .ut small{display:block;color:#8a8a85;font-weight:600;margin:1px 0 5px}
 .pips{display:flex;gap:4px}.pips i{width:22px;height:7px;border-radius:4px;background:rgba(0,0,0,.14)}.pips i.on{background:#FF7A00}
 .achg{display:grid;grid-template-columns:1fr 1fr;gap:6px}.ach{display:flex;gap:8px;align-items:center;padding:8px 10px;border-radius:12px;background:rgba(0,0,0,.05);opacity:.55}.ach.on{opacity:1;background:rgba(47,191,113,.16)}.ach span{font-size:20px}.ach small{display:block;color:#8a8a85;font-weight:600;font-size:11px}.scn.lock{opacity:.5}
+.autob{display:flex;gap:4px;background:rgba(0,0,0,.08);padding:3px;border-radius:12px}.autob button{flex:1;padding:8px 4px;border-radius:9px;font-weight:800;font-size:13px}.autob button.on{background:var(--or);color:#1d1d1b}
+.callg{display:grid;gap:4px;margin-top:8px}.callr{display:flex;gap:8px;align-items:center;font-size:13px;opacity:.6}.callr.dial,.callr.talk{opacity:1}.callr.done{opacity:1;color:#2a9d62}.callr small{display:block;color:#8a8a85;font-weight:600}.callr span{font-size:18px}
 .sjb{display:flex;gap:8px;margin:-4px 0 10px;flex-wrap:wrap}
 .sjc.open{border-left:4px solid #e5483f}.sjc.enroute,.sjc.work,.sjc.return,.sjc.queued{border-left:4px solid #FF7A00}
 @media(max-width:760px){.carchip{padding:6px 9px;font-size:11.5px}}
@@ -1398,7 +1400,7 @@ function beginCrash(h) {
   G.traf.forEach(v => { if (!crs.includes(v) && v.s + v.len / 2 > c.s0 + sw.s0 && v.s - v.len / 2 < c.s0 + sw.s1 && v.lat + v.wid / 2 > sw.l0 && v.lat - v.wid / 2 < sw.l1) { v.wreck = true; v.v = 0; v.hz = true; v.rotFix = (Math.random() < .5 ? -1 : 1) * rnd(.1, .4); } });
   crs.forEach(v => { v.noBrake = true; v.vd = 82; v.v = Math.max(v.v, 55); v.crasher = true; }); G.shake = .5; G.skids = [{ pts: [] }];
   if (sc.fire) { const tr = rigParts(k, CRASH[k].dur).find(p => p.k === 'tractor' || p.k === 'box' || p.k === 'van'); G.fire = { on: true, int: 0, t0: G.t + 2.6, ds: tr.ds, lat: tr.lat, burnt: false }; }
-  sfx.crash(); toast('UNFALL auf der A7!', 'bad');
+  sfx.crash(); toast('UNFALL auf der A7!', 'bad'); callsInit(h);
 }
 function updateCrash(dt) {
   const c = G.crash; if (!c) return;
@@ -1649,7 +1651,7 @@ const cposAcc = () => G.acc ? P(G.acc.mid, 40) : { x: 0, y: 0 };
 function step(dt) {
   G.t += dt; G.shake = Math.max(0, G.shake - dt * .9);
   for (const s of G.sched.slice()) if (G.t >= s.t) { G.sched = G.sched.filter(x => x !== s); s.fn(); }
-  updateCrash(dt); nsStep(dt); stepTraffic(dt); stepDet(dt); stepUnits(dt); stepRepairs(dt); stepAmb(dt);
+  updateCrash(dt); callsStep(dt); autoStep(dt); nsStep(dt); stepTraffic(dt); stepDet(dt); stepUnits(dt); stepRepairs(dt); stepAmb(dt);
   G.jamT -= dt; if (G.jamT <= 0) { G.jamT = .25; updateJam(); }
   G.slowT -= dt; if (G.slowT <= 0 && G.phase !== 'select') { G.slowT = rnd(35, 80) / (1 + (1 - envWf()) * 3); if (TRF.slow) slowEvent(); }
   if (G.fire && G.fire.on && G.t >= G.fire.t0) G.fire.int = Math.min(1, G.fire.int + dt / (G.units.some(u => u.type === 'fw' && u.site) ? 1e9 : 9));
@@ -2261,6 +2263,108 @@ function sjDraw(g, vw, now) {
     if (j.state === 'work') { g.fillStyle = 'rgba(0,0,0,.6)'; rr(g, p.x - 18, p.y - 22, 36, 5, 2.5); g.fill(); g.fillStyle = '#2fbf71'; rr(g, p.x - 17, p.y - 21, 34 * (1 - j.wt / j.wt0), 3, 1.5); g.fill(); }
   }
 }
+/* ===== Notrufe (Fahrer & Zeugen), Lagekarte in der Fahreransicht, Auto-Disponent ===== */
+const CALLS = { list: [], first: null };
+const LEITS = () => P(DU, 300);
+function callsInit(h) {
+  CALLS.list = []; CALLS.first = null; const c = G.crash, p0 = c.s0;
+  CALLS.list.push({ id: 1, who: 'Du (Fahrer)', ic: '🧑', kind: 'driver', fix: () => P(p0 + 26, 63), t0: G.t + 2.6, dial: 2.2, talk: 5, st: 'wait' });
+  const cand = [];
+  for (const v of G.traf) if (v !== h && !v.wreck && !v.hero && (v.kind === 'truck' || v.kind === 'semi' || v.kind === 'bus') && v.s < p0 - 25 && v.s > p0 - 420) cand.push({ v, d: p0 - v.s, w: false });
+  const rW = NET.R['A7-']; if (rW) for (const v of rW.veh) if (!v.dead && !v.broken && (v.kind === 'truck' || v.kind === 'semi' || v.kind === 'bus') && Math.abs((Lh - v.s) - p0) < 340) cand.push({ v, d: Math.abs((Lh - v.s) - p0) + 60, w: true, rd: rW });
+  cand.sort((a, b) => a.d - b.d); let n = 0;
+  for (const q of cand) { if (n >= 3) break; const v = q.v; n++; CALLS.list.push({ id: n + 1, who: 'Lkw-Fahrer ' + (q.w ? '(Gegenfahrbahn)' : '(im Stau)'), ic: v.kind === 'bus' ? '🚌' : '🚛', kind: 'witness', ref: q, fix: null, last: null, t0: G.t + rnd(3.5, 9) + n * .8, dial: rnd(1.6, 2.6), talk: rnd(3.5, 6), st: 'wait' }); }
+}
+const callPos = c => { if (c.fix) return c.fix(); const q = c.ref; try { if (q.w) { if (!q.v.dead && q.rd.veh.includes(q.v)) c.last = q.rd.pos(q.v.s, q.v.lat); } else if (G.traf.includes(q.v)) c.last = P(q.v.s, q.v.lat); } catch (_) { } return c.last || P(G.crash ? G.crash.s0 : 0, 40); };
+function callsStep(dt) {
+  if (!CALLS.list.length) return;
+  for (const c of CALLS.list) {
+    if (c.st === 'done') continue; const t = G.t - c.t0; const was = c.st;
+    c.st = t < 0 ? 'wait' : t < c.dial ? 'dial' : t < c.dial + c.talk ? 'talk' : 'done'; if (c.st !== 'wait') c.pos = callPos(c);
+    if (c.st === 'talk' && was !== 'talk') { sfx.alert && tone(520, .1, 'sine', .05); }
+    if (c.st === 'done' && was !== 'done') {
+      c.at = G.t; addLog('call_' + c.id, 'Notruf 112 eingegangen – ' + c.who);
+      if (CALLS.first == null) {
+        CALLS.first = G.t; toast('📞 Erster Notruf 112 – ' + c.who, 'blu'); G.ev.firstCall = G.t;
+        if (G.sched.length) { let i = 0; for (const s of G.sched) s.t = Math.min(s.t, G.t + .4 + (i++) * 1.3); addLog('call_fast', 'Leitstelle alarmiert Einsatzkräfte nach Notruf'); }
+      } else toast('📞 Weiterer Notruf – ' + c.who, 'blu');
+    }
+  }
+}
+function callsDraw(g, vw, now) {
+  if (!CALLS.list.length) return; const hq = LEITS();
+  for (const c of CALLS.list) {
+    if (c.st !== 'dial' && c.st !== 'talk') continue; const p = c.pos; if (!p) continue;
+    if (p.x < vw.x0 - 400 && hq.x < vw.x0 - 400 || p.x > vw.x1 + 400 && hq.x > vw.x1 + 400) continue;
+    if (c.st === 'talk') { g.strokeStyle = 'rgba(255,122,0,.35)'; g.lineWidth = 1.4; g.setLineDash([4, 8]); g.beginPath(); g.moveTo(p.x, p.y); g.lineTo(hq.x, hq.y); g.stroke(); g.setLineDash([]); const L = Math.hypot(hq.x - p.x, hq.y - p.y); for (let k = 0; k < 4; k++) { const f = ((now * .45 + k / 4) % 1); g.fillStyle = `rgba(255,150,40,${1 - f * .6})`; g.beginPath(); g.arc(lerp(p.x, hq.x, f), lerp(p.y, hq.y, f), 3.2, 0, 7); g.fill(); } }
+    for (let k = 0; k < 3; k++) { const r = 9 + ((now * 22 + k * 9) % 27); g.strokeStyle = `rgba(255,122,0,${.8 - r / 40})`; g.lineWidth = 2; g.beginPath(); g.arc(p.x, p.y - 14, r, -2.2, -.9); g.stroke(); }
+    g.save(); g.translate(p.x, p.y - 15); g.rotate(Math.sin(now * 22) * .14 * (c.st === 'dial' ? 1 : .3)); g.fillStyle = '#16181c'; rr(g, -4.2, -7, 8.4, 14, 2); g.fill(); g.fillStyle = c.st === 'talk' ? '#2fbf71' : '#7fd1ff'; rr(g, -3.2, -5.4, 6.4, 9.4, 1); g.fill(); g.restore();
+    chipAt(g, p.x, p.y - 38, c.st === 'dial' ? '📞 wählt 112 …' : '📞 Notruf 112 · ' + c.who.split(' (')[0], c.st === 'dial' ? '#ffb020' : '#FF7A00', '#1d1d1b', 9);
+  }
+  chipAt(g, hq.x, hq.y - 40, '☎ Leitstelle', '#1d1d1b', '#fff', 8);
+}
+/* --- Lagekarte (Fahreransicht) --- */
+function drawRepMap() {
+  const cvn = document.getElementById('repMap'); if (!cvn || !G.crash) return; const g = cvn.getContext('2d'), w = cvn.width, h = cvn.height, now = performance.now() / 1000, c0 = G.acc ? G.acc.mid : G.crash.s0, S0 = c0 - 1100, S1 = c0 + 450, X = s => (s - S0) / (S1 - S0) * w;
+  g.fillStyle = '#20252b'; g.fillRect(0, 0, w, h); g.fillStyle = '#2e353d'; g.fillRect(0, 18, w, 56); g.fillRect(0, 100, w, 56);
+  for (const [y0, l] of [[18, 3], [100, 3]]) for (let i = 1; i < l; i++) { g.strokeStyle = 'rgba(255,255,255,.18)'; g.setLineDash([8, 8]); g.beginPath(); g.moveTo(0, y0 + i * 56 / l); g.lineTo(w, y0 + i * 56 / l); g.stroke(); } g.setLineDash([]);
+  g.fillStyle = '#9aa0a6'; g.font = '700 10px system-ui'; g.fillText('⬅ Gegenfahrbahn (West)', 8, 12); g.fillText('Richtung Hamburg ➜ (Ost)', 8, 94);
+  const lane = (lat) => lat > 0 ? 100 + (49.5 - lat) / 17 * 18 + 9 : 18 + (lat + 49.5) / 17 * 18 + 9;
+  if (G.jam.active && G.acc) { g.fillStyle = 'rgba(229,72,63,.22)'; g.fillRect(X(G.jam.tail), 100, X(G.acc.front) - X(G.jam.tail), 56); }
+  const veh = (x, y, len, col) => { g.fillStyle = col; g.fillRect(x - len * .18, y - 3, len * .36, 6); };
+  for (const v of G.traf) if (v.s > S0 && v.s < S1) veh(X(v.s), 100 + (49.5 - v.lat) / 17 * 18 + 9 - 1, v.len, v.wreck ? '#e5483f' : v.kind === 'semi' || v.kind === 'truck' ? '#cfd3d8' : '#6b7480');
+  const rW = NET.R['A7-']; if (rW) for (const v of rW.veh) { const s = Lh - v.s; if (s > S0 && s < S1) veh(X(s), 18 + (49.5 - v.lat) / 17 * 18 + 9 - 1, v.len, v.kind === 'semi' || v.kind === 'truck' ? '#cfd3d8' : '#6b7480'); }
+  if (G.acc) { const x = X(G.acc.mid), r = 8 + (now * 14 % 14); g.strokeStyle = 'rgba(229,72,63,.8)'; g.lineWidth = 2; g.beginPath(); g.arc(x, 128, r, 0, 7); g.stroke(); g.fillStyle = '#e5483f'; g.beginPath(); g.arc(x, 128, 6, 0, 7); g.fill(); g.fillStyle = '#fff'; g.font = '900 9px system-ui'; g.textAlign = 'center'; g.fillText('!', x, 131); g.textAlign = 'left'; }
+  for (const c of CALLS.list) {
+    if (c.st === 'wait' || !c.pos) continue; let s = c.pos ? projA7(c.pos.x, c.pos.y).s : 0, west = c.kind === 'witness' && c.ref && c.ref.w; const x = X(s), y = west ? 46 : 128; const act = c.st !== 'done';
+    g.fillStyle = act ? '#FF7A00' : '#2fbf71'; g.beginPath(); g.arc(x, y, 7, 0, 7); g.fill(); g.strokeStyle = '#fff'; g.lineWidth = 1.5; g.stroke();
+    if (act) for (let k = 0; k < 2; k++) { g.strokeStyle = `rgba(255,122,0,${.7 - ((now * .9 + k * .5) % 1) * .7})`; g.beginPath(); g.arc(x, y, 7 + ((now * .9 + k * .5) % 1) * 18, 0, 7); g.stroke(); }
+    g.font = '11px system-ui'; g.textAlign = 'center'; g.fillStyle = '#fff'; g.fillText(c.kind === 'driver' ? '📞' : '📞', x, y + 4); g.font = '800 9px system-ui'; g.fillStyle = act ? '#ffd9b3' : '#b9f0d2'; g.fillText(c.kind === 'driver' ? 'Du' : 'Lkw ' + (c.id - 1), x, y - 11); g.textAlign = 'left';
+  }
+}
+function callsCard() {
+  if (!CALLS.list.length || !(G.crash || G.acc)) return '';
+  const row = c => `<div class="callr ${c.st}"><span>${c.ic}</span><div><b>${esc(c.who)}</b><small>${c.st === 'wait' ? 'beobachtet den Unfall …' : c.st === 'dial' ? 'wählt 112 …' : c.st === 'talk' ? 'Notruf läuft' : 'Notruf eingegangen' + (c.at != null ? ' · nach ' + rt(c.at - G.ev.crash) : '')}</small></div></div>`;
+  return `<div class="card callc"><div class="h2" style="font-size:15px;margin-bottom:6px">📞 Notrufe &amp; Lage</div><canvas id="repMap" width="560" height="170" style="width:100%;border-radius:12px;display:block"></canvas><div class="callg">${CALLS.list.map(row).join('')}</div></div>`;
+}
+/* --- Auto-Disponent --- */
+const AUTO = { mode: 0, t: 0, last: '' };
+const AUTOP = [{ n: 'Aus', d: 'Du disponierst selbst.' }, { n: 'Azubi', d: 'Reagiert langsam, wählt manchmal ein zu großes Fahrzeug oder die zweitbeste Route. Kostenlos.', delay: 9, acc: .65, fee: 0, side: .45 }, { n: 'Profi', d: 'Reagiert zügig, meist passendes Fahrzeug & beste Route. € 60 je Einsatz.', delay: 3.5, acc: .94, fee: 60, side: .9 }, { n: 'Meister', d: 'Sofort, perfekte Wahl, hält Reserve vor. € 120 je Einsatz.', delay: 1.2, acc: 1, fee: 120, side: 1 }];
+function autoLoad() { try { const o = JSON.parse(localStorage.getItem('tr_auto') || '{}'); if (isFinite(o.mode)) AUTO.mode = clamp(o.mode | 0, 0, 3); } catch (_) { } }
+const autoSave = () => { try { localStorage.setItem('tr_auto', JSON.stringify({ mode: AUTO.mode })); } catch (_) { } };
+function autoCard() {
+  const P0 = AUTOP[AUTO.mode];
+  return `<div class="card autoc"><div class="h2" style="font-size:15px;margin-bottom:6px">🤖 Auto-Disponent</div><div class="autob">${AUTOP.map((a, i) => `<button class="${AUTO.mode === i ? 'on' : ''}" data-act="auto" data-m="${i}">${a.n}</button>`).join('')}</div><small style="display:block;margin-top:6px;color:#8a8a85;font-weight:600">${P0.d}</small>${AUTO.mode && AUTO.last ? `<small style="display:block;margin-top:4px;font-weight:700">Zuletzt: ${esc(AUTO.last)}</small>` : ''}</div>`;
+}
+function autoStep(dt) {
+  if (!AUTO.mode) return; AUTO.t -= dt; if (AUTO.t > 0) return; AUTO.t = .6; const A = AUTOP[AUTO.mode], acc = A.acc;
+  // Hauptunfall
+  if (G.acc && !G.acc.cleared) {
+    const t0 = G.ev.report ?? (CALLS.first != null && AUTO.mode >= 2 ? CALLS.first + 3 : null);
+    if (t0 != null && G.t - t0 >= A.delay) {
+      const W = G.wrecks.filter(w => !w.tow && !w.done).sort((a, b) => (a.kind === 'rig' ? -1 : 0) - (b.kind === 'rig' ? -1 : 0))[0];
+      if (W && !(W.kind !== 'rig' && rigOpen() && !rigOpen().tow)) {
+        let fl = G.fleet.filter(f => f.state === 'depot' && f.type >= W.need).sort((a, b) => a.type - b.type); let f = fl[0];
+        if (f && fl.length > 1 && Math.random() > acc) f = fl[Math.min(fl.length - 1, 1)];
+        if (f) {
+          const sp = towSpec(f.type), est = RAMPS.map(r => routeEst(sp, r.id, W)).filter(e => e && e.ok).sort((a, b) => a.total - b.total); let e = est[0];
+          if (est.length > 1 && Math.random() > acc) e = est[1];
+          if (e && dispatchTow(f.id, e.i, W.id)) { if (A.fee) carEarn(-A.fee, 'Auto-Disponent (' + A.n + ')', 0); AUTO.last = f.name + ' → ' + W.label; addLog('auto' + W.id, 'Auto-Disponent (' + A.n + '): ' + f.name + ' → ' + W.label); G.routeManual = false; renderPanel(true); AUTO.t = Math.max(.6, A.delay * .35); return; }
+        }
+      }
+    }
+  }
+  // Pannenhilfe
+  if (typeof SJ !== 'undefined') {
+    const open = SJ.list.filter(j => j.state === 'open').sort((a, b) => b.pay - a.pay), need = G.acc && !G.acc.cleared ? G.wrecks.filter(w => !w.tow && !w.done).length + (AUTO.mode === 3 ? 1 : 0) : 0;
+    for (const j of open) {
+      if (!j.autoSeen) { j.autoSeen = G.t + A.delay; j.autoSkip = Math.random() > A.side; }
+      if (j.autoSkip || G.t < j.autoSeen) continue;
+      const free = G.fleet.filter(f => f.state === 'depot' && f.type >= j.need); if (free.length <= need) continue; if (AUTO.mode === 3 && j.eta > (j.dl - G.t) * .8) continue;
+      if (sjDispatch(j.id)) { if (A.fee) carEarn(-Math.round(A.fee / 3), 'Auto-Disponent (' + A.n + ')', 0); AUTO.last = 'Pannenhilfe ' + SJK[j.kind]; renderPanel(true); break; }
+    }
+  }
+}
 /* ===== Kamera, Zeichnen, Minimap ===== */
 const cv = $('#cv'), ctx = cv.getContext('2d'), mini = $('#mini'), mctx = mini.getContext('2d'); let K = 1;
 const CAM = { x: 3000, y: 1700, z: .62 }; let ZMIN = Math.max(W / WW, H / WH) + .001, ZMAX = 2.2;
@@ -2398,7 +2502,7 @@ function draw() {
     if (u.fade >= 1) { const e = unitEta(u); chipAt(g, x, y - 20, u.sp.abbr + (u.type === 'tow' && u.fleet ? ' ' + u.fleet.name.split(' ').pop() : '') + (e != null && e > .5 && u.mode !== 'depart' && u.mode !== 'return' ? ' · ' + minTx(e) : ''), u.sp.col, u.type === 'rd' ? '#1d1d1b' : '#fff'); }
     if (u.site && u.mode === 'hw' && G.acc && !G.acc.cleared) drawCrew(g, u, x, y, a, now);
   });
-  nsDecks(g, vw, now); nsSignals(g, vw, now); sjDraw(g, vw, now); insDraw(g, vw, now);
+  nsDecks(g, vw, now); nsSignals(g, vw, now); sjDraw(g, vw, now); callsDraw(g, vw, now); insDraw(g, vw, now);
   G.wrecks.forEach(w => { const an = craneAnim(w); if (an) drawCrane(g, w, an, now); });
   // Leitkegel der Polizei
   const pol = unitsOf('pol').find(u => u.site); if (pol && G.acc) { const n = Math.floor(Math.min(1, pol.wt / 6) * 12); for (let i = 0; i < n; i++) { const p = P(G.acc.front - 36 - i * 12, 58 - i * 3.4); g.fillStyle = 'rgba(0,0,0,.25)'; g.beginPath(); g.arc(p.x + 1, p.y + 1.5, 2.6, 0, 7); g.fill(); g.fillStyle = '#ff6a1a'; g.beginPath(); g.arc(p.x, p.y, 2.5, 0, 7); g.fill(); g.fillStyle = '#fff'; g.beginPath(); g.arc(p.x, p.y, 1.2, 0, 7); g.fill(); } }
@@ -2414,7 +2518,7 @@ function draw() {
   g.setTransform(K, 0, 0, K, 0, 0);
   for (const l of LBL) { const X = (l.x - vx) * z, Y = (l.y - vy) * z; if (X < -80 || X > W + 80 || Y < -20 || Y > H + 20) continue; g.font = `900 ${l.size + 1}px system-ui,Arial`; g.textAlign = 'center'; const w = g.measureText(l.txt).width + 12; g.fillStyle = l.bg; rr(g, X - w / 2, Y - l.size, w, l.size * 1.9, 6); g.fill(); g.fillStyle = l.fg; g.fillText(l.txt, X, Y + l.size * .45); }
   { g.setTransform(1, 0, 0, 1, 0, 0); if (!VIG || VIG.w !== cv.width || VIG.h !== cv.height) { const c = document.createElement('canvas'); c.width = cv.width; c.height = cv.height; const x = c.getContext('2d'), rg = x.createRadialGradient(c.width * .5, c.height * .5, Math.min(c.width, c.height) * .35, c.width * .5, c.height * .5, Math.hypot(c.width, c.height) * .62); rg.addColorStop(0, 'rgba(0,0,0,0)'); rg.addColorStop(1, 'rgba(10,14,20,.34)'); x.fillStyle = rg; x.fillRect(0, 0, c.width, c.height); const lg = x.createLinearGradient(0, 0, c.width, c.height); lg.addColorStop(0, 'rgba(255,244,214,.07)'); lg.addColorStop(.5, 'rgba(255,244,214,0)'); lg.addColorStop(1, 'rgba(20,30,60,.08)'); x.fillStyle = lg; x.fillRect(0, 0, c.width, c.height); VIG = { c, w: c.width, h: c.height }; } g.drawImage(VIG.c, 0, 0); }
-  if (!MOB || (fcnt++ % 3) === 0) drawMini(now);
+  if (!MOB || (fcnt++ % 3) === 0) drawMini(now); drawRepMap();
 }
 function drawCrew(g, u, x, y, a, now) {
   const w = G.wrecks.find(w2 => !w2.done), wp = w ? P((w.box.s0 + w.box.s1) / 2, Math.min(60, (w.box.l0 + w.box.l1) / 2)) : cposAcc(), k = ss(u.wt / 3);
@@ -2504,7 +2608,8 @@ function playerHTML(key, memo) {
 }
 const bars = () => Array.from({ length: 30 }, () => 5 + Math.round(Math.random() * 20));
 /* --- Fahrer --- */
-function driverPanel() {
+function driverPanel() { return autoCard() + callsCard() + driverPanel0(); }
+function driverPanel0() {
   if (G.phase === 'select') return `<div><div class="h2">Szenario wählen</div><p class="sub">Du bist Lkw-Fahrer auf der A7. Wähle, was gleich passiert – danach meldest du den Unfall, der Disponent koordiniert die Bergung.</p></div>
     ${Object.entries(SCEN).map(([k, s]) => `<button class="scn ${G.scen === k ? 'on' : ''} ${carLvl() < (SCEN_LVL[k] || 1) ? 'lock' : ''}" data-act="scen" data-k="${k}"><div class="ti">${tIc(s.need)}</div><div><b>${s.title}${carLvl() < (SCEN_LVL[k] || 1) ? ' 🔒' : ''}</b><small>${carLvl() < (SCEN_LVL[k] || 1) ? 'Ab Level ' + SCEN_LVL[k] + ' – sammle Erfahrung mit Pannenhilfe &amp; Einsätzen' : s.desc}</small></div></button>`).join('')}
     <button class="btn big" data-act="startScen">${ic('arrow')} Fahrt starten</button><div class="muted" style="font-size:12px;color:#8a8a85;text-align:center">Tipp: Mit „Disponent“ oben wechselst du die Seite. Die Simulation läuft in 10-fachem Zeitraffer.</div>`;
@@ -2549,7 +2654,7 @@ function tracking() {
 const curWreck = () => G.wrecks.find(w => w.id === G.selWreck) || G.wrecks.find(w => !w.done && !w.tow) || G.wrecks[0];
 const routeList = () => G.acc ? RAMPS.filter(r => r.s + 70 < G.acc.front - 130).slice(-4) : [];
 function fleetBack(f) { const u = G.units.find(x => x.fleet === f); if (!u) return null; if (u.mode === 'return') return (u.path.len - u.pd) / u.sp.vLoc; if (u.mode === 'depart') return Math.max(0, ((u.exitS || EXIT.s) - u.s) / 60) + backPath(gateU('depot'), u.exitS).len / 80; return null; }
-function dispatchPanel() { return sjBoard() + dispatchPanel0(); }
+function dispatchPanel() { return autoCard() + sjBoard() + dispatchPanel0(); }
 function dispatchPanel0() {
   if (!G.acc) return `<div class="card" style="display:flex;gap:12px;align-items:center"><div class="spin"></div><div><b>Leitstelle bereit</b><small style="display:block;color:#9a9a93">${G.phase === 'select' ? 'Wechsle zum Fahrer und starte ein Szenario.' : 'Verkehr normal – warte auf Meldungen …'}</small></div></div>`;
   const r = G.report, W = curWreck(), nW = G.wrecks.length, dW = G.wrecks.filter(w => w.done).length;
@@ -2576,7 +2681,7 @@ function dispatchPanel0() {
   return h;
 }
 function sigNow() {
-  return [G.view, G.phase, G.step, !!G.report, G.alertSeen, G.towSel, G.jobs.length, G.selWreck, G.wrecks.filter(w => w.done).length, G.wrecks.filter(w => w.tow).length, G.acc && G.acc.cleared, G.fire && G.fire.on, G.units.map(u => u.type + u.mode + (u.site ? 1 : 0) + (u.rel ? 1 : 0)).join(','), G.fleet.map(f => f.state).join(''), carLvl(), SJ.list.map(j => j.id + j.state).join(','), Math.round(CAR.cash), G.reps.map(r => r.st + Math.round(r.prog * 10)).join(), G.ws.map(w => w.q.length).join(), G.fixed, !!G.rec, G.log.length, G.err, G.form && G.form.photos.length, G.form && !!G.form.memo, G.play && G.play.key, G.scen].join('|');
+  return [G.view, G.phase, G.step, !!G.report, G.alertSeen, G.towSel, G.jobs.length, G.selWreck, G.wrecks.filter(w => w.done).length, G.wrecks.filter(w => w.tow).length, G.acc && G.acc.cleared, G.fire && G.fire.on, G.units.map(u => u.type + u.mode + (u.site ? 1 : 0) + (u.rel ? 1 : 0)).join(','), G.fleet.map(f => f.state).join(''), carLvl(), AUTO.mode + AUTO.last, CALLS.list.map(c => c.st).join(''), SJ.list.map(j => j.id + j.state).join(','), Math.round(CAR.cash), G.reps.map(r => r.st + Math.round(r.prog * 10)).join(), G.ws.map(w => w.q.length).join(), G.fixed, !!G.rec, G.log.length, G.err, G.form && G.form.photos.length, G.form && !!G.form.memo, G.play && G.play.key, G.scen].join('|');
 }
 function renderPanel(force) {
   const s = sigNow(); if (!force && s === lastSig) return; lastSig = s;
@@ -2792,7 +2897,7 @@ function sendReport() {
   onReport(); sfx.ok(); toast('Meldung gesendet', 'good'); renderPanel(true);
 }
 function startRec() { G.rec = { sec: 0, t0: performance.now() }; } function stopRec() { const s = Math.max(1, Math.round((performance.now() - G.rec.t0) / 1000)); G.form.memo = { sec: s, bars: bars() }; G.rec = null; }
-function newSim() { sjReset(); G.paidTow = 0; G.phase = 'select'; G.acc = null; G.crash = null; G.obs = []; G.units = []; G.parts = []; G.report = null; G.jobs = []; G.returns = []; G.wrecks = []; G.fire = null; G.skids = []; G.selWreck = null; G.results = null; G.alarmed = {}; G.ev = {}; G.log = []; G.sched = []; genZones(); G.fleet.forEach(f => f.state = 'depot'); G.camFollow = null; G.jam = { active: false, tail: 0, len: 0, count: 0, gasse: 0, growth: 0, hist: [] }; G.traf = G.traf.filter(v => !v.hero); G.paused = false; G.view = 'driver'; showOverlay(null); renderPanel(true); }
+function newSim() { sjReset(); CALLS.list = []; CALLS.first = null; G.paidTow = 0; G.phase = 'select'; G.acc = null; G.crash = null; G.obs = []; G.units = []; G.parts = []; G.report = null; G.jobs = []; G.returns = []; G.wrecks = []; G.fire = null; G.skids = []; G.selWreck = null; G.results = null; G.alarmed = {}; G.ev = {}; G.log = []; G.sched = []; genZones(); G.fleet.forEach(f => f.state = 'depot'); G.camFollow = null; G.jam = { active: false, tail: 0, len: 0, count: 0, gasse: 0, growth: 0, hist: [] }; G.traf = G.traf.filter(v => !v.hero); G.paused = false; G.view = 'driver'; showOverlay(null); renderPanel(true); }
 const ACT = {
   view: d => { G.view = d.v; renderPanel(true); },
   closeOv: () => showOverlay(null),
@@ -2819,6 +2924,7 @@ const ACT = {
   accept: () => { if (G.routeSel == null) { const ri = routeInfo(); G.routeSel = ri.best ? ri.best.i : RAMPS.length - 1; } if (dispatchTow(G.towSel, G.routeSel, curWreck().id)) { G.towSel = null; G.routeManual = false; renderPanel(true); } },
   alertView: () => { G.alertSeen = true; showOverlay(null); renderPanel(true); },
   newSim: () => newSim(),
+  auto: d => { AUTO.mode = +d.m; autoSave(); AUTO.last = ''; renderPanel(true); },
   shop: () => showOverlay('shop'),
   buy: d => { const u = UPG.find(x => x.id === d.id); if (!u) return; const lv = CAR.up[u.id], c = u.cost(lv); if (lv >= u.max || CAR.cash < c) return; CAR.cash -= c; CAR.up[u.id]++; carSave(); careerChip(); sfx.ok(); showOverlay('shop'); },
   careerReset: () => { if (!confirm('Fortschritt wirklich zurücksetzen?')) return; Object.assign(CAR, { cash: 2500, rep: 50, xp: 0, jobs: 0, main: 0, earned: 0, up: { speed: 0, crane: 0, bay: 0, radio: 0, siren: 0 } }); carSave(); careerChip(); showOverlay('shop'); },
@@ -2854,7 +2960,7 @@ $('#bCtr').onclick = () => { G.camFollow = G.acc ? 'acc' : G.phase === 'drive' |
 /* ===== Start ===== */
 window.addEventListener('pointerdown', () => { try { AC = AC || new (window.AudioContext || window.webkitAudioContext)(); if (AC.state === 'suspended') AC.resume(); } catch (_) { } }, { once: true });
 if (window.visualViewport) visualViewport.addEventListener('resize', fit); window.addEventListener('orientationchange', () => setTimeout(fit, 250));
-carLoad(); careerChip(); envLoad(); BG = buildBG(); admInit(); fit(); genZones(); nsInit(); warm(150); CAM.x = P(1500, 120).x; CAM.y = P(1500, 120).y; CAM.z = .7; clampCam(); G.slowT = 30; G.phase = 'select'; renderPanel(true); showOverlay('intro'); requestAnimationFrame(frame);
+carLoad(); autoLoad(); careerChip(); envLoad(); BG = buildBG(); admInit(); fit(); genZones(); nsInit(); warm(150); CAM.x = P(1500, 120).x; CAM.y = P(1500, 120).y; CAM.z = .7; clampCam(); G.slowT = 30; G.phase = 'select'; renderPanel(true); showOverlay('intro'); requestAnimationFrame(frame);
 </script>
 </body>
 </html>
