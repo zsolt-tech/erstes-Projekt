@@ -197,7 +197,7 @@ const C = []; let Lh = 0;
 })();
 function at(s) { s = clamp(s, 0, Lh); const f = s / 2, i = Math.min(C.length - 2, f | 0), k = f - i, a = C[i], b = C[i + 1]; return { x: lerp(a.x, b.x, k), y: lerp(a.y, b.y, k), tx: lerp(a.tx, b.tx, k), ty: lerp(a.ty, b.ty, k) }; }
 function P(s, lat) { const c = at(s); return { x: c.x - c.ty * lat, y: c.y + c.tx * lat, a: Math.atan2(c.ty, c.tx) }; }
-const MED = 7, LAT = [49.5, 32.5, 15.5], SH = 66, STRIP = 84, STRIP2 = 100, STRIP3 = 116, CORR = 25.7, CORR2 = 25.7, SHIFT = [6.5, 9, -5.5], SHIFTN = [6.5, 9, -5.5], GC1 = 25.7, GS = 5.5, LATL = 190;   // Spur 0 = rechts, 2 = links; Gasse innen (CORR) Blaulicht, außen (CORR2) Abschleppdienst
+const MED = 7, LAT = [49.5, 32.5, 15.5], SH = 66, STRIP = 84, STRIP2 = 100, STRIP3 = 116, CORR = 24.8, CORR2 = 24.8, SHIFT = [3, 7, -5.5], SHIFTN = [3, 7, -5.5], GC1 = 24.8, GS = 5.5, LATL = 190;   // Spur 0 = rechts, 2 = links; Gasse innen (CORR) Blaulicht, außen (CORR2) Abschleppdienst
 const kmOf = s => (140 + s / 500).toFixed(1).replace('.', ',');
 const RN = ['AS Nord', 'AS Wald', 'AS Mitte', 'AS Süd', 'AS Hafen', 'AS Ost', 'AS Berg', 'AS Tal', 'AS Feld', 'AS Dorf', 'AS Stadt', 'AS See', 'AS Park', 'AS Mühle'];
 const RAMPS = []; for (let s = 320, i = 0; s < Lh - 900; s += 500, i++) RAMPS.push({ id: i, name: RN[i % RN.length], s });
@@ -668,7 +668,7 @@ function stepTraffic(dt) {
       else if (moving && gap > 130 && cur > 0 && Math.random() < (v.kind === 'car' ? .12 : .5) && laneFree(v, cur - 1) && !obstacleAhead(v, cur - 1, 360)) pick = cur - 1;
       if (pick >= 0) { v.lane = pick; if (!urgentZip) v.lcT = 2.2; }
     }
-    const tl = LAT[v.lane] + v.shT, old = v.lat, nl = v.lat + clamp(tl - v.lat, -26 * dt, 26 * dt);
+    const tl = Math.min(LAT[v.lane] + v.shT, 61 - v.wid / 2), old = v.lat, nl = v.lat + clamp(tl - v.lat, -26 * dt, 26 * dt);
     if (nl !== v.lat && !latBlocked(v, nl)) v.lat = nl; v.ly = (v.lat - old) / dt;
     const yt = clamp(Math.atan2(v.ly, Math.max(v.v, 16)), -.3, .3) * (v.len > 40 ? .6 : 1); v.yaw = (v.yaw || 0) + (yt - (v.yaw || 0)) * Math.min(1, dt * 4); artic(v, v.yaw, dt);
   }
@@ -697,7 +697,7 @@ const _dp = {}; function detPath(xi, rk) { const key = xi + '_' + rk; if (_dp[ke
 const lanePos = (p, o = 4.5) => ({ x: p.x - Math.sin(p.a) * o, y: p.y + Math.cos(p.a) * o, a: p.a });
 function pathVehAhead(x, y, a, len, self) {
   const test = (ox, oy, ol, oa) => { if (Math.cos(oa - a) < .3) return false; const dx = ox - x, dy = oy - y, d = Math.hypot(dx, dy); if (d > 60 || d < .01) return false; const fw = (dx * Math.cos(a) + dy * Math.sin(a)); return fw > 0 && fw < (len + ol) / 2 + 8 && Math.abs(-dx * Math.sin(a) + dy * Math.cos(a)) < 6; };
-  for (const d of G.det) if (d !== self) { const p = lanePos(follow(d.path, d.pd), d.lo ?? 4.5); if (test(p.x, p.y, d.len, p.a)) return true; }
+  if (!self.type) for (const d of G.det) if (d !== self) { const p = lanePos(follow(d.path, d.pd), d.lo ?? 4.5); if (test(p.x, p.y, d.len, p.a)) return true; }
   for (const u of G.units) if (u !== self && (u.mode === 'local' || u.mode === 'return') && u.x) { if (test(u.x, u.y, u.len, u.a)) return true; }
   for (const am of G.amb) { const p = follow(CPATH[am.i], am.pd); if (test(p.x - Math.sin(p.a) * 5 * am.dir * -1, p.y + Math.cos(p.a) * 5 * am.dir, am.len, p.a + (am.dir < 0 ? Math.PI : 0))) return true; }
   return false;
@@ -708,8 +708,8 @@ function stepDet(dt) {
     // Blaulicht-Fahrzeug (Polizei/RD/FW) von hinten: sofort rechts ranfahren und stehen bleiben
     const yld = G.units.some(u => u.siren && u.type !== 'tow' && (u.mode === 'local' || u.mode === 'return') && u.x && Math.cos(u.a - p.a) > .3 && (() => { const dx = p.x - u.x, dy = p.y - u.y, fw = dx * Math.cos(u.a) + dy * Math.sin(u.a), lt = -dx * Math.sin(u.a) + dy * Math.cos(u.a); return fw > -6 && fw < 280 && Math.abs(lt) < 16; })());
     d.lo = (d.lo ?? 4.5) + clamp((yld ? 8.5 : 4.5) - (d.lo ?? 4.5), -14 * dt, 14 * dt);
-    d.v = clamp(blocked || yld ? 0 : d.vd, d.v - 240 * dt, d.v + 40 * dt); artic(d, p.a, dt);
-    if (d.pd >= d.path.len - 1) {                       // Wiedereinfahrt auf die Autobahn
+    d.v = clamp((blocked && d.pd < d.path.len - 40) || yld ? 0 : d.vd, d.v - 240 * dt, d.v + 40 * dt); artic(d, p.a, dt);
+    if (d.pd >= d.path.len - 10) {                       // Wiedereinfahrt auf die Autobahn
       const nv = newVeh(0, RAMPS[d.k].s + 70, d.kind); nv.col = d.col; nv.col2 = d.col2; nv.v = 24; nv.lat = STRIP; nv.vd = d.vd; nv.divert = -1;
       d.wait = (d.wait || 0) + dt;
       if ((laneFreeZip(nv, 0) || d.wait > 6 && !G.traf.some(o => o.lane === 0 && Math.abs(o.s - nv.s) < (o.len + nv.len) / 2 + 8)) && !G.units.some(u => (u.mode === 'hw' || u.mode === 'depart') && Math.abs(u.s - nv.s) < 40 && Math.abs(u.lat - STRIP) < 14)) { G.traf.push(nv); G.det = G.det.filter(x => x !== d); }
@@ -979,10 +979,12 @@ function stepUnits(dt) {
     }
     if (u.mode === 'local' || u.mode === 'return') {
       const ms = u.mode === 'local' ? RAMPS[u.ramp].s + 70 : 0; if (u.mode === 'local' && u.pd + u.sp.vLoc * dt >= u.path.len && !mergeFree(u, ms)) { u.pd = Math.min(u.pd, u.path.len - .5); continue; }
-      if (u.x && pathVehAhead(u.x, u.y, u.a, u.len, u)) continue;
-      u.pd += u.sp.vLoc * dt; const fp = follow(u.path, u.pd);
+      { const fp = follow(u.path, u.pd);
       const nearDet = G.det.some(d => { const q = lanePos(follow(d.path, d.pd), 4.5), dx = q.x - fp.x, dy = q.y - fp.y, fw = dx * Math.cos(fp.a) + dy * Math.sin(fp.a), lt = -dx * Math.sin(fp.a) + dy * Math.cos(fp.a); return Math.cos(q.a - fp.a) > .3 && fw > -(u.len + d.len) / 2 - 8 && fw < 90 && Math.abs(lt) < 14; });
       u.lo = (u.lo ?? 4.5) + clamp((nearDet ? -4.5 : 4.5) - (u.lo ?? 4.5), -14 * dt, 14 * dt);
+      }
+      if (u.x && pathVehAhead(u.x, u.y, u.a, u.len, u)) continue;
+      u.pd += u.sp.vLoc * dt; const fp = follow(u.path, u.pd);
       const p = lanePos(fp, u.lo); u.x = p.x; u.y = p.y; u.a = p.a;
       if (u.pd >= u.path.len) {
         if (u.mode === 'local') { u.mode = 'hw'; u.s = ms; u.lat = STRIP; u.v = u.sp.vLoc * .5; u.tlat = STRIP; u.crossing = false; u.entW = 0; }
