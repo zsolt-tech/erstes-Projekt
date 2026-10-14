@@ -1,0 +1,748 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#FF7A00">
+<title>Truck Rescue – Depot-Manager</title>
+<style>
+:root{--or:#FF7A00;--or-d:#E26500;--or-l:#FFF1E3;--ink:#1D1D1B;--ink2:#2A2A27;--ink3:#383834;--mute:#9a9a93;--line:rgba(255,255,255,.1);--grn:#2FBF71;--red:#E5483F;--amb:#FFC247}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%}
+body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:#12120f;color:#fff;font-size:14px;line-height:1.35;overflow-x:hidden}
+button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
+.ico{width:1.2em;height:1.2em;vertical-align:-.2em;flex:none}
+.top{background:var(--or);box-shadow:0 2px 0 rgba(0,0,0,.25);position:relative;z-index:5}
+.top-in{max-width:1640px;margin:0 auto;padding:8px 16px;display:flex;align-items:center;gap:12px}
+.logo{display:flex;align-items:center;gap:10px;margin-right:auto;color:var(--ink)}
+.logo-mark{width:42px;height:42px;border-radius:11px;background:var(--ink);color:var(--or);display:grid;place-items:center}
+.logo-mark svg{width:32px;height:20px}
+.logo b{display:block;font-size:18px;font-weight:900;letter-spacing:.05em;text-transform:uppercase;line-height:1}
+.logo small{display:block;font-size:12px;font-weight:700;color:rgba(0,0,0,.65);margin-top:3px}
+.toplink{background:rgba(0,0,0,.16);color:var(--ink);padding:9px 14px;border-radius:999px;font-weight:800;text-decoration:none;font-size:13px}
+.toplink:hover{background:var(--ink);color:#fff}
+
+.wrap{max-width:1640px;margin:0 auto;padding:14px;display:grid;gap:14px;grid-template-columns:minmax(0,1fr) 380px;align-items:start}
+@media(max-width:1000px){.wrap{grid-template-columns:1fr;padding:10px}}
+#stage{position:relative;aspect-ratio:16/9;border-radius:20px;overflow:hidden;background:#b9d596;box-shadow:0 0 0 3px #000,0 0 0 6px var(--ink3),0 24px 60px rgba(0,0,0,.55);user-select:none;-webkit-user-select:none}
+#cv{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:default;touch-action:manipulation}
+#hud{position:absolute;left:0;right:0;top:0;padding:12px;display:flex;gap:8px;align-items:flex-start;pointer-events:none;flex-wrap:wrap}
+#hud>*{pointer-events:auto}
+.pill{background:rgba(29,29,27,.86);backdrop-filter:blur(6px);border-radius:14px;padding:8px 14px;display:flex;align-items:center;gap:9px;font-weight:900;font-size:17px;box-shadow:0 4px 14px rgba(0,0,0,.3);min-height:44px}
+.pill small{display:block;font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--mute);line-height:1}
+.pill .v{line-height:1.05;font-variant-numeric:tabular-nums}
+.pill.money .ico{color:var(--amb);width:24px;height:24px}
+.stars{display:flex;gap:2px}.stars svg{width:20px;height:20px;color:#4a4a45}.stars svg.on{color:var(--or)}
+.sp{flex:1}
+.hbtn{width:44px;height:44px;border-radius:14px;background:rgba(29,29,27,.86);display:grid;place-items:center;box-shadow:0 4px 14px rgba(0,0,0,.3);font-weight:900}
+.hbtn:hover{background:var(--or);color:var(--ink)}
+.hbtn.on{background:var(--or);color:var(--ink)}
+#toasts{position:absolute;left:50%;top:72px;transform:translateX(-50%);display:flex;flex-direction:column;gap:6px;align-items:center;pointer-events:none;width:min(560px,90%)}
+.toast{background:rgba(29,29,27,.92);border-left:5px solid var(--or);padding:9px 14px;border-radius:10px;font-weight:700;box-shadow:0 6px 20px rgba(0,0,0,.35);animation:tin .25s ease-out,tout .4s 3.2s forwards;max-width:100%}
+.toast.good{border-color:var(--grn)}.toast.bad{border-color:var(--red)}
+@keyframes tin{from{opacity:0;transform:translateY(-10px)}}
+@keyframes tout{to{opacity:0;transform:translateY(-8px)}}
+#hint{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);background:rgba(29,29,27,.9);padding:10px 16px;border-radius:999px;font-weight:700;pointer-events:none;box-shadow:0 6px 20px rgba(0,0,0,.35);white-space:nowrap;animation:bob 2s infinite;max-width:94%;overflow:hidden;text-overflow:ellipsis}
+@keyframes bob{50%{transform:translateX(-50%) translateY(-4px)}}
+
+/* Seitenleiste */
+#side{background:var(--ink2);border-radius:20px;overflow:hidden;box-shadow:0 0 0 1px var(--line),0 20px 50px rgba(0,0,0,.4);display:flex;flex-direction:column;max-height:calc(100vh - 100px);min-height:420px}
+@media(max-width:1000px){#side{max-height:none}}
+.tabs{display:flex;background:#161614;padding:6px;gap:4px}
+.tabs button{flex:1;padding:11px 6px;border-radius:12px;font-weight:800;color:var(--mute);display:flex;justify-content:center;align-items:center;gap:7px}
+.tabs button.on{background:var(--or);color:var(--ink)}
+.tabs em{font-style:normal;background:var(--red);color:#fff;border-radius:99px;padding:0 7px;font-size:12px}
+#panel{overflow:auto;padding:12px;display:flex;flex-direction:column;gap:10px;flex:1}
+.h{font-size:11px;font-weight:900;letter-spacing:.09em;text-transform:uppercase;color:var(--mute);margin:6px 2px 0;display:flex;justify-content:space-between}
+.empty{padding:22px 12px;text-align:center;color:var(--mute);font-weight:700;border:2px dashed var(--line);border-radius:14px}
+.inc{display:flex;gap:11px;align-items:center;background:var(--ink3);border-radius:14px;padding:10px;border:2px solid transparent;text-align:left;width:100%}
+.inc:hover{border-color:rgba(255,122,0,.5)}.inc.sel{border-color:var(--or);background:#463722}
+.ti{width:54px;height:36px;border-radius:10px;background:#fff;color:var(--ink);display:grid;place-items:center;flex:none}
+.ti.dk{background:var(--ink);color:#fff}.ti.big{width:64px;height:42px}
+.ti svg{width:44px;height:27px}
+.im{flex:1;min-width:0}.im b{display:flex;gap:6px;align-items:center;font-weight:800}.im small{color:var(--mute);font-weight:600;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tb{height:6px;background:rgba(255,255,255,.12);border-radius:3px;overflow:hidden;margin-top:6px}.tb i{display:block;height:100%;background:var(--grn);width:100%}
+.tm{font-weight:900;font-variant-numeric:tabular-nums;min-width:38px;text-align:right}
+.chip{display:inline-flex;align-items:center;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:900;background:rgba(255,255,255,.14);color:#fff;white-space:nowrap;text-transform:uppercase;letter-spacing:.03em}
+.chip.red{background:var(--red)}.chip.or{background:var(--or);color:var(--ink)}.chip.grn{background:var(--grn);color:#06361d}.chip.amb{background:var(--amb);color:#3b2a00}
+.send{background:#161614;border-radius:14px;padding:10px;display:flex;flex-direction:column;gap:7px}
+.pk{display:flex;align-items:center;gap:10px;background:var(--ink3);border-radius:12px;padding:8px 10px;width:100%;text-align:left;border:2px solid transparent}
+.pk:hover{border-color:var(--or)}.pk.off{opacity:.38;pointer-events:none}.pk.rec{border-color:var(--grn)}
+.pk .nm{font-weight:800}.pk small{display:block;color:var(--mute);font-weight:600}
+.pk .go{margin-left:auto;font-weight:900;text-align:right;white-space:nowrap}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:11px 16px;border-radius:12px;font-weight:900;background:var(--or);color:var(--ink);min-height:44px}
+.btn:hover{background:#ff9230}.btn.ghost{background:var(--ink3);color:#fff}.btn.ghost:hover{background:#4a4a45}
+.btn[disabled]{opacity:.4;pointer-events:none}.btn.big{padding:16px 26px;font-size:18px;border-radius:14px}
+.btn.grn{background:var(--grn);color:#06361d}
+.fl{display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--ink3);border-radius:12px;border:2px solid transparent;width:100%;text-align:left}
+.fl.sel{border-color:var(--or)}.fl.can:hover{border-color:rgba(255,122,0,.5)}
+.fl .nm{font-weight:800}.fl small{display:block;color:var(--mute);font-weight:600}.fl .st{margin-left:auto}
+.shop{background:var(--ink3);border-radius:14px;padding:12px;display:flex;gap:12px;align-items:center}
+.shop .tx{flex:1;min-width:0}.shop b{display:block}.shop small{color:var(--mute);font-weight:600;display:block}
+.shop .price{font-weight:900;color:var(--amb);font-variant-numeric:tabular-nums}
+.stat4{display:grid;grid-template-columns:1fr 1fr;gap:8px}.stat4 div{background:var(--ink3);border-radius:12px;padding:10px}.stat4 b{font-size:20px;font-variant-numeric:tabular-nums;display:block}.stat4 small{color:var(--mute);font-weight:700}
+
+/* Overlays */
+#ov{position:fixed;inset:0;z-index:50;display:none;place-items:center;padding:16px;background:radial-gradient(circle at 50% 30%,rgba(60,38,10,.88),rgba(10,10,8,.94))}
+#ov.on{display:grid}
+.modal{width:100%;max-width:640px;background:var(--ink2);border-radius:26px;overflow:hidden;box-shadow:0 30px 90px rgba(0,0,0,.6),0 0 0 1px var(--line);animation:mup .4s cubic-bezier(.2,1.2,.4,1)}
+@keyframes mup{from{transform:translateY(30px) scale(.95);opacity:0}}
+.m-h{background:var(--or);color:var(--ink);padding:22px 26px;position:relative;overflow:hidden}
+.m-h h1{margin:0;font-size:34px;font-weight:900;letter-spacing:-.02em;line-height:1}
+.m-h p{margin:6px 0 0;font-weight:700;color:rgba(0,0,0,.7)}
+.m-h svg.bgt{position:absolute;right:-10px;top:-4px;width:210px;height:126px;opacity:.16;color:#000}
+.m-b{padding:22px 26px;display:flex;flex-direction:column;gap:14px}
+.how{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+@media(max-width:560px){.how{grid-template-columns:1fr}}
+.how div{background:var(--ink3);border-radius:14px;padding:12px}.how b{display:block;margin-bottom:3px}.how span{color:#c9c9c2;font-size:13px}
+.how .n{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;background:var(--or);color:var(--ink);font-weight:900;margin-bottom:6px}
+.sizes{display:flex;gap:8px}.sizes div{flex:1;background:var(--ink3);border-radius:14px;padding:10px;text-align:center;font-weight:800;font-size:12px}
+.sizes .ti{margin:0 auto 6px}.sizes small{display:block;color:var(--mute);font-weight:600}
+.m-b .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.best{color:var(--mute);font-weight:700}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <symbol id="i-tow" viewBox="0 0 80 48">
+    <path d="M13 24 L37 5" stroke="currentColor" stroke-width="5.5" stroke-linecap="round"/><path d="M37 5 V19" stroke="currentColor" stroke-width="2"/>
+    <path d="M37 19 v4 a3 3 0 1 1 -3 -3" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round"/><path d="M22 26 L30 14" stroke="currentColor" stroke-width="2.4"/>
+    <rect x="4" y="22" width="44" height="8" rx="2" fill="currentColor"/><path d="M50 12h12c2 0 3 1 4 3l8 12v7H50z" fill="currentColor"/>
+    <path d="M54.5 16h7l5.5 9H54.5z" fill="#fff" opacity=".92"/><rect x="53" y="7" width="9" height="4" rx="1.5" fill="#FFB300"/><rect x="2" y="29" width="76" height="6" rx="2" fill="currentColor"/>
+    <g fill="#2b2b29" stroke="#fff" stroke-width="1.6"><circle cx="17" cy="38" r="6.2"/><circle cx="31" cy="38" r="6.2"/><circle cx="62" cy="38" r="6.2"/></g>
+    <g fill="#bdbdb8"><circle cx="17" cy="38" r="2"/><circle cx="31" cy="38" r="2"/><circle cx="62" cy="38" r="2"/></g>
+  </symbol>
+  <symbol id="i-flat" viewBox="0 0 80 48">
+    <path d="M2 21 L46 27 V31 L2 31 Z" fill="currentColor"/><rect x="9" y="12" width="26" height="10" rx="2.5" fill="currentColor" opacity=".55" transform="rotate(7 22 17)"/>
+    <circle cx="14" cy="22" r="2.6" fill="#2b2b29" transform="rotate(7 22 17)"/><circle cx="30" cy="22.5" r="2.6" fill="#2b2b29" transform="rotate(7 22 17)"/>
+    <path d="M50 12h12c2 0 3 1 4 3l8 12v7H50z" fill="currentColor"/><path d="M54.5 16h7l5.5 9H54.5z" fill="#fff" opacity=".92"/><rect x="53" y="7" width="9" height="4" rx="1.5" fill="#FFB300"/>
+    <rect x="2" y="29" width="76" height="6" rx="2" fill="currentColor"/>
+    <g fill="#2b2b29" stroke="#fff" stroke-width="1.6"><circle cx="16" cy="38" r="6.2"/><circle cx="30" cy="38" r="6.2"/><circle cx="62" cy="38" r="6.2"/></g>
+    <g fill="#bdbdb8"><circle cx="16" cy="38" r="2"/><circle cx="30" cy="38" r="2"/><circle cx="62" cy="38" r="2"/></g>
+  </symbol>
+  <symbol id="i-heavy" viewBox="0 0 80 48">
+    <path d="M10 25 L30 3 L40 3" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="none"/><path d="M40 3 V17" stroke="currentColor" stroke-width="2"/>
+    <path d="M40 17 v4 a3 3 0 1 1 -3 -3" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round"/><path d="M20 26 L27 15" stroke="currentColor" stroke-width="3"/>
+    <rect x="3" y="21" width="45" height="9" rx="2" fill="currentColor"/><rect x="10" y="26" width="6" height="8" fill="currentColor"/><rect x="32" y="26" width="6" height="8" fill="currentColor"/>
+    <path d="M50 11h12c2 0 3 1 4 3l8 12v8H50z" fill="currentColor"/><path d="M54.5 15h7l5.5 9H54.5z" fill="#fff" opacity=".92"/><rect x="53" y="6" width="9" height="4" rx="1.5" fill="#FFB300"/>
+    <rect x="2" y="29" width="76" height="6" rx="2" fill="currentColor"/>
+    <g fill="#2b2b29" stroke="#fff" stroke-width="1.6"><circle cx="12" cy="38" r="6.2"/><circle cx="25" cy="38" r="6.2"/><circle cx="38" cy="38" r="6.2"/><circle cx="63" cy="38" r="6.2"/></g>
+    <g fill="#bdbdb8"><circle cx="12" cy="38" r="2"/><circle cx="25" cy="38" r="2"/><circle cx="38" cy="38" r="2"/><circle cx="63" cy="38" r="2"/></g>
+  </symbol>
+</defs></svg>
+
+<header class="top"><div class="top-in">
+  <div class="logo"><div class="logo-mark"><svg viewBox="0 0 80 48"><use href="#i-tow"/></svg></div><div><b>Truck Rescue</b><small>Depot-Manager · Minigame</small></div></div>
+  <a class="toplink" href="index.html">Zur Disposition-App</a>
+</div></header>
+
+<div class="wrap">
+  <section>
+    <div id="stage">
+      <canvas id="cv"></canvas>
+      <div id="hud">
+        <div class="pill money"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5a4 4 0 1 0 0 7M7.5 11h6M7.5 13.5h6"/></svg><div><small>Kasse</small><div class="v" id="hMoney">0 €</div></div></div>
+        <div class="pill"><div><small>Ruf</small><div class="stars" id="hStars"></div></div></div>
+        <div class="pill"><div><small id="hDay">Tag 1</small><div class="v" id="hClock">07:00</div></div></div>
+        <div class="sp"></div>
+        <button class="hbtn" id="bPause" title="Pause (Leertaste)" aria-label="Pause"></button>
+        <button class="hbtn" id="bSpeed" title="Tempo (1)" aria-label="Tempo">1×</button>
+        <button class="hbtn" id="bSound" title="Ton" aria-label="Ton"></button>
+      </div>
+      <div id="toasts"></div>
+      <div id="hint"></div>
+    </div>
+  </section>
+  <aside id="side">
+    <div class="tabs"><button data-tab="dispatch" class="on">Disposition</button><button data-tab="shop">Depot &amp; Shop</button></div>
+    <div id="panel"></div>
+  </aside>
+</div>
+
+<div id="ov"></div>
+
+<script>
+'use strict';
+/* =====================================================================
+   TRUCK RESCUE – Depot-Manager (Minigame)
+   Einsätze erscheinen auf der Karte. Schicke das passende Fahrzeug aus dem
+   Depot los, birg das Wrack, bring es zurück – und baue dein Depot aus.
+   ===================================================================== */
+const $ = s => document.querySelector(s);
+const W = 1280, H = 720, NX = 6, NY = 5;
+const X = [110, 340, 570, 800, 1030, 1200], Y = [70, 230, 400, 570, 700];
+const VN = ['Hafenstraße', 'Mühlenweg', 'Ringstraße', 'A7', 'Ostring', 'Gewerbeallee'];
+const HN = ['Nordring', 'B27', 'Zentralachse', 'Südtangente', 'Logistikweg'];
+const vw = i => i === 3 ? 52 : 34, hw_ = j => j === 1 ? 40 : 34;
+const DAYLEN = 100, BEST_KEY = 'truckrescue.game.best';
+
+/* ---------- Straßennetz ---------- */
+const NODES = []; for (let j = 0; j < NY; j++) for (let i = 0; i < NX; i++) NODES.push({ x: X[i], y: Y[j], i, j });
+const nid = (i, j) => j * NX + i;
+const EDGES = [];
+for (let j = 0; j < NY; j++) for (let i = 0; i < NX; i++) {
+  if (i < NX - 1) EDGES.push({ a: nid(i, j), b: nid(i + 1, j), f: j === 1 ? 1.3 : 1, w: hw_(j), name: HN[j], h: true, k: j });
+  if (j < NY - 1 && !(i === 2 && j === 2)) EDGES.push({ a: nid(i, j), b: nid(i, j + 1), f: i === 3 ? 1.7 : 1, w: vw(i), name: VN[i], h: false, k: i });
+}
+const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+function route(P, Q) {
+  const nodes = NODES.map(n => ({ x: n.x, y: n.y })), adj = nodes.map(() => []);
+  EDGES.forEach(e => { const l = dist(nodes[e.a], nodes[e.b]); adj[e.a].push({ to: e.b, len: l, f: e.f }); adj[e.b].push({ to: e.a, len: l, f: e.f }); });
+  const onSeg = (a, b, p) => (Math.abs(a.x - b.x) < .1 ? Math.abs(p.x - a.x) < .8 && p.y >= Math.min(a.y, b.y) - .8 && p.y <= Math.max(a.y, b.y) + .8
+    : Math.abs(p.y - a.y) < .8 && p.x >= Math.min(a.x, b.x) - .8 && p.x <= Math.max(a.x, b.x) + .8);
+  function insert(p) {
+    for (let i = 0; i < nodes.length; i++) if (Math.hypot(nodes[i].x - p.x, nodes[i].y - p.y) < .9) return i;
+    for (let u = 0; u < adj.length; u++) for (const e of adj[u]) {
+      const v = e.to; if (u > v) continue;
+      if (onSeg(nodes[u], nodes[v], p)) {
+        const f = e.f, w = nodes.length; nodes.push({ x: p.x, y: p.y }); adj.push([]);
+        adj[u] = adj[u].filter(x => x.to !== v); adj[v] = adj[v].filter(x => x.to !== u);
+        const l1 = dist(nodes[u], p), l2 = dist(p, nodes[v]);
+        adj[u].push({ to: w, len: l1, f }); adj[w].push({ to: u, len: l1, f }); adj[w].push({ to: v, len: l2, f }); adj[v].push({ to: w, len: l2, f });
+        return w;
+      }
+    }
+    return -1;
+  }
+  const s = insert(P), t = insert(Q);
+  if (s < 0 || t < 0) return [{ x: P.x, y: P.y, f: 1 }, { x: Q.x, y: Q.y, f: 1 }];
+  if (s === t) return [{ x: P.x, y: P.y, f: 1 }];
+  const d = nodes.map(() => Infinity), prev = nodes.map(() => null), done = nodes.map(() => false); d[s] = 0;
+  for (;;) {
+    let u = -1; for (let i = 0; i < d.length; i++) if (!done[i] && (u < 0 || d[i] < d[u])) u = i;
+    if (u < 0 || d[u] === Infinity || u === t) break; done[u] = true;
+    for (const e of adj[u]) { const c = d[u] + e.len / e.f; if (c < d[e.to]) { d[e.to] = c; prev[e.to] = { u, f: e.f }; } }
+  }
+  const out = []; let c = t; while (c !== s && prev[c]) { out.push({ x: nodes[c].x, y: nodes[c].y, f: prev[c].f }); c = prev[c].u; }
+  out.push({ x: nodes[s].x, y: nodes[s].y, f: 1 }); return out.reverse();
+}
+const pathLen = p => p.slice(1).reduce((a, q, i) => a + dist(q, p[i]), 0);
+function trimEnd(p, d) {
+  p = p.map(q => ({ ...q }));
+  while (p.length > 2 && dist(p[p.length - 1], p[p.length - 2]) <= d) { d -= dist(p[p.length - 1], p[p.length - 2]); p.pop(); }
+  const a = p[p.length - 2], b = p[p.length - 1], l = dist(a, b);
+  if (l > d + 1) { const k = (l - d) / l; b.x = a.x + (b.x - a.x) * k; b.y = a.y + (b.y - a.y) * k; }
+  return p;
+}
+
+/* ---------- Depot ---------- */
+const BX = i => 382 + 36 * i, BY = 472, ROADY = 400;
+const LOT = { x: 362, y: 422, w: 407, h: 126 };
+const BAYS = [4, 7, 11], BAYCOST = [0, 1400, 3200];
+const TYPES = [
+  { key: 'tow', name: 'Abschlepper', size: 'Klein', desc: 'Pkw & Transporter', cost: 450, spd: 150, L: 46, W: 17, cab: 15, axl: [-15, 14] },
+  { key: 'flat', name: 'Plateau', size: 'Mittel', desc: 'Lkw bis 7,5 t', cost: 1100, spd: 125, L: 64, W: 20, cab: 17, axl: [-23, -11, 23] },
+  { key: 'heavy', name: 'Schwerlast', size: 'Groß', desc: 'Sattelzüge & Busse', cost: 2400, spd: 100, L: 86, W: 24, cab: 21, axl: [-34, -22, -10, 33] },
+];
+const INC = [
+  { name: 'Pkw-Panne', pay: 220, pat: 70, work: 3.5 },
+  { name: 'Lkw-Unfall', pay: 520, pat: 85, work: 5.5 },
+  { name: 'Sattelzug umgekippt', pay: 1200, pat: 105, work: 8 },
+];
+const STATE_TX = { bay: 'Im Depot', out: 'Anfahrt', work: 'Bergung läuft', back: 'Rückfahrt' };
+
+/* ---------- Hilfen ---------- */
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const lerp = (a, b, t) => a + (b - a) * t;
+const lerpAng = (a, b, t) => { let d = ((b - a + Math.PI) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2) - Math.PI; return a + d * t; };
+const fmt = n => Math.round(n).toLocaleString('de-DE') + ' €';
+const pad2 = n => String(n).padStart(2, '0');
+const rnd = (a, b) => a + Math.random() * (b - a);
+function rng(s) { return () => { s |= 0; s = s + 0x6D2B79F5 | 0; let t = Math.imul(s ^ s >>> 15, 1 | s); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function rr(g, x, y, w, h, r) { r = Math.min(r, w / 2, h / 2); g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
+const IC = {
+  pause: '<path d="M8 5v14M16 5v14" stroke-width="3.5"/>', play: '<path d="M7 4l13 8-13 8z" fill="currentColor"/>',
+  snd: '<path d="M4 9v6h4l5 4V5L8 9z" fill="currentColor"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a9 9 0 0 1 0 12"/>', mute: '<path d="M4 9v6h4l5 4V5L8 9z" fill="currentColor"/><path d="M17 9l5 6M22 9l-5 6"/>',
+  star: '<path d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4 6.1 20.5l1.2-6.5L2.5 9.4l6.6-.9z" fill="currentColor" stroke="none"/>',
+  bell: '<path d="M6 17V11a6 6 0 0 1 12 0v6l2 2H4z"/><path d="M10 21a2 2 0 0 0 4 0"/>',
+};
+const ic = (n, c = '') => `<svg class="ico ${c}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">${IC[n]}</svg>`;
+const tIc = (t, w = 44, h = 27) => `<svg viewBox="0 0 80 48" width="${w}" height="${h}"><use href="#i-${TYPES[t].key}"/></svg>`;
+
+/* ---------- Sound ---------- */
+let AC = null;
+function tone(f, d = .15, type = 'sine', v = .12, delay = 0) {
+  if (G.mute) return;
+  try {
+    AC = AC || new (window.AudioContext || window.webkitAudioContext)(); const t = AC.currentTime + delay, o = AC.createOscillator(), g = AC.createGain();
+    o.type = type; o.frequency.setValueAtTime(f, t); g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(v, t + .01); g.gain.exponentialRampToValueAtTime(.0001, t + d);
+    o.connect(g).connect(AC.destination); o.start(t); o.stop(t + d + .02);
+  } catch (e) {}
+}
+const sfx = {
+  alert: () => { tone(880, .12, 'square', .06); tone(660, .16, 'square', .06, .13); },
+  go: () => { tone(420, .08, 'triangle', .12); tone(630, .1, 'triangle', .12, .07); },
+  coin: () => { tone(988, .09, 'square', .07); tone(1319, .22, 'square', .07, .08); },
+  fail: () => { tone(220, .3, 'sawtooth', .09); tone(165, .4, 'sawtooth', .09, .2); },
+  buy: () => { tone(523, .1, 'triangle', .12); tone(659, .1, 'triangle', .12, .09); tone(784, .2, 'triangle', .12, .18); },
+};
+
+/* ---------- Hintergrund (einmal vorgerendert) ---------- */
+const RV = (() => {                                       // Fluss
+  const segs = [[[-40, 300], [250, 250], [480, 360], [760, 320]], [[760, 320], [960, 285], [1110, 180], [1330, 130]]], pts = [];
+  segs.forEach(s => { for (let k = 0; k <= 40; k++) { const t = k / 40, u = 1 - t; pts.push({ x: u * u * u * s[0][0] + 3 * u * u * t * s[1][0] + 3 * u * t * t * s[2][0] + t * t * t * s[3][0], y: u * u * u * s[0][1] + 3 * u * u * t * s[1][1] + 3 * u * t * t * s[2][1] + t * t * t * s[3][1] }); } });
+  return { segs, pts };
+})();
+const riverDist = (x, y) => RV.pts.reduce((m, p) => Math.min(m, Math.hypot(p.x - x, p.y - y)), 1e9);
+const LAMPS = [];
+function tree(g, x, y, r, R) {
+  g.fillStyle = 'rgba(30,50,20,.28)'; g.beginPath(); g.ellipse(x + r * .5, y + r * .7, r, r * .85, 0, 0, 7); g.fill();
+  const cols = ['#4f9a4f', '#5aa857', '#3f8a49', '#68b25c']; g.fillStyle = cols[(R() * cols.length) | 0]; g.beginPath(); g.arc(x, y, r, 0, 7); g.fill();
+  g.fillStyle = 'rgba(255,255,255,.18)'; g.beginPath(); g.arc(x - r * .3, y - r * .3, r * .55, 0, 7); g.fill();
+}
+function buildBG() {
+  const S = 2, c = document.createElement('canvas'); c.width = W * S; c.height = H * S; const g = c.getContext('2d'); g.scale(S, S);
+  const R = rng(11);
+  let gr = g.createLinearGradient(0, 0, 0, H); gr.addColorStop(0, '#c9e0aa'); gr.addColorStop(1, '#b6d393'); g.fillStyle = gr; g.fillRect(0, 0, W, H);
+  for (let i = 0; i < 80; i++) { g.fillStyle = R() < .5 ? 'rgba(255,255,255,.06)' : 'rgba(70,110,50,.07)'; g.beginPath(); g.arc(R() * W, R() * H, 30 + R() * 90, 0, 7); g.fill(); }
+
+  const block = (x0, y0, x1, y1, o) => {
+    const w = x1 - x0, h = y1 - y0;
+    g.fillStyle = 'rgba(40,50,30,.12)'; rr(g, x0 + 3, y0 + 5, w, h, 10); g.fill();
+    const nearR = riverDist((x0 + x1) / 2, (y0 + y1) / 2) < Math.hypot(w, h) / 2 + 20 || [[x0, y0], [x1, y0], [x0, y1], [x1, y1]].some(p => riverDist(...p) < 50);
+    if (nearR && !o.depot) {                                        // Park am Fluss
+      g.fillStyle = '#b4d68f'; rr(g, x0, y0, w, h, 10); g.fill(); g.strokeStyle = '#9ec47a'; g.lineWidth = 2; g.stroke();
+      for (let k = 0; k < Math.floor(w * h / 1800); k++) { const x = x0 + 10 + R() * (w - 20), y = y0 + 10 + R() * (h - 20); if (riverDist(x, y) > 52) tree(g, x, y, 6 + R() * 6, R); }
+      return;
+    }
+    g.fillStyle = '#e9e4d5'; rr(g, x0, y0, w, h, 10); g.fill(); g.strokeStyle = '#d2ccb9'; g.lineWidth = 2; g.stroke();
+    if (o.depot) return;
+    const roofs = ['#f2e8d8', '#e4d4bc', '#d8c7ad', '#dde6ed', '#efd5cb', '#d2dac9', '#e9e9e9', '#f1e3ba', '#cfd9e6'];
+    const kind = R(); const ind = (o.i >= 4 || o.j === 3) && kind < .55;
+    const cols = Math.max(1, Math.round(w / (ind ? 120 : 84))), rows = Math.max(1, Math.round(h / (ind ? 90 : 72)));
+    const cw = w / cols, ch = h / rows;
+    for (let a = 0; a < cols; a++) for (let b = 0; b < rows; b++) {
+      const cx = x0 + a * cw, cy = y0 + b * ch, r = R();
+      if (r < .17) { g.fillStyle = '#bcd997'; rr(g, cx + 6, cy + 6, cw - 12, ch - 12, 8); g.fill(); for (let k = 0; k < 4; k++) tree(g, cx + 14 + R() * (cw - 28), cy + 14 + R() * (ch - 28), 5 + R() * 4, R); continue; }
+      if (r < .27) { g.fillStyle = '#9fa1a8'; rr(g, cx + 6, cy + 6, cw - 12, ch - 12, 5); g.fill(); g.strokeStyle = 'rgba(255,255,255,.6)'; g.lineWidth = 1.5; for (let k = 1; k < 5; k++) { g.beginPath(); g.moveTo(cx + 6 + k * (cw - 12) / 5, cy + 10); g.lineTo(cx + 6 + k * (cw - 12) / 5, cy + ch - 10); g.stroke(); } continue; }
+      const m = 7 + R() * 7, bx = cx + m, by = cy + m, bw = cw - m * 2, bh = ch - m * 2;
+      g.fillStyle = 'rgba(30,30,20,.22)'; rr(g, bx + 5, by + 7, bw, bh, 5); g.fill();
+      if (ind) {                                                    // Lagerhalle + Container
+        g.fillStyle = ['#cfd3d8', '#d9d2c3', '#c5ccd3'][(R() * 3) | 0]; rr(g, bx, by, bw, bh, 4); g.fill();
+        g.strokeStyle = 'rgba(0,0,0,.12)'; g.lineWidth = 1; for (let k = 1; k < 6; k++) { g.beginPath(); g.moveTo(bx + k * bw / 6, by); g.lineTo(bx + k * bw / 6, by + bh); g.stroke(); }
+        if (R() < .6) { const cc = ['#d9534f', '#3f7fc1', '#e9a23b', '#4f9a6a']; for (let k = 0; k < 3; k++) { g.fillStyle = cc[(R() * 4) | 0]; g.fillRect(bx + 4 + k * 17, by + bh + 3 > y1 - 4 ? by + 2 : by + bh - 14, 14, 9); } }
+      } else {
+        g.fillStyle = roofs[(R() * roofs.length) | 0]; rr(g, bx, by, bw, bh, 5); g.fill();
+        g.fillStyle = 'rgba(255,255,255,.35)'; rr(g, bx + 4, by + 4, bw - 8, bh * .45, 3); g.fill();
+        g.strokeStyle = 'rgba(0,0,0,.1)'; g.lineWidth = 1.5; rr(g, bx, by, bw, bh, 5); g.stroke();
+        const dtl = R();
+        if (dtl < .4) { g.fillStyle = '#8b8f96'; for (let k = 0; k < 2; k++) g.fillRect(bx + 8 + R() * (bw - 26), by + 8 + R() * (bh - 24), 10, 8); }
+        else if (dtl < .65) { g.fillStyle = '#4b6f9c'; g.fillRect(bx + 8, by + bh * .5, bw * .5, bh * .35); g.strokeStyle = 'rgba(255,255,255,.35)'; for (let k = 1; k < 5; k++) { g.beginPath(); g.moveTo(bx + 8 + k * bw * .1, by + bh * .5); g.lineTo(bx + 8 + k * bw * .1, by + bh * .85); g.stroke(); } }
+        else if (dtl < .8) { g.fillStyle = '#8fbf7a'; rr(g, bx + 8, by + 8, bw - 16, bh - 16, 4); g.fill(); }
+      }
+    }
+  };
+  for (let j = 0; j < NY - 1; j++) for (let i = 0; i < NX - 1; i++) {
+    if (i === 2 && j === 2) continue; const ie = (i === 1 && j === 2) ? 3 : i + 1;
+    block(X[i] + vw(i) / 2 + 5, Y[j] + hw_(j) / 2 + 5, X[ie] - vw(ie) / 2 - 5, Y[j + 1] - hw_(j + 1) / 2 - 5, { i, j, depot: i === 1 && j === 2 });
+  }
+  // Fluss
+  const rp = () => { g.beginPath(); g.moveTo(...RV.segs[0][0]); RV.segs.forEach(s => g.bezierCurveTo(...s[1], ...s[2], ...s[3])); };
+  g.lineCap = 'round'; rp(); g.strokeStyle = '#e8e2bd'; g.lineWidth = 92; g.stroke(); rp(); g.strokeStyle = '#8cc8ea'; g.lineWidth = 70; g.stroke();
+  rp(); g.strokeStyle = '#a4d6f1'; g.lineWidth = 46; g.stroke(); rp(); g.strokeStyle = 'rgba(255,255,255,.4)'; g.lineWidth = 2; g.setLineDash([26, 38]); g.lineDashOffset = 5; g.stroke(); g.setLineDash([]);
+
+  for (let k = 0; k < 40; k++) { const side = R(); let x, y; if (side < .3) { x = R() * 70 + 6; y = R() * H; } else if (side < .55) { x = W - R() * 36 - 2; y = R() * H; } else { x = R() * W; y = R() * 36 + 4; } if (riverDist(x, y) > 55) tree(g, x, y, 7 + R() * 7, R); }
+
+  // Straßen
+  const boxes = NODES.map(n => { const hs = EDGES.filter(e => e.h && (NODES[e.a] === n || NODES[e.b] === n)).map(e => e.w), vs = EDGES.filter(e => !e.h && (NODES[e.a] === n || NODES[e.b] === n)).map(e => e.w); return { n, hwid: Math.max(0, ...hs), vwid: Math.max(0, ...vs) }; });
+  g.lineCap = 'butt';
+  EDGES.forEach(e => { const a = NODES[e.a], b = NODES[e.b]; g.strokeStyle = '#d8d3c4'; g.lineWidth = e.w + 10; g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(b.x, b.y); g.stroke(); });
+  boxes.forEach(({ n, hwid, vwid }) => { const w = Math.max(vwid, 34) , h = Math.max(hwid, 34); g.fillStyle = '#d8d3c4'; g.fillRect(n.x - w / 2 - 5, n.y - h / 2 - 5, w + 10, h + 10); });
+  EDGES.forEach(e => { const a = NODES[e.a], b = NODES[e.b]; g.strokeStyle = e.f > 1.5 ? '#34363b' : '#3f4247'; g.lineWidth = e.w; g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(b.x, b.y); g.stroke(); });
+  boxes.forEach(({ n, hwid, vwid }) => { const w = Math.max(vwid, 34), h = Math.max(hwid, 34); g.fillStyle = '#3f4247'; g.fillRect(n.x - w / 2, n.y - h / 2, w, h); });
+  EDGES.forEach(e => {                                         // Markierungen
+    const a = NODES[e.a], b = NODES[e.b], dx = Math.sign(b.x - a.x), dy = Math.sign(b.y - a.y), L = dist(a, b), sh = 30;
+    const p0 = { x: a.x + dx * sh, y: a.y + dy * sh }, p1 = { x: b.x - dx * sh, y: b.y - dy * sh }, nx = -dy, ny = dx;
+    const line = (off, col, wd, dash) => { g.strokeStyle = col; g.lineWidth = wd; g.setLineDash(dash); g.beginPath(); g.moveTo(p0.x + nx * off, p0.y + ny * off); g.lineTo(p1.x + nx * off, p1.y + ny * off); g.stroke(); g.setLineDash([]); };
+    if (e.f > 1.5) { line(0, '#bdbdbd', 4, []); line(-13, 'rgba(255,255,255,.75)', 2, [12, 12]); line(13, 'rgba(255,255,255,.75)', 2, [12, 12]); line(-24, '#fff', 2, []); line(24, '#fff', 2, []); }
+    else if (e.f > 1.1) { line(-1.8, '#f0c24b', 2, []); line(1.8, '#f0c24b', 2, []); }
+    else line(0, 'rgba(240,238,225,.8)', 2, [11, 11]);
+    for (const [px, py, sx, sy] of [[a.x + dx * 25, a.y + dy * 25], [b.x - dx * 25, b.y - dy * 25]]) {   // Zebrastreifen
+      g.fillStyle = 'rgba(255,255,255,.8)'; const n = Math.floor(e.w / 7);
+      for (let k = 0; k < n; k++) { const o = -e.w / 2 + 4 + k * (e.w - 6) / Math.max(1, n - 1); g.fillRect(px + nx * o - (dy ? 1.7 : 4), py + ny * o - (dy ? 4 : 1.7), dy ? 3.4 : 8, dy ? 8 : 3.4); }
+    }
+  });
+  // Straßennamen auf dem Asphalt
+  g.fillStyle = 'rgba(210,212,218,.55)'; g.font = '800 9.5px system-ui,Arial'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  const spaced = s => s.toUpperCase().split('').join(' ');
+  for (let i = 0; i < NX; i++) if (i !== 3) { g.save(); g.translate(X[i], (Y[0] + Y[1]) / 2); g.rotate(-Math.PI / 2); g.fillText(spaced(VN[i]), 0, 0); g.restore(); }
+  for (let j = 0; j < NY; j++) if (j !== 1) g.fillText(spaced(HN[j]), (X[0] + X[1]) / 2 + (j % 2) * 220, Y[j]);
+  // Schilder + Laternen
+  const sign = (x, y, t, bg, fg) => { g.fillStyle = 'rgba(0,0,0,.25)'; rr(g, x - 17, y - 10, 38, 22, 5); g.fill(); g.fillStyle = bg; rr(g, x - 19, y - 12, 38, 22, 5); g.fill(); g.strokeStyle = '#fff'; g.lineWidth = 1.6; rr(g, x - 17, y - 10, 34, 18, 3); g.stroke(); g.fillStyle = fg; g.font = '900 13px Arial'; g.fillText(t, x, y - 1); };
+  [[800, 160], [800, 480], [800, 630]].forEach(p => sign(p[0] - 46, p[1], 'A7', '#1f5fae', '#fff'));
+  [[220, 230], [920, 230]].forEach(p => sign(p[0], p[1] - 34, 'B27', '#f2c230', '#1d1d1b'));
+  NODES.forEach(n => { [[-1, -1], [1, 1]].forEach(([sx, sy]) => { const lx = n.x + sx * (Math.max(34, 0) / 2 + 12), ly = n.y + sy * 28; LAMPS.push({ x: lx, y: ly }); g.fillStyle = 'rgba(0,0,0,.25)'; g.beginPath(); g.arc(lx + 1.5, ly + 2, 3.4, 0, 7); g.fill(); g.fillStyle = '#f4efe0'; g.beginPath(); g.arc(lx, ly, 3, 0, 7); g.fill(); }); });
+
+  // Depot-Gelände
+  const L = LOT; g.fillStyle = 'rgba(0,0,0,.28)'; rr(g, L.x + 3, L.y + 5, L.w, L.h, 8); g.fill();
+  const lg = g.createLinearGradient(0, L.y, 0, L.y + L.h); lg.addColorStop(0, '#5a5d65'); lg.addColorStop(1, '#4a4d54'); g.fillStyle = lg; rr(g, L.x, L.y, L.w, L.h, 8); g.fill();
+  g.strokeStyle = '#fff'; g.lineWidth = 3; rr(g, L.x + 1.5, L.y + 1.5, L.w - 3, L.h - 3, 7); g.stroke();
+  g.fillStyle = '#FF7A00'; for (let x = L.x + 12; x < L.x + L.w - 6; x += 22) { g.beginPath(); g.arc(x, L.y + 1.5, 2.6, 0, 7); g.fill(); g.beginPath(); g.arc(x, L.y + L.h - 1.5, 2.6, 0, 7); g.fill(); }
+  const oy = L.y + L.h - 29; g.fillStyle = 'rgba(0,0,0,.3)'; rr(g, L.x + 7, oy + 4, L.w - 8, 25, 5); g.fill();
+  const og = g.createLinearGradient(0, oy, 0, oy + 25); og.addColorStop(0, '#ff9534'); og.addColorStop(1, '#ee6d00'); g.fillStyle = og; rr(g, L.x + 4, oy, L.w - 8, 25, 5); g.fill();
+  g.fillStyle = '#1d1d1b'; rr(g, L.x + 10, oy + 4, 128, 17, 4); g.fill(); g.fillStyle = '#FF7A00'; g.font = '900 11px system-ui,Arial'; g.textAlign = 'left'; g.fillText('TRUCK RESCUE DEPOT', L.x + 16, oy + 13);
+  g.fillStyle = 'rgba(255,255,255,.85)'; for (let k = 0; k < 6; k++) g.fillRect(L.x + 160 + k * 38, oy + 6, 24, 13);
+  g.fillStyle = 'rgba(255,255,255,.3)'; g.fillRect(L.x + 8, oy + 1.5, L.w - 20, 2);
+  return c;
+}
+
+/* ---------- Fahrzeug-Sprites (Draufsicht) ---------- */
+function drawCar(g, len, wid, col) {
+  g.fillStyle = col; rr(g, -len / 2, -wid / 2, len, wid, wid * .34); g.fill();
+  g.fillStyle = 'rgba(255,255,255,.28)'; rr(g, -len * .1, -wid * .5 + 1, len * .5, wid * .3, 3); g.fill();
+  g.fillStyle = '#25384a'; rr(g, len * .1, -wid / 2 + 2, len * .2, wid - 4, 2); g.fill(); rr(g, -len * .36, -wid / 2 + 2.5, len * .13, wid - 5, 2); g.fill();
+  g.fillStyle = 'rgba(0,0,0,.2)'; rr(g, -len * .2, -wid / 2 + 2, len * .3, wid - 4, 3); g.fill();
+}
+function drawTruck(g, type, o = {}) {
+  const T = TYPES[type], L = T.L, Wd = T.W, cl = T.cab, hw = Wd / 2, x0 = -L / 2, bedL = L - cl;
+  g.fillStyle = '#121214'; T.axl.forEach(a => { rr(g, a - 4.5, -hw - 1.6, 9, 3.8, 1.3); g.fill(); rr(g, a - 4.5, hw - 2.2, 9, 3.8, 1.3); g.fill(); });
+  g.fillStyle = '#2a2b2f'; rr(g, x0, -hw + 1.5, L - 1, Wd - 3, 3); g.fill();
+  const dg = g.createLinearGradient(0, -hw, 0, hw); dg.addColorStop(0, '#ffa04a'); dg.addColorStop(1, '#e56a00');
+  g.fillStyle = dg; rr(g, x0 + 1, -hw + 1, bedL - .5, Wd - 2, 3); g.fill();
+  g.strokeStyle = 'rgba(255,255,255,.38)'; g.lineWidth = 1; rr(g, x0 + 2.6, -hw + 2.6, bedL - 3.6, Wd - 5.2, 2); g.stroke();
+  if (type === 0) {
+    g.fillStyle = '#303036'; rr(g, x0 + 4, -2.2, 15, 4.4, 1.6); g.fill(); g.fillStyle = '#ffd24a'; g.beginPath(); g.arc(x0 + 19.5, 0, 2.5, 0, 7); g.fill();
+    g.strokeStyle = 'rgba(0,0,0,.3)'; g.lineWidth = 1; g.strokeRect(x0 + 22, -hw + 3, bedL - 26, Wd - 6);
+  } else if (type === 1) {
+    g.strokeStyle = 'rgba(0,0,0,.28)'; g.lineWidth = 1; for (let k = 1; k < 6; k++) { g.beginPath(); g.moveTo(x0 + 3 + k * 7.4, -hw + 2.5); g.lineTo(x0 + 3 + k * 7.4, hw - 2.5); g.stroke(); }
+    g.fillStyle = '#303036'; g.beginPath(); g.arc(L / 2 - cl - 4, 0, 3.2, 0, 7); g.fill(); g.fillStyle = '#ffd24a'; g.fillRect(x0 + 1, -hw + 1, 3, Wd - 2);
+  } else {
+    g.fillStyle = '#2c2c32'; rr(g, x0 + 5, -3.4, bedL - 11, 6.8, 2); g.fill(); g.fillStyle = '#ffd24a'; for (let k = 0; k < 6; k++) g.fillRect(x0 + 9 + k * 9, -3.4, 4, 6.8);
+    g.fillStyle = '#2c2c32'; g.beginPath(); g.arc(x0 + 10, 0, 5.4, 0, 7); g.fill(); g.fillStyle = '#ffd24a'; g.beginPath(); g.arc(x0 + 10, 0, 2.2, 0, 7); g.fill();
+    g.fillStyle = '#303036'; g.fillRect(x0 + bedL * .45, -hw - 3.6, 6, 3.6); g.fillRect(x0 + bedL * .45, hw, 6, 3.6); g.fillRect(x0 + bedL * .75, -hw - 3.6, 6, 3.6); g.fillRect(x0 + bedL * .75, hw, 6, 3.6);
+  }
+  if (o.load != null) {
+    g.save(); g.translate(-cl / 2 - 1, 0); g.rotate(-.05);
+    if (o.load === 0) drawCar(g, 27, 12, '#6f87a8'); else if (o.load === 1) { g.fillStyle = '#eceae4'; rr(g, -20, -7, 38, 14, 2); g.fill(); g.fillStyle = '#b53b33'; rr(g, 18, -6, 9, 12, 2); g.fill(); g.strokeStyle = 'rgba(0,0,0,.15)'; g.strokeRect(-20, -7, 38, 14); }
+    else { g.fillStyle = '#9d3a32'; rr(g, -26, -8, 52, 16, 3); g.fill(); g.fillStyle = '#d8d4cc'; rr(g, -26, -8, 30, 16, 3); g.fill(); g.fillStyle = 'rgba(0,0,0,.2)'; g.fillRect(-8, -8, 2, 16); }
+    g.restore();
+  }
+  g.fillStyle = '#f7f5ef'; rr(g, L / 2 - cl, -hw, cl, Wd, 4); g.fill();
+  g.fillStyle = '#FF7A00'; rr(g, L / 2 - cl + 2, -hw + 3, cl - 9, Wd - 6, 2); g.fill();
+  g.fillStyle = '#2d4257'; rr(g, L / 2 - 6.4, -hw + 2, 4.8, Wd - 4, 1.6); g.fill(); g.fillStyle = 'rgba(255,255,255,.4)'; g.fillRect(L / 2 - 5.6, -hw + 3.2, 1.2, Wd - 7);
+  g.fillStyle = '#202024'; g.fillRect(L / 2 - 10, -hw - 2, 3.2, 2.4); g.fillRect(L / 2 - 10, hw - .4, 3.2, 2.4);
+  g.fillStyle = '#fffbe0'; g.fillRect(L / 2 - 1.6, -hw + 1.4, 2, 3.2); g.fillRect(L / 2 - 1.6, hw - 4.6, 2, 3.2);
+  if (o.beacon) {
+    const on = Math.floor(o.t * 6) % 2;
+    [[-1, on], [1, 1 - on]].forEach(([s, k]) => { const bx = L / 2 - cl + 4.5, by = s * (hw - 4.5); g.fillStyle = k ? '#ffe27a' : '#9a6400'; g.beginPath(); g.arc(bx, by, 2.4, 0, 7); g.fill();
+      if (k) { g.save(); g.globalCompositeOperation = 'lighter'; const rg = g.createRadialGradient(bx, by, 0, bx, by, 16); rg.addColorStop(0, 'rgba(255,170,40,.75)'); rg.addColorStop(1, 'rgba(255,140,0,0)'); g.fillStyle = rg; g.beginPath(); g.arc(bx, by, 16, 0, 7); g.fill(); g.restore(); } });
+  }
+}
+function drawWreck(g, inc) {
+  const R = rng(inc.seed), cls = inc.cls;
+  g.save(); g.translate(inc.x, inc.y); g.rotate(inc.rot);
+  g.strokeStyle = 'rgba(0,0,0,.32)'; g.lineWidth = 2.4; g.lineCap = 'round';
+  for (const o of [-5, 5]) { g.beginPath(); g.moveTo(-70, o + 4); g.quadraticCurveTo(-35, o - 2, -18, o * .4); g.stroke(); }
+  g.fillStyle = 'rgba(0,0,0,.25)';
+  if (cls === 0) { g.translate(2, 3); drawCar(g, 36, 16, ['#c0392b', '#3b82c4', '#d6b23a', '#6e7f8d', '#4aa36b'][(R() * 5) | 0]);
+    g.fillStyle = 'rgba(0,0,0,.35)'; g.beginPath(); g.moveTo(14, -8); g.lineTo(20, -2); g.lineTo(15, 5); g.lineTo(11, 0); g.fill(); g.fillStyle = '#17171a'; g.fillRect(-10, 7, 8, 4); g.fillRect(-14, -13, 8, 4); }
+  else if (cls === 1) { g.save(); g.rotate(.15); g.fillStyle = '#eceae4'; rr(g, -26, -11, 46, 22, 3); g.fill(); g.strokeStyle = 'rgba(0,0,0,.2)'; g.lineWidth = 1; g.strokeRect(-26, -11, 46, 22); g.fillStyle = '#d9534f'; g.fillRect(-26, -3, 46, 5); g.restore();
+    g.save(); g.translate(30, 11); g.rotate(.7); g.fillStyle = '#2f6fb0'; rr(g, -9, -9, 18, 18, 3); g.fill(); g.fillStyle = '#25384a'; rr(g, 3, -7, 5, 14, 1); g.fill(); g.restore();
+    for (let k = 0; k < 4; k++) { g.fillStyle = ['#c98b4a', '#b9722f'][k % 2]; g.save(); g.translate(-30 + R() * 14, 16 + R() * 10); g.rotate(R()); g.fillRect(-4, -4, 8, 8); g.restore(); } }
+  else { g.save(); g.rotate(.5 + R() * .2); g.fillStyle = '#e5e8ec'; rr(g, -42, -12, 78, 24, 3); g.fill(); g.strokeStyle = 'rgba(0,0,0,.2)'; g.strokeRect(-42, -12, 78, 24);
+    g.fillStyle = '#c8d0d8'; for (let k = 0; k < 6; k++) g.fillRect(-38 + k * 12, -12, 2, 24); g.fillStyle = '#d9534f'; g.fillRect(-42, -2, 78, 4); g.restore();
+    g.save(); g.translate(40, -24); g.rotate(-.6); g.fillStyle = '#2f6fb0'; rr(g, -12, -9, 24, 18, 3); g.fill(); g.fillStyle = '#25384a'; rr(g, 4, -7, 6, 14, 1); g.fill(); g.restore();
+    for (let k = 0; k < 7; k++) { g.fillStyle = ['#c98b4a', '#a96b2b', '#e1b36a'][k % 3]; g.save(); g.translate(-20 + R() * 54, 26 + R() * 14); g.rotate(R() * 3); g.fillRect(-5, -5, 10, 10); g.restore(); } }
+  g.restore();
+}
+
+/* ---------- Spielzustand ---------- */
+const G = { running: false, over: false, paused: false, mute: false, speed: 1, t: 0, day: 1, money: 400, earned: 0, rep: 5, jobs: 0, fails: 0, streak: 0, uid: 0, trucks: [], incs: [], parts: [], sel: null, selT: null, bays: 4, upg: { turbo: false, tow: false },
+  nextSpawn: 2, tab: 'dispatch', dshow: 400, best: 0, hint: true, daySeen: 1, tick: 0 };
+try { G.best = +localStorage.getItem(BEST_KEY) || 0; } catch (e) {}
+const getInc = id => G.incs.find(i => i.id === id), getTr = id => G.trucks.find(t => t.id === id);
+const spdOf = t => TYPES[t.type].spd * (G.upg.turbo ? 1.2 : 1);
+
+function freeBay() { for (let i = 0; i < G.bays; i++) if (!G.trucks.some(t => t.bay === i)) return i; return -1; }
+function addTruck(type) {
+  const bay = freeBay(); if (bay < 0) return null;
+  const n = G.trucks.filter(t => t.type === type).length + 1;
+  const t = { id: ++G.uid, type, name: TYPES[type].name + ' ' + n, bay, state: 'bay', x: BX(bay), y: BY, hd: -Math.PI / 2, lane: 0, path: [], seg: 0, sd: 0, inc: null, load: null, pay: 0, work: 0, wmax: 1 };
+  G.trucks.push(t); return t;
+}
+function newGame() {
+  Object.assign(G, { running: true, over: false, paused: false, t: 0, day: 1, daySeen: 1, money: 400, earned: 0, rep: 5, jobs: 0, fails: 0, streak: 0, trucks: [], incs: [], parts: [], sel: null, selT: null, bays: 4, upg: { turbo: false, tow: false }, nextSpawn: 2, hint: true, dshow: 400, tab: 'dispatch', speed: 1 });
+  addTruck(0); addTruck(1); showOverlay(null); renderAll(true); toast('Schicht beginnt – viel Erfolg!', 'good');
+}
+
+/* ---------- Einsätze ---------- */
+function spawnInc(first) {
+  const d = G.day, r = Math.random(); let cls;
+  if (first) cls = 0; else if (d < 2) cls = r < .75 ? 0 : 1; else if (d < 3) cls = r < .55 ? 0 : r < .9 ? 1 : 2; else cls = r < .4 ? 0 : r < .8 ? 1 : 2;
+  let e, x, y, ok = false;
+  for (let k = 0; k < 40 && !ok; k++) {
+    e = EDGES[(Math.random() * EDGES.length) | 0]; const t = rnd(.28, .72), a = NODES[e.a], b = NODES[e.b]; x = lerp(a.x, b.x, t); y = lerp(a.y, b.y, t);
+    ok = G.incs.every(i => Math.hypot(i.x - x, i.y - y) > 110) && Math.hypot(x - 570, y - 400) > 160 && x > 30 && x < W - 30;
+  }
+  const urgent = d >= 2 && !first && Math.random() < .18, pat = INC[cls].pat * (urgent ? .6 : 1) * (1 - Math.min(.3, (d - 1) * .04));
+  const street = e.f > 1.5 ? `A7 · km ${(rnd(120, 190)).toFixed(1)}` : e.f > 1.1 ? `B27 · km ${(rnd(10, 60)).toFixed(1)}` : `${e.name}, Höhe Nr. ${(rnd(2, 80)) | 0}`;
+  const inc = { id: ++G.uid, cls, x, y, street, urgent, max: pat, t: pat, state: 'wait', seed: (Math.random() * 99999) | 0, rot: (e.h ? 0 : Math.PI / 2) + rnd(-.5, .5), age: 0, truck: null, smoke: 0 };
+  G.incs.push(inc); sfx.alert();
+  toast(`${urgent ? 'EILIG – ' : ''}${INC[cls].name}: ${street}`, urgent ? 'bad' : '');
+  return inc;
+}
+function failInc(inc) {
+  G.incs = G.incs.filter(i => i !== inc); if (G.sel === inc.id) G.sel = null;
+  const t = inc.truck && getTr(inc.truck); if (t && t.state === 'out') { t.inc = null; sendBack(t); }
+  G.rep--; G.fails++; G.streak = 0; sfx.fail(); toast(`Einsatz verpasst: ${INC[inc.cls].name}`, 'bad'); burst(inc.x, inc.y, 'smoke', 8);
+  if (G.rep <= 0) gameOver();
+}
+const etaOf = (t, inc) => { const p = [{ x: BX(t.bay), y: BY, f: 1 }].concat(route({ x: BX(t.bay), y: ROADY }, inc)); let s = 0; for (let i = 1; i < p.length; i++) s += dist(p[i], p[i - 1]) / (spdOf(t) * (i === 1 ? .8 : p[i].f)); return s; };
+function dispatch(t, inc) {
+  if (!t || !inc || t.state !== 'bay' || inc.state !== 'wait') return false;
+  if (t.type < inc.cls) { toast(`${t.name} ist zu klein für „${INC[inc.cls].name}“`, 'bad'); return false; }
+  const P = { x: BX(t.bay), y: ROADY }, r = route(P, inc);
+  r[0].f = .8; r[0].nl = true;
+  let path = [{ x: P.x, y: BY, f: 1, nl: true }].concat(r); path = trimEnd(path, 34);
+  Object.assign(t, { state: 'out', path, seg: 0, sd: 0, inc: inc.id, hd: -Math.PI / 2, load: null }); inc.state = 'enroute'; inc.truck = t.id;
+  G.sel = null; G.selT = null; G.hint = false; sfx.go(); toast(`${t.name} fährt zu: ${inc.street}`); renderAll(true); return true;
+}
+function sendBack(t) {
+  const P = { x: BX(t.bay), y: ROADY }; let path;
+  if (t.state === 'out' && t.seg === 0 && t.path[1] && t.path[1].nl) path = [{ x: t.x, y: t.y, f: .8, nl: true }, { x: P.x, y: BY, f: .8, nl: true, h: -Math.PI / 2 }];
+  else { const r = route({ x: t.x, y: t.y }, P); path = r.concat([{ x: P.x, y: BY, f: .8, nl: true, h: -Math.PI / 2 }]); if (path.length > 1) path[path.length - 2].nl = true; }
+  t.path = path; t.seg = 0; t.sd = 0; t.state = 'back';
+}
+function updateTruck(t, dt) {
+  if (t.state === 'bay') { t.x = BX(t.bay); t.y = BY; t.hd = lerpAng(t.hd, -Math.PI / 2, .2); t.lane = 0; return; }
+  if (t.state === 'work') {
+    const inc = getInc(t.inc); t.work -= dt; if (Math.random() < dt * 14) part(inc.x + rnd(-10, 10), inc.y + rnd(-8, 8), 'spark');
+    if (t.work <= 0) {
+      const frac = clamp(inc.t / inc.max, 0, 1); t.pay = Math.round(INC[inc.cls].pay * (1 + .5 * frac) * (inc.urgent ? 1.5 : 1) / 10) * 10; t.load = inc.cls;
+      G.incs = G.incs.filter(i => i !== inc); burst(inc.x, inc.y, 'smoke', 6); t.inc = null; sendBack(t);
+    }
+    return;
+  }
+  let rem = dt, hdT = t.hd;
+  while (rem > 0 && t.seg < t.path.length - 1) {
+    const a = t.path[t.seg], b = t.path[t.seg + 1], L = dist(a, b), sp = spdOf(t) * (b.f || 1);
+    hdT = b.h !== undefined ? b.h : (L > .01 ? Math.atan2(b.y - a.y, b.x - a.x) : hdT);
+    t.lane += ((b.nl ? 0 : 7) - t.lane) * Math.min(1, dt * 6);
+    const need = (L - t.sd) / sp;
+    if (need <= rem) { rem -= need; t.seg++; t.sd = 0; } else { t.sd += sp * rem; rem = 0; }
+  }
+  if (t.seg >= t.path.length - 1) {
+    const e = t.path[t.path.length - 1]; t.x = e.x; t.y = e.y;
+    if (t.state === 'out') {
+      const inc = getInc(t.inc);
+      if (inc && inc.state === 'enroute') { inc.state = 'working'; t.state = 'work'; const wm = (G.upg.tow ? .75 : 1) * (t.type > inc.cls ? .8 : 1); t.work = t.wmax = INC[inc.cls].work * wm; t.lane = 7; toast(`${t.name} beginnt die Bergung`); }
+      else { t.inc = null; sendBack(t); }
+    } else if (t.state === 'back') {
+      t.state = 'bay'; t.x = BX(t.bay); t.y = BY; t.hd = -Math.PI / 2;
+      if (t.load != null) { G.money += t.pay; G.earned += t.pay; G.jobs++; G.streak++; floatText(BX(t.bay), BY - 52, '+' + fmt(t.pay), '#2fbf71'); sfx.coin();
+        if (G.streak % 6 === 0 && G.rep < 5) { G.rep++; toast('Guter Ruf! +1 Stern', 'good'); } t.load = null; t.pay = 0; }
+    }
+  } else {
+    const a = t.path[t.seg], b = t.path[t.seg + 1], L = dist(a, b) || 1; t.x = lerp(a.x, b.x, t.sd / L); t.y = lerp(a.y, b.y, t.sd / L);
+    t.hd = lerpAng(t.hd, hdT, 1 - Math.exp(-9 * dt));
+  }
+}
+function gameOver() {
+  G.over = true; G.running = false; try { if (G.earned > G.best) { G.best = G.earned; localStorage.setItem(BEST_KEY, String(G.best)); } } catch (e) {}
+  showOverlay('over');
+}
+
+/* ---------- Partikel ---------- */
+function part(x, y, kind, v) { G.parts.push(kind === 'spark' ? { k: 'spark', x, y, vx: rnd(-60, 60), vy: rnd(-60, 20), l: .4, m: .4 } : { k: 'smoke', x, y, vx: rnd(-6, 10), vy: rnd(-26, -12), l: 2.2, m: 2.2, r: rnd(4, 7) }); }
+function burst(x, y, k, n) { for (let i = 0; i < n; i++) part(x + rnd(-8, 8), y + rnd(-6, 6), k); }
+function floatText(x, y, txt, col) { G.parts.push({ k: 'txt', x, y, vy: -26, l: 1.8, m: 1.8, txt, col }); }
+
+/* ---------- Update ---------- */
+function update(dt) {
+  G.t += dt; G.day = Math.floor(G.t / DAYLEN) + 1;
+  if (G.day !== G.daySeen) { G.daySeen = G.day; toast(`Tag ${G.day} beginnt – es wird hektischer!`, 'good'); }
+  G.nextSpawn -= dt; const maxI = Math.min(9, 4 + G.day);
+  if (G.nextSpawn <= 0) { if (G.incs.length < maxI) { spawnInc(G.t < 3); G.nextSpawn = Math.max(4.2, 12 - (G.day - 1) * 1.1) * rnd(.75, 1.25); } else G.nextSpawn = 2; }
+  for (const inc of G.incs.slice()) {
+    inc.age += dt; if (inc.state !== 'working') { inc.t -= dt; if (inc.t <= 0) { failInc(inc); continue; } }
+    inc.smoke -= dt; if (inc.smoke <= 0) { inc.smoke = .28; part(inc.x + rnd(-6, 6), inc.y + rnd(-4, 4), 'smoke'); }
+  }
+  G.trucks.forEach(t => updateTruck(t, dt));
+  G.parts = G.parts.filter(p => { p.l -= dt; p.x += (p.vx || 0) * dt; p.y += p.vy * dt; if (p.k === 'spark') p.vy += 160 * dt; return p.l > 0; });
+}
+
+/* ---------- Zeichnen ---------- */
+const cv = $('#cv'), ctx = cv.getContext('2d'); let BG = null, K = 1;
+function fit() { const r = cv.getBoundingClientRect(), d = Math.min(2, window.devicePixelRatio || 1); cv.width = Math.max(2, Math.round(r.width * d)); cv.height = Math.max(2, Math.round(r.width * H / W * d)); K = cv.width / W; }
+const hourOf = () => ((7 + G.t / DAYLEN * 24) % 24 + 24) % 24;
+function darkness(h) { if (h >= 22 || h < 4.5) return 1; if (h >= 20) return (h - 20) / 2; if (h < 6.5) return 1 - (h - 4.5) / 2; return 0; }
+function draw() {
+  const g = ctx; g.setTransform(K, 0, 0, K, 0, 0); g.drawImage(BG, 0, 0, W, H);
+  const dk = darkness(hourOf()), now = performance.now() / 1000;
+  // Depot-Buchten
+  g.lineWidth = 1.6;
+  for (let i = 0; i < 11; i++) {
+    const x = BX(i) - 18; g.strokeStyle = 'rgba(255,255,255,.55)'; g.beginPath(); g.moveTo(x, 428); g.lineTo(x, 516); if (i === 10) { g.moveTo(x + 36, 428); g.lineTo(x + 36, 516); } g.stroke();
+    if (i >= G.bays) { g.fillStyle = 'rgba(20,20,22,.62)'; g.fillRect(x + 1, 427, 34, 90); g.strokeStyle = 'rgba(255,255,255,.12)'; for (let k = -90; k < 40; k += 12) { g.beginPath(); g.moveTo(x + 1, 427 + k + 90); g.lineTo(x + 35, 427 + k + 56); g.stroke(); }
+      g.fillStyle = 'rgba(255,255,255,.45)'; rr(g, BX(i) - 6, BY - 4, 12, 9, 2); g.fill(); g.strokeStyle = 'rgba(255,255,255,.45)'; g.lineWidth = 2; g.beginPath(); g.arc(BX(i), BY - 5, 4, Math.PI, 0); g.stroke(); g.lineWidth = 1.6; }
+    else { g.fillStyle = 'rgba(255,255,255,.3)'; g.font = '800 9px system-ui'; g.textAlign = 'center'; g.fillText(i + 1, BX(i), 436); }
+  }
+  // Routenvorschau
+  const sInc = getInc(G.sel);
+  if (sInc && sInc.state === 'wait') {
+    const t = getTr(G.selT) || G.trucks.find(t => t.state === 'bay' && t.type >= sInc.cls), bx = t ? BX(t.bay) : BX(0);
+    const r = route({ x: bx, y: ROADY }, sInc); g.save(); g.strokeStyle = 'rgba(255,122,0,.95)'; g.lineWidth = 5; g.lineCap = 'round'; g.lineJoin = 'round'; g.setLineDash([2, 12]); g.lineDashOffset = -now * 30;
+    g.beginPath(); g.moveTo(bx, BY); r.forEach(p => g.lineTo(p.x, p.y)); g.stroke(); g.restore();
+  }
+  // Wracks
+  G.incs.forEach(inc => drawWreck(g, inc));
+  // Fahrzeuge
+  const list = G.trucks.slice().sort((a, b) => a.y - b.y);
+  list.forEach(t => {
+    const moving = t.state !== 'bay', nx = -Math.sin(t.hd) * t.lane, ny = Math.cos(t.hd) * t.lane, x = t.x + nx, y = t.y + ny, T = TYPES[t.type];
+    g.save(); g.translate(x + 3.5, y + 5.5); g.rotate(t.hd); g.fillStyle = 'rgba(0,0,0,.25)'; rr(g, -T.L / 2, -T.W / 2, T.L, T.W, 4); g.fill(); g.restore();
+    g.save(); g.translate(x, y); g.rotate(t.hd);
+    if (dk > .05 && moving) { g.save(); g.globalCompositeOperation = 'lighter'; const lg = g.createRadialGradient(T.L / 2, 0, 2, T.L / 2 + 20, 0, 86); lg.addColorStop(0, `rgba(255,240,190,${.55 * dk})`); lg.addColorStop(1, 'rgba(255,240,190,0)'); g.fillStyle = lg; g.beginPath(); g.moveTo(T.L / 2, -4); g.arc(T.L / 2, 0, 90, -.42, .42); g.lineTo(T.L / 2, 4); g.fill(); g.restore(); }
+    drawTruck(g, t.type, { beacon: t.state === 'out' || t.state === 'work', t: now, load: t.state === 'back' ? t.load : null });
+    g.restore();
+    if (G.selT === t.id) { g.strokeStyle = '#FF7A00'; g.lineWidth = 3; g.setLineDash([6, 5]); g.lineDashOffset = -now * 20; g.beginPath(); g.arc(x, y, T.L / 2 + 8, 0, 7); g.stroke(); g.setLineDash([]); }
+    if (t.state === 'work') { const w = 40; g.fillStyle = 'rgba(0,0,0,.6)'; rr(g, x - w / 2, y - 34, w, 8, 4); g.fill(); g.fillStyle = '#2fbf71'; rr(g, x - w / 2 + 1.5, y - 32.5, (w - 3) * (1 - t.work / t.wmax), 5, 2.5); g.fill(); }
+  });
+  // Nacht
+  if (dk > .01) {
+    g.save(); g.globalCompositeOperation = 'multiply'; const c = (a, b) => Math.round(lerp(255, a, dk * .9)); g.fillStyle = `rgb(${c(70)},${c(90)},${c(150)})`; g.fillRect(0, 0, W, H); g.restore();
+    g.save(); g.globalCompositeOperation = 'lighter'; LAMPS.forEach(l => { const rg = g.createRadialGradient(l.x, l.y, 0, l.x, l.y, 58); rg.addColorStop(0, `rgba(255,214,130,${.55 * dk})`); rg.addColorStop(1, 'rgba(255,214,130,0)'); g.fillStyle = rg; g.fillRect(l.x - 58, l.y - 58, 116, 116); }); g.restore();
+  }
+  // Marker
+  G.incs.forEach(inc => {
+    const sel = inc.id === G.sel, frac = clamp(inc.t / inc.max, 0, 1), bob = Math.sin(now * 3 + inc.id) * 2.5, mx = inc.x, my = inc.y - 50 + bob;
+    if (sel) { g.save(); g.strokeStyle = '#FF7A00'; g.lineWidth = 3.5; g.setLineDash([10, 8]); g.lineDashOffset = -now * 30; g.beginPath(); g.arc(inc.x, inc.y, 52, 0, 7); g.stroke(); g.restore(); }
+    g.fillStyle = 'rgba(0,0,0,.3)'; g.beginPath(); g.ellipse(mx + 2, my + 22, 11, 4, 0, 0, 7); g.fill();
+    g.fillStyle = '#fff'; g.beginPath(); g.moveTo(mx - 8, my + 15); g.lineTo(mx, my + 27); g.lineTo(mx + 8, my + 15); g.fill();
+    g.fillStyle = inc.urgent ? '#e5483f' : '#fff'; g.beginPath(); g.arc(mx, my, 21, 0, 7); g.fill();
+    g.lineWidth = 5; g.strokeStyle = 'rgba(0,0,0,.18)'; g.beginPath(); g.arc(mx, my, 21, 0, 7); g.stroke();
+    if (inc.state !== 'working') { g.strokeStyle = frac > .5 ? '#2fbf71' : frac > .25 ? '#ffb020' : '#e5483f'; if (inc.urgent) g.strokeStyle = frac > .25 ? '#ffe27a' : '#1d1d1b'; g.beginPath(); g.arc(mx, my, 21, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * frac); g.stroke(); }
+    else { g.strokeStyle = '#FF7A00'; g.beginPath(); g.arc(mx, my, 21, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * ((now * .8) % 1)); g.stroke(); }
+    g.save(); g.translate(mx, my + 1); g.scale(.3, .3); g.rotate(0); g.fillStyle = '#fff'; drawTruck(g, inc.cls, {}); g.restore();
+    g.fillStyle = '#1d1d1b'; g.font = '900 11px system-ui'; g.textAlign = 'center'; g.fillStyle = inc.urgent ? '#fff' : '#1d1d1b';
+    if (inc.state === 'enroute') { g.fillStyle = '#1d1d1b'; rr(g, mx - 17, my + 24, 34, 13, 6); g.fill(); g.fillStyle = '#FF7A00'; g.font = '900 9px system-ui'; g.fillText('UNTERWEGS', mx, my + 31); }
+    else if (inc.urgent) { g.fillStyle = '#e5483f'; rr(g, mx - 17, my + 24, 34, 13, 6); g.fill(); g.fillStyle = '#fff'; g.font = '900 9px system-ui'; g.fillText('EILIG', mx, my + 31); }
+  });
+  // Partikel
+  G.parts.forEach(p => {
+    const a = p.l / p.m;
+    if (p.k === 'smoke') { g.fillStyle = `rgba(60,60,64,${.45 * a})`; g.beginPath(); g.arc(p.x, p.y, p.r * (1.4 - a * .6) + 2, 0, 7); g.fill(); }
+    else if (p.k === 'spark') { g.fillStyle = `rgba(255,${180 + a * 60 | 0},60,${a})`; g.fillRect(p.x, p.y, 2.4, 2.4); }
+    else { g.globalAlpha = Math.min(1, a * 2); g.font = '900 20px system-ui'; g.textAlign = 'center'; g.lineWidth = 4; g.strokeStyle = 'rgba(0,0,0,.7)'; g.strokeText(p.txt, p.x, p.y); g.fillStyle = p.col; g.fillText(p.txt, p.x, p.y); g.globalAlpha = 1; }
+  });
+  if (dk > .3) { const vg = g.createRadialGradient(W / 2, H / 2, H * .45, W / 2, H / 2, H * .95); vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, `rgba(0,0,20,${.35 * dk})`); g.fillStyle = vg; g.fillRect(0, 0, W, H); }
+}
+
+/* ---------- UI ---------- */
+function toast(msg, cls = '') { const d = document.createElement('div'); d.className = 'toast ' + cls; d.textContent = msg; const box = $('#toasts'); box.appendChild(d); while (box.children.length > 4) box.firstChild.remove(); setTimeout(() => d.remove(), 3700); }
+const panel = $('#panel'); let lastSig = '';
+function sigNow() {
+  return [G.tab, G.sel, G.selT, G.bays, G.upg.turbo, G.upg.tow, G.rep, G.running, G.incs.map(i => i.id + i.state).join(','), G.trucks.map(t => t.id + t.state + t.bay).join(','),
+    TYPES.map(t => G.money >= t.cost ? 1 : 0).join(''), G.money >= 1400 ? 1 : 0, G.money >= 3200 ? 1 : 0, G.money >= 1800 ? 1 : 0, G.money >= 1600 ? 1 : 0].join('|');
+}
+function renderPanel() {
+  document.querySelectorAll('.tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === G.tab));
+  const nWait = G.incs.filter(i => i.state === 'wait').length; const tb = document.querySelector('[data-tab=dispatch]'); tb.innerHTML = 'Disposition' + (nWait ? `<em>${nWait}</em>` : '');
+  panel.innerHTML = G.tab === 'dispatch' ? dispatchHTML() : shopHTML();
+}
+function dispatchHTML() {
+  const sInc = getInc(G.sel), idle = G.trucks.filter(t => t.state === 'bay');
+  let h = `<div class="h"><span>Einsätze</span><span>${G.incs.length}</span></div>`;
+  h += G.incs.length ? G.incs.slice().sort((a, b) => a.t / a.max - b.t / b.max).map(i => `<button class="inc ${i.id === G.sel ? 'sel' : ''}" data-act="selInc" data-id="${i.id}"><div class="ti">${tIc(i.cls)}</div><div class="im"><b>${INC[i.cls].name}${i.urgent ? '<span class="chip red">Eilig</span>' : ''}</b><small>${i.street}</small><div class="tb"><i data-bar="${i.id}"></i></div></div><div class="tm" data-t="${i.id}">${i.state === 'working' ? '…' : Math.ceil(i.t) + 's'}</div></button>`).join('') : '<div class="empty">Gerade ist alles ruhig …<br>Neue Einsätze erscheinen automatisch.</div>';
+  if (sInc && sInc.state === 'wait') {
+    const el = idle.map(t => ({ t, ok: t.type >= sInc.cls, eta: etaOf(t, sInc) })).sort((a, b) => (b.ok - a.ok) || (a.t.type - b.t.type) || (a.eta - b.eta));
+    const best = el.find(x => x.ok);
+    h += `<div class="send"><div class="h" style="margin:0"><span>Fahrzeug senden</span><span>Benötigt: ${TYPES[sInc.cls].size}</span></div>`;
+    h += el.length ? el.map(({ t, ok, eta }) => `<button class="pk ${ok ? '' : 'off'} ${best && best.t === t ? 'rec' : ''}" data-act="send" data-id="${t.id}"><div class="ti dk">${tIc(t.type, 40, 24)}</div><div><span class="nm">${t.name}</span><small>${ok ? (best && best.t === t ? 'Empfohlen' : TYPES[t.type].size) : 'Zu klein'}</small></div><div class="go">${ok ? Math.ceil(eta) + ' s' : '–'}<small>Anfahrt</small></div></button>`).join('') : '<div class="empty" style="padding:14px">Kein Fahrzeug im Depot – warte, bis eins zurück ist.</div>';
+    h += best ? `<button class="btn grn" data-act="auto" data-id="${sInc.id}">Beste Wahl senden</button>` : '';
+    h += '</div>';
+  } else if (sInc) h += '<div class="empty">Dieser Einsatz wird bereits bearbeitet.</div>';
+  h += `<div class="h"><span>Fuhrpark</span><span>${G.trucks.length}/${G.bays} Plätze</span></div>`;
+  h += G.trucks.map(t => `<button class="fl ${t.id === G.selT ? 'sel' : ''} ${t.state === 'bay' ? 'can' : ''}" data-act="selTr" data-id="${t.id}"><div class="ti dk">${tIc(t.type, 40, 24)}</div><div><span class="nm">${t.name}</span><small>${TYPES[t.type].size} · ${TYPES[t.type].desc}</small></div><span class="st chip ${t.state === 'bay' ? 'grn' : t.state === 'work' ? 'or' : 'amb'}">${STATE_TX[t.state]}</span></button>`).join('');
+  return h;
+}
+function shopHTML() {
+  const free = freeBay() >= 0;
+  let h = `<div class="stat4"><div><b>${fmt(G.money)}</b><small>Kasse</small></div><div><b>${G.jobs}</b><small>Bergungen</small></div><div><b>${fmt(G.earned)}</b><small>Umsatz gesamt</small></div><div><b>${G.fails}</b><small>Verpasst</small></div></div>`;
+  h += `<div class="h"><span>Fahrzeuge kaufen</span><span>${G.trucks.length}/${G.bays} Plätze</span></div>`;
+  h += TYPES.map((T, i) => `<div class="shop"><div class="ti big">${tIc(i, 52, 32)}</div><div class="tx"><b>${T.name} <span class="chip">${T.size}</span></b><small>${T.desc}</small><span class="price">${fmt(T.cost)}</span></div><button class="btn" data-act="buy" data-i="${i}" ${G.money >= T.cost && free ? '' : 'disabled'}>Kaufen</button></div>`).join('');
+  if (!free) h += '<div class="empty" style="padding:10px">Alle Stellplätze belegt – baue das Depot aus.</div>';
+  const lv = BAYS.indexOf(G.bays);
+  h += `<div class="h"><span>Depot &amp; Technik</span></div>`;
+  h += lv < 2 ? `<div class="shop"><div class="tx"><b>Depot erweitern</b><small>${BAYS[lv]} → ${BAYS[lv + 1]} Stellplätze</small><span class="price">${fmt(BAYCOST[lv + 1])}</span></div><button class="btn" data-act="bays" ${G.money >= BAYCOST[lv + 1] ? '' : 'disabled'}>Ausbauen</button></div>` : '<div class="shop"><div class="tx"><b>Depot erweitern</b><small>Maximale Ausbaustufe erreicht</small></div><span class="chip grn">Fertig</span></div>';
+  h += `<div class="shop"><div class="tx"><b>Turbo-Motoren</b><small>Alle Fahrzeuge fahren 20 % schneller</small><span class="price">${fmt(1800)}</span></div>${G.upg.turbo ? '<span class="chip grn">Gekauft</span>' : `<button class="btn" data-act="upg" data-k="turbo" ${G.money >= 1800 ? '' : 'disabled'}>Kaufen</button>`}</div>`;
+  h += `<div class="shop"><div class="tx"><b>Hydraulik-Winden</b><small>Bergungen dauern 25 % kürzer</small><span class="price">${fmt(1600)}</span></div>${G.upg.tow ? '<span class="chip grn">Gekauft</span>' : `<button class="btn" data-act="upg" data-k="tow" ${G.money >= 1600 ? '' : 'disabled'}>Kaufen</button>`}</div>`;
+  return h;
+}
+function renderAll(force) { const s = sigNow(); if (force || s !== lastSig) { lastSig = s; renderPanel(); } hint(); }
+function hint() {
+  const h = $('#hint'); let t = '';
+  if (!G.running) t = ''; else if (G.hint) t = G.sel || G.selT ? 'Jetzt ein passendes Fahrzeug bzw. einen Einsatz anklicken' : 'Klicke einen Einsatz auf der Karte – dann ein Fahrzeug aus dem Depot';
+  h.style.display = t ? '' : 'none'; h.textContent = t;
+}
+function hud() {
+  G.dshow += (G.money - G.dshow) * .2; if (Math.abs(G.money - G.dshow) < 1) G.dshow = G.money;
+  $('#hMoney').textContent = fmt(G.dshow); const h = hourOf(); $('#hClock').textContent = pad2(Math.floor(h)) + ':' + pad2(Math.floor((h % 1) * 60)); $('#hDay').textContent = 'Tag ' + G.day;
+  const st = $('#hStars'); if (st.dataset.v !== String(G.rep)) { st.dataset.v = G.rep; st.innerHTML = [0, 1, 2, 3, 4].map(i => `<svg class="${i < G.rep ? 'on' : ''}" viewBox="0 0 24 24">${IC.star}</svg>`).join(''); }
+  document.querySelectorAll('[data-bar]').forEach(b => { const i = getInc(+b.dataset.bar); if (!i) return; const f = clamp(i.t / i.max, 0, 1); b.style.width = f * 100 + '%'; b.style.background = f > .5 ? '#2fbf71' : f > .25 ? '#ffb020' : '#e5483f'; if (i.state === 'working') b.style.background = '#FF7A00'; });
+  document.querySelectorAll('[data-t]').forEach(b => { const i = getInc(+b.dataset.t); if (i) b.textContent = i.state === 'working' ? '…' : Math.ceil(i.t) + 's'; });
+}
+function setBtns() { $('#bPause').innerHTML = ic(G.paused ? 'play' : 'pause'); $('#bSpeed').textContent = G.speed + '×'; $('#bSpeed').classList.toggle('on', G.speed > 1); $('#bSound').innerHTML = ic(G.mute ? 'mute' : 'snd'); $('#bPause').classList.toggle('on', G.paused); }
+
+function showOverlay(kind) {
+  const ov = $('#ov'); if (!kind) { ov.classList.remove('on'); ov.innerHTML = ''; return; }
+  const best = G.best ? `<span class="best">Rekord: ${fmt(G.best)}</span>` : '';
+  if (kind === 'start') ov.innerHTML = `<div class="modal"><div class="m-h"><svg class="bgt" viewBox="0 0 80 48"><use href="#i-heavy"/></svg><h1>Depot-Manager</h1><p>Führe dein eigenes Abschleppunternehmen für LKW.</p></div>
+    <div class="m-b"><div class="how"><div><span class="n">1</span><b>Einsatz wählen</b><span>Unfälle und Pannen erscheinen auf der Karte. Der Ring zeigt, wie viel Zeit bleibt.</span></div><div><span class="n">2</span><b>Passendes Fahrzeug senden</b><span>Kleine Pannen schafft ein Abschlepper – Sattelzüge brauchen Schwerlast.</span></div><div><span class="n">3</span><b>Bergen &amp; kassieren</b><span>Wrack laden, zurück ins Depot – je schneller, desto mehr Geld.</span></div></div>
+    <div class="sizes">${TYPES.map((T, i) => `<div><div class="ti dk">${tIc(i)}</div>${T.name}<small>${T.size} · ${T.desc}</small></div>`).join('')}</div>
+    <div class="row"><button class="btn big" data-act="start">Schicht starten</button>${best}</div></div></div>`;
+  if (kind === 'pause') ov.innerHTML = `<div class="modal" style="max-width:420px"><div class="m-h"><h1>Pause</h1><p>Das Depot wartet auf dich.</p></div><div class="m-b"><button class="btn big" data-act="resume">Weiterspielen</button><button class="btn ghost" data-act="restart">Neu starten</button></div></div>`;
+  if (kind === 'over') ov.innerHTML = `<div class="modal" style="max-width:480px"><div class="m-h"><h1>Schicht beendet</h1><p>Dein Ruf ist ruiniert – zu viele Einsätze verpasst.</p></div><div class="m-b"><div class="stat4"><div><b>${fmt(G.earned)}</b><small>Umsatz</small></div><div><b>${G.jobs}</b><small>Bergungen</small></div><div><b>Tag ${G.day}</b><small>erreicht</small></div><div><b>${G.trucks.length}</b><small>Fahrzeuge</small></div></div>${G.earned >= G.best && G.earned > 0 ? '<div class="chip grn" style="align-self:flex-start">Neuer Rekord!</div>' : `<span class="best">Rekord: ${fmt(G.best)}</span>`}<button class="btn big" data-act="restart">Nochmal spielen</button></div></div>`;
+  ov.classList.add('on');
+}
+
+/* ---------- Eingabe ---------- */
+const ACT = {
+  start: () => { newGame(); },
+  restart: () => { newGame(); },
+  resume: () => { setPause(false); },
+  selInc: d => { const i = getInc(+d.id); if (!i) return; G.sel = G.sel === i.id ? null : i.id; if (G.selT && G.sel) { const t = getTr(G.selT); if (t && i.state === 'wait') { dispatch(t, i); return; } } renderAll(true); },
+  selTr: d => { const t = getTr(+d.id); if (!t || t.state !== 'bay') return; const inc = getInc(G.sel); if (inc && inc.state === 'wait') { dispatch(t, inc); return; } G.selT = G.selT === t.id ? null : t.id; renderAll(true); },
+  send: d => dispatch(getTr(+d.id), getInc(G.sel)),
+  auto: d => { const inc = getInc(+d.id); const idle = G.trucks.filter(t => t.state === 'bay' && t.type >= inc.cls).sort((a, b) => (a.type - b.type) || (etaOf(a, inc) - etaOf(b, inc))); if (idle[0]) dispatch(idle[0], inc); },
+  buy: d => { const T = TYPES[+d.i]; if (G.money >= T.cost && freeBay() >= 0) { G.money -= T.cost; addTruck(+d.i); sfx.buy(); toast(`${T.name} gekauft!`, 'good'); renderAll(true); } },
+  bays: () => { const lv = BAYS.indexOf(G.bays); if (lv < 2 && G.money >= BAYCOST[lv + 1]) { G.money -= BAYCOST[lv + 1]; G.bays = BAYS[lv + 1]; sfx.buy(); toast('Depot erweitert!', 'good'); renderAll(true); } },
+  upg: d => { const c = d.k === 'turbo' ? 1800 : 1600; if (!G.upg[d.k] && G.money >= c) { G.money -= c; G.upg[d.k] = true; sfx.buy(); toast('Upgrade gekauft!', 'good'); renderAll(true); } },
+};
+function setPause(p) { if (!G.running) return; G.paused = p; setBtns(); showOverlay(p ? 'pause' : null); }
+document.addEventListener('click', e => {
+  const t = e.target.closest('[data-act]'); if (t && ACT[t.dataset.act]) { ACT[t.dataset.act](t.dataset); return; }
+  const tab = e.target.closest('[data-tab]'); if (tab) { G.tab = tab.dataset.tab; renderAll(true); }
+});
+$('#bPause').onclick = () => G.running && setPause(!G.paused);
+$('#bSpeed').onclick = () => { G.speed = G.speed === 1 ? 2 : 1; setBtns(); };
+$('#bSound').onclick = () => { G.mute = !G.mute; setBtns(); };
+document.addEventListener('keydown', e => {
+  if (e.code === 'Space' && G.running) { e.preventDefault(); setPause(!G.paused); }
+  else if (e.key === '1') { G.speed = 1; setBtns(); } else if (e.key === '2') { G.speed = 2; setBtns(); }
+  else if (e.key === 'Escape') { G.sel = G.selT = null; renderAll(true); }
+  else if ((e.key === 'a' || e.key === 'A') && G.sel) ACT.auto({ id: G.sel });
+});
+cv.addEventListener('click', e => {
+  if (!G.running || G.paused) return; const r = cv.getBoundingClientRect(), x = (e.clientX - r.left) / r.width * W, y = (e.clientY - r.top) / r.height * H;
+  let inc = null, bd = 48; G.incs.forEach(i => { const d = Math.min(Math.hypot(i.x - x, i.y - y), Math.hypot(i.x - x, i.y - 50 - y)); if (d < bd) { bd = d; inc = i; } });
+  let tr = null, bt = 30; G.trucks.forEach(t => { if (t.state !== 'bay') return; const d = Math.hypot(t.x - x, t.y - y) * .8 - (TYPES[t.type].L / 2 - 18); if (d < bt) { bt = d; tr = t; } });
+  if (inc && (!tr || bd < bt)) ACT.selInc({ id: inc.id }); else if (tr) ACT.selTr({ id: tr.id }); else { G.sel = G.selT = null; renderAll(true); }
+});
+cv.addEventListener('mousemove', e => { if (!G.running) return; const r = cv.getBoundingClientRect(), x = (e.clientX - r.left) / r.width * W, y = (e.clientY - r.top) / r.height * H; cv.style.cursor = G.incs.some(i => Math.hypot(i.x - x, i.y - y) < 48 || Math.hypot(i.x - x, i.y - 50 - y) < 28) || G.trucks.some(t => t.state === 'bay' && Math.hypot(t.x - x, t.y - y) < 36) ? 'pointer' : 'default'; });
+document.addEventListener('visibilitychange', () => { if (document.hidden && G.running && !G.paused) setPause(true); });
+window.addEventListener('resize', fit);
+
+/* ---------- Start ---------- */
+let last = performance.now(), acc = 0;
+function frame(ts) {
+  const dt = Math.min(.05, (ts - last) / 1000); last = ts;
+  if (G.running && !G.paused) { const n = G.speed; for (let k = 0; k < n; k++) update(dt); }
+  draw(); hud(); if ((acc += dt) > .15) { acc = 0; renderAll(); }
+  requestAnimationFrame(frame);
+}
+BG = buildBG(); fit(); addTruck(0); addTruck(1); setBtns(); renderAll(true); showOverlay('start');
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
