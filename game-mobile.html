@@ -2057,6 +2057,13 @@ function lifeInit() {
   for (let i = 0; i < 2; i++) LIFE.boats.push({ riv: 1 - i, t: Q(), sp: (i ? 1 : -1) * (.0012 + Q() * .001), len: 30 + Q() * 12, col: '#e9b32c', barge: 1 });
   LAKES.forEach((l, i) => { LIFE.boats.push({ lake: i, ph: Q() * 6.28, sp: (.15 + Q() * .1) * (Q() < .5 ? 1 : -1), len: 12, col: '#fff', sail: 1 }); });
 }
+/* Ziel nur über Land-/Zubringerstraßen (Traktoren dürfen nicht auf Autobahnen) */
+const nsSvcOk = (n, e) => !(e.link && (e.link.legTo || (e.link.to && e.link.to.rd.kind === 'mot') || (e.link.from && e.link.from.rd.kind === 'mot')));
+function nsSvcDest(rd) {
+  const n = nsNext(rd, 0), L = NS.dests.filter(d => !d.leg && d.sk.rd && d.sk.rd.kind !== 'mot' && !d.sk.rd.ring && !d.sk.rd.link && d.d[n.id] < 400 && d.d[n.id] > 20); if (!L.length) return null;
+  const d = L[(Math.random() * L.length) | 0]; if (!d.ds) { d.ds = new Float32Array(NS.nodes.length); nsRevDij(d.ds, d.sk.id, nsSvcOk); } if (d.ds[n.id] > 9e8) return null;
+  return { sk: d.sk, d: d.ds, di: -1, leg: false, tmp: true };
+}
 const rivPt = (i, t) => RIV[i](clamp(t, 0, 1));
 function lifeStep(dt) {
   for (const p of LIFE.ped) { p.t += p.sp * p.dir * dt / 4; if (p.t > 1) { p.t = 1; p.dir = -1; } if (p.t < 0) { p.t = 0; p.dir = 1; } }
@@ -2065,7 +2072,7 @@ function lifeStep(dt) {
   LIFE.birdT = (LIFE.birdT || 0) - dt; if (LIFE.birdT <= 0 && !wx && envNight() < .5 && LIFE.birds.length < 4) { LIFE.birdT = rnd(6, 14); const a = Math.random() * 6.28, cx = WW / 2 + Math.cos(a) * WW * .6, cy = WH / 2 + Math.sin(a) * WH * .6, tx = WW * (.2 + Math.random() * .6), ty = WH * (.2 + Math.random() * .6), d = Math.hypot(tx - cx, ty - cy); LIFE.birds.push({ x: cx, y: cy, vx: (tx - cx) / d * 46, vy: (ty - cy) / d * 46, n: 3 + (Math.random() * 4 | 0), ph: Math.random() * 6, life: d / 46 * 1.2 }); }
   for (const f of LIFE.birds) { f.x += f.vx * dt; f.y += f.vy * dt; f.life -= dt; } LIFE.birds = LIFE.birds.filter(f => f.life > 0);
   // Traktoren
-  LIFE.trT = (LIFE.trT || 20) - dt; if (LIFE.trT <= 0) { LIFE.trT = rnd(40, 90) / Math.max(.4, TRF.dens); const n = NS.svc.filter(r => r.veh.some(v => v.kind === 'tractor')).length; if (n < 2) { const c = [LS.f, LS.b, LN.f, LN.b].concat(FEED.flatMap(f => [f.f, f.b])), rd = c[(Math.random() * c.length) | 0]; if (!rd.veh.some(v => v.s < 100)) { const v = nsNew(rd, -20, 0, 'tractor'); v.col = ['#2f8f4f', '#c8453b', '#2f6fbf'][(Math.random() * 3) | 0]; v.dest = nsPickDest(rd, 0); if (v.dest) rd.veh.push(v); } } }
+  LIFE.trT = (LIFE.trT || 20) - dt; if (LIFE.trT <= 0) { LIFE.trT = rnd(40, 90) / Math.max(.4, TRF.dens); const n = NS.svc.filter(r => r.veh.some(v => v.kind === 'tractor')).length; if (n < 2) { const c = [LS.f, LS.b, LN.f, LN.b].concat(FEED.flatMap(f => [f.f, f.b])), rd = c[(Math.random() * c.length) | 0]; if (!rd.veh.some(v => v.s < 100)) { const v = nsNew(rd, -20, 0, 'tractor'); v.col = ['#2f8f4f', '#c8453b', '#2f6fbf'][(Math.random() * 3) | 0]; v.dest = nsSvcDest(rd); if (v.dest) rd.veh.push(v); } } }
 }
 function drawBoat(g, p, a, b, now) {
   g.save(); g.translate(p.x, p.y); g.rotate(a);
@@ -2608,7 +2615,7 @@ function playerHTML(key, memo) {
 }
 const bars = () => Array.from({ length: 30 }, () => 5 + Math.round(Math.random() * 20));
 /* --- Fahrer --- */
-function driverPanel() { return autoCard() + callsCard() + driverPanel0(); }
+function driverPanel() { return G.phase === 'select' ? autoCard() + driverPanel0() : callsCard() + driverPanel0() + autoCard(); }
 function driverPanel0() {
   if (G.phase === 'select') return `<div><div class="h2">Szenario wählen</div><p class="sub">Du bist Lkw-Fahrer auf der A7. Wähle, was gleich passiert – danach meldest du den Unfall, der Disponent koordiniert die Bergung.</p></div>
     ${Object.entries(SCEN).map(([k, s]) => `<button class="scn ${G.scen === k ? 'on' : ''} ${carLvl() < (SCEN_LVL[k] || 1) ? 'lock' : ''}" data-act="scen" data-k="${k}"><div class="ti">${tIc(s.need)}</div><div><b>${s.title}${carLvl() < (SCEN_LVL[k] || 1) ? ' 🔒' : ''}</b><small>${carLvl() < (SCEN_LVL[k] || 1) ? 'Ab Level ' + SCEN_LVL[k] + ' – sammle Erfahrung mit Pannenhilfe &amp; Einsätzen' : s.desc}</small></div></button>`).join('')}
@@ -2654,7 +2661,7 @@ function tracking() {
 const curWreck = () => G.wrecks.find(w => w.id === G.selWreck) || G.wrecks.find(w => !w.done && !w.tow) || G.wrecks[0];
 const routeList = () => G.acc ? RAMPS.filter(r => r.s + 70 < G.acc.front - 130).slice(-4) : [];
 function fleetBack(f) { const u = G.units.find(x => x.fleet === f); if (!u) return null; if (u.mode === 'return') return (u.path.len - u.pd) / u.sp.vLoc; if (u.mode === 'depart') return Math.max(0, ((u.exitS || EXIT.s) - u.s) / 60) + backPath(gateU('depot'), u.exitS).len / 80; return null; }
-function dispatchPanel() { return autoCard() + sjBoard() + dispatchPanel0(); }
+function dispatchPanel() { return G.acc && !G.acc.cleared ? dispatchPanel0() + autoCard() + sjBoard() : autoCard() + sjBoard() + dispatchPanel0(); }
 function dispatchPanel0() {
   if (!G.acc) return `<div class="card" style="display:flex;gap:12px;align-items:center"><div class="spin"></div><div><b>Leitstelle bereit</b><small style="display:block;color:#9a9a93">${G.phase === 'select' ? 'Wechsle zum Fahrer und starte ein Szenario.' : 'Verkehr normal – warte auf Meldungen …'}</small></div></div>`;
   const r = G.report, W = curWreck(), nW = G.wrecks.length, dW = G.wrecks.filter(w => w.done).length;
