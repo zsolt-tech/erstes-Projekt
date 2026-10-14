@@ -1,0 +1,776 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#FF7A00">
+<title>Truck Rescue – Abschlepp-Disposition</title>
+<style>
+:root{
+  --or:#FF7A00; --or-d:#E26500; --or-l:#FFF1E3; --or-m:#FFD6AD;
+  --ink:#1D1D1B; --ink2:#4A4A47; --mute:#8A8A85; --line:#E4E2DC;
+  --bg:#F2F1ED; --card:#fff; --red:#D9302C; --red-l:#FDECEB; --grn:#1E9A55; --grn-l:#E5F5EC; --blu:#2765C9;
+  --r:14px;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0}
+body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink);font-size:15px;line-height:1.4}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer;border:0;background:none}
+h1,h2,h3,p{margin:0}
+.ico{width:1.2em;height:1.2em;vertical-align:-.2em;flex:none}
+
+/* ---------- Kopfzeile ---------- */
+.top{background:var(--or);position:sticky;top:0;z-index:30;box-shadow:0 2px 0 rgba(0,0,0,.08)}
+.top-in{max-width:1500px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.logo{display:flex;align-items:center;gap:10px;margin-right:auto}
+.logo-mark{width:46px;height:46px;border-radius:12px;background:var(--ink);color:var(--or);display:grid;place-items:center}
+.logo-mark svg{width:34px;height:22px}
+.logo b{display:block;font-size:19px;font-weight:900;letter-spacing:.04em;text-transform:uppercase;line-height:1}
+.logo small{display:block;font-size:12px;font-weight:600;color:rgba(0,0,0,.65);margin-top:3px}
+.seg{display:flex;background:rgba(0,0,0,.14);border-radius:999px;padding:4px;gap:2px}
+.seg button{display:flex;align-items:center;gap:8px;padding:9px 16px;border-radius:999px;font-weight:800;font-size:14px;color:var(--ink);position:relative;white-space:nowrap}
+.seg button.on{background:var(--ink);color:#fff}
+.seg .badge{position:absolute;top:-6px;right:-4px;background:var(--red);color:#fff;border-radius:999px;min-width:21px;height:21px;display:grid;place-items:center;font-size:12px;border:2px solid var(--or);padding:0 4px;animation:pop 1.2s infinite}
+@keyframes pop{50%{transform:scale(1.18)}}
+
+/* ---------- Allgemein ---------- */
+.card{background:var(--card);border-radius:var(--r);box-shadow:0 1px 2px rgba(0,0,0,.06),0 0 0 1px rgba(0,0,0,.03)}
+.pad{padding:16px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:13px 20px;border-radius:12px;font-weight:800;font-size:15px;transition:.15s;min-height:48px}
+.btn.pri{background:var(--or);color:var(--ink)}
+.btn.pri:hover{background:var(--or-d);color:#fff}
+.btn.dark{background:var(--ink);color:#fff}
+.btn.ghost{background:#fff;border:2px solid var(--line);color:var(--ink)}
+.btn.ghost:hover{border-color:var(--ink)}
+.btn.danger{background:var(--red-l);color:var(--red)}
+.btn.grn{background:var(--grn);color:#fff}
+.btn.big{padding:18px 24px;font-size:18px;border-radius:14px;width:100%}
+.btn[disabled]{opacity:.45;pointer-events:none}
+.chip{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:800;background:#EEE;color:var(--ink2);white-space:nowrap}
+.chip.or{background:var(--or-l);color:var(--or-d)}
+.chip.red{background:var(--red-l);color:var(--red)}
+.chip.grn{background:var(--grn-l);color:var(--grn)}
+.chip.dark{background:var(--ink);color:#fff}
+.lbl{font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--mute)}
+.muted{color:var(--mute)}
+
+/* ---------- Fahrer (Handy-Rahmen) ---------- */
+.drv-wrap{padding:20px 12px 40px;display:flex;justify-content:center}
+.phone{width:100%;max-width:440px;background:var(--bg);border-radius:30px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.18),0 0 0 8px #1d1d1b;min-height:760px;display:flex;flex-direction:column;position:relative}
+.phone-bar{background:var(--ink);color:#fff;padding:12px 18px;display:flex;align-items:center;gap:10px;font-weight:800}
+.phone-bar .ico{color:var(--or)}
+.phone-bar small{margin-left:auto;font-weight:600;color:#bbb}
+.phone-body{padding:16px;flex:1;display:flex;flex-direction:column;gap:14px}
+.phone-foot{position:sticky;bottom:0;background:linear-gradient(transparent,var(--bg) 22%);padding:18px 16px 16px;display:flex;gap:10px}
+.phone-foot .btn{flex:1}
+.phone-foot .btn.ghost{flex:0 0 auto}
+.steps{display:flex;gap:6px}
+.steps div{flex:1;text-align:center;font-size:11px;font-weight:800;color:var(--mute)}
+.steps i{display:block;height:6px;border-radius:3px;background:var(--line);margin-bottom:5px}
+.steps .done i{background:var(--ink)} .steps .cur i{background:var(--or)} .steps .cur{color:var(--ink)}
+.h2{font-size:24px;font-weight:900;line-height:1.1;letter-spacing:-.01em}
+.sub{color:var(--ink2);margin-top:6px}
+.hero{background:var(--ink);color:#fff;border-radius:22px;padding:22px;position:relative;overflow:hidden}
+.hero h1{font-size:30px;font-weight:900;line-height:1.05;letter-spacing:-.02em}
+.hero h1 em{font-style:normal;color:var(--or)}
+.hero p{color:#cfcfca;margin:10px 0 18px}
+.hero .bg-truck{position:absolute;right:-14px;top:8px;width:190px;height:114px;color:#fff;opacity:.09}
+.hero>*:not(.bg-truck){position:relative}
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.tile{background:#fff;border-radius:12px;padding:12px 8px;text-align:center;font-size:12px;font-weight:800}
+.tile .ico{display:block;margin:0 auto 6px;width:28px;height:28px;color:var(--or)}
+.opt-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.opts{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.opt{flex:1 1 auto;background:#fff;border:2px solid var(--line);border-radius:12px;padding:12px 12px;font-weight:700;text-align:left;display:flex;align-items:center;gap:8px;min-height:48px;line-height:1.2}
+.opt::before{content:"";width:18px;height:18px;border-radius:50%;border:2px solid #C9C7C0;flex:none}
+.opt.multi::before{border-radius:5px}
+.opt.on{border-color:var(--or);background:var(--or-l)}
+.opt.on::before{border-color:var(--or);background:var(--or) radial-gradient(#fff 0 35%,transparent 38%)}
+.opt.multi.on::before{background:var(--or);box-shadow:inset 0 0 0 3px var(--or-l)}
+.q{background:#fff;border-radius:14px;padding:14px}
+.q h3{font-size:15px;font-weight:800}
+.q .n{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--ink);color:#fff;font-size:12px;margin-right:6px}
+.field{display:block}
+.field span{display:block;font-size:12px;font-weight:800;color:var(--mute);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px}
+.field input{width:100%;padding:14px;border-radius:12px;border:2px solid var(--line);background:#fff;font-weight:700;font-size:16px}
+.field input:focus{outline:0;border-color:var(--or)}
+.plate{font-family:ui-monospace,Menlo,Consolas,monospace;letter-spacing:.12em;text-transform:uppercase}
+.err{background:var(--red-l);color:var(--red);padding:10px 12px;border-radius:10px;font-weight:700;display:flex;gap:8px;align-items:center}
+.locbox{display:flex;gap:12px;align-items:center;padding:12px}
+.locbox .ico{color:var(--or);width:26px;height:26px}
+.minimap{border-radius:12px;overflow:hidden;line-height:0}
+.minimap svg{width:100%;height:190px;display:block}
+
+.drop{border:2.5px dashed var(--or);background:var(--or-l);border-radius:16px;padding:22px;text-align:center;font-weight:800;display:block;cursor:pointer}
+.drop .ico{width:38px;height:38px;color:var(--or-d);display:block;margin:0 auto 6px}
+.drop input{display:none}
+.thumbs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.thumb{position:relative;aspect-ratio:1;border-radius:12px;overflow:hidden;background:#ddd}
+.thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.thumb button{position:absolute;top:5px;right:5px;width:28px;height:28px;border-radius:50%;background:rgba(0,0,0,.65);color:#fff;display:grid;place-items:center}
+.hints{display:flex;gap:6px;flex-wrap:wrap}
+
+.rec{text-align:center;padding:22px 16px}
+.mic{width:116px;height:116px;border-radius:50%;background:var(--or);color:var(--ink);display:grid;place-items:center;margin:8px auto 14px;position:relative;transition:.2s}
+.mic .ico{width:50px;height:50px}
+.mic.on{background:var(--red);color:#fff;animation:rec 1.2s infinite}
+@keyframes rec{0%{box-shadow:0 0 0 0 rgba(217,48,44,.5)}100%{box-shadow:0 0 0 26px rgba(217,48,44,0)}}
+.timer{font-size:34px;font-weight:900;font-variant-numeric:tabular-nums}
+.wave{display:flex;align-items:center;justify-content:center;gap:3px;height:44px;margin:10px 0}
+.wave i{width:4px;border-radius:2px;background:#CFCDC6;height:var(--h)}
+.wave.live i{background:var(--red);animation:wv .7s ease-in-out infinite alternate;animation-delay:var(--d)}
+@keyframes wv{from{transform:scaleY(.25)}to{transform:scaleY(1)}}
+.wave i.on{background:var(--or)}
+.player{display:flex;align-items:center;gap:12px;background:#fff;border-radius:14px;padding:10px 14px}
+.player .play{width:42px;height:42px;border-radius:50%;background:var(--ink);color:#fff;display:grid;place-items:center;flex:none}
+.player .wave{margin:0;flex:1;justify-content:flex-start;height:32px}
+.player .wave i{width:3px}
+.player time{font-weight:800;font-variant-numeric:tabular-nums;font-size:13px;min-width:38px;text-align:right}
+.sum dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:8px 14px}
+.sum dt{color:var(--mute);font-weight:700}
+.sum dd{margin:0;font-weight:700;text-align:right}
+
+.status{border-radius:20px;padding:20px;background:#fff}
+.status.ok{background:var(--ink);color:#fff}
+.spin{width:44px;height:44px;border-radius:50%;border:5px solid var(--or-m);border-top-color:var(--or);animation:sp 1s linear infinite;margin-bottom:12px}
+@keyframes sp{to{transform:rotate(360deg)}}
+.eta{font-size:54px;font-weight:900;line-height:1;color:var(--or)}
+.eta small{font-size:18px;color:#fff;font-weight:800;margin-left:6px}
+.bar{height:8px;border-radius:4px;background:rgba(255,255,255,.18);overflow:hidden;margin-top:14px}
+.bar i{display:block;height:100%;background:var(--or);width:0;transition:width .3s linear}
+.tl{display:flex;flex-direction:column;gap:12px;margin-top:6px}
+.tl div{display:flex;gap:12px;align-items:flex-start;color:var(--mute);font-weight:700}
+.tl div b{width:22px;height:22px;border-radius:50%;background:var(--line);display:grid;place-items:center;flex:none;color:#fff;font-size:12px}
+.tl .d{color:var(--ink)} .tl .d b{background:var(--grn)}
+.tl .c{color:var(--ink)} .tl .c b{background:var(--or)}
+
+/* ---------- Karte ---------- */
+.map{line-height:0;border-radius:var(--r);overflow:hidden;background:#EDEBE6;position:relative}
+.map > svg{width:100%;height:100%;display:block}
+.map.tall > svg{height:min(62vh,540px);min-height:340px}
+.pin .ring{fill:rgba(255,122,0,.35);transform-box:fill-box;transform-origin:center;opacity:0}
+.pin .pb{fill:var(--or);stroke:#fff;stroke-width:2.5}
+.pin.act .pb{fill:var(--ink)} .pin.act .pw{fill:var(--or)} .pin.done .pb{fill:#9d9d98}
+.pin.new .ring{animation:ring 1.5s ease-out infinite}
+@keyframes ring{0%{transform:scale(.4);opacity:.9}100%{transform:scale(2.6);opacity:0}}
+.pin{cursor:pointer}
+.pin.sel .pb{stroke:var(--ink);stroke-width:3.5}
+.map-legend{position:absolute;left:10px;bottom:10px;display:flex;gap:8px;flex-wrap:wrap;font-size:12px;font-weight:800;line-height:1}
+.map-legend span{background:rgba(255,255,255,.94);padding:6px 9px;border-radius:8px;display:flex;align-items:center;gap:6px}
+.map-legend i{width:10px;height:10px;border-radius:50%;background:var(--or);display:block}
+.map-badge{position:absolute;right:10px;top:10px;background:var(--ink);color:#fff;padding:7px 11px;border-radius:9px;font-size:12px;font-weight:800;line-height:1;display:flex;gap:6px;align-items:center}
+
+/* ---------- Disponent ---------- */
+.disp{max-width:1500px;margin:0 auto;padding:16px;display:grid;gap:16px;grid-template-columns:1fr}
+@media(min-width:900px){.disp{grid-template-columns:350px minmax(0,1fr)}}
+.dmain{display:grid;gap:16px;grid-template-columns:minmax(0,1fr);align-content:start}
+@media(min-width:1280px){.dmain{grid-template-columns:minmax(0,1fr) 410px}.dmain .mapcol{position:sticky;top:84px;align-self:start}}
+.stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.stat{background:#fff;border-radius:12px;padding:12px;text-align:center}
+.stat b{display:block;font-size:26px;font-weight:900;line-height:1}
+.stat span{font-size:11px;font-weight:800;color:var(--mute);text-transform:uppercase;letter-spacing:.04em}
+.stat.hot b{color:var(--or-d)}
+.tabs{display:flex;gap:4px;padding:6px;background:#E8E6E0;border-radius:12px}
+.tabs button{flex:1;padding:9px 6px;border-radius:9px;font-weight:800;font-size:13px;color:var(--ink2)}
+.tabs button.on{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.tabs em{font-style:normal;background:var(--or);color:var(--ink);border-radius:999px;padding:1px 7px;margin-left:4px;font-size:12px}
+.orders{display:flex;flex-direction:column;gap:8px}
+.ord{background:#fff;border-radius:12px;padding:12px 14px;text-align:left;border:2px solid transparent;display:block;width:100%}
+.ord:hover{border-color:var(--or-m)}
+.ord.on{border-color:var(--or);background:var(--or-l)}
+.ord.fresh{box-shadow:0 0 0 3px rgba(255,122,0,.35)}
+.ord .r1{display:flex;justify-content:space-between;gap:8px;align-items:center}
+.ord b{font-weight:900}
+.ord .r2{margin:5px 0 7px;font-weight:700}
+.ord .r3{display:flex;gap:6px;flex-wrap:wrap}
+.empty{text-align:center;color:var(--mute);padding:26px 14px;font-weight:700}
+.fleet .row{display:flex;align-items:center;gap:12px;padding:10px 0;border-top:1px solid var(--line)}
+.fleet .row:first-of-type{border-top:0}
+.fleet .ti{width:54px;height:36px;border-radius:9px;background:var(--ink);color:#fff;display:grid;place-items:center;flex:none}
+.fleet .ti svg{width:42px;height:26px}
+.fleet .row.busy .ti{background:#a9a9a4}
+.fleet .nm{font-weight:900} .fleet small{color:var(--mute);font-weight:700;display:block}
+.fleet .row > div:nth-child(2){flex:1;min-width:0}
+.dh{padding:16px;border-bottom:1px solid var(--line);display:flex;gap:10px;justify-content:space-between;align-items:flex-start}
+.dh h2{font-size:22px;font-weight:900}
+.sec{padding:14px 16px;border-top:1px solid var(--line)}
+.sec:first-child{border-top:0}
+.sec .lbl{margin-bottom:8px;display:block}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.qa{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;margin:0}
+.qa dt{color:var(--mute);font-weight:700} .qa dd{margin:0;font-weight:800}
+.gal{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.gal button{aspect-ratio:1;border-radius:10px;overflow:hidden;background:#ddd;display:block}
+.gal img{width:100%;height:100%;object-fit:cover;display:block}
+.pick{display:flex;gap:12px;align-items:center;width:100%;text-align:left;padding:10px 12px;border:2px solid var(--line);border-radius:12px;margin-bottom:8px;background:#fff}
+.pick.on{border-color:var(--or);background:var(--or-l)}
+.pick .ti{width:54px;height:36px;border-radius:9px;background:var(--ink);color:#fff;display:grid;place-items:center;flex:none}
+.pick .ti svg{width:42px;height:26px}
+.pick .nm{font-weight:900} .pick small{display:block;color:var(--ink2);font-weight:700}
+.pick .go{margin-left:auto;text-align:right;font-weight:900;white-space:nowrap}
+.pick.off{opacity:.45;pointer-events:none}
+.acts{display:flex;gap:8px;padding:14px 16px;border-top:1px solid var(--line);background:#FAF9F6;border-radius:0 0 var(--r) var(--r)}
+.acts .btn{flex:1}
+.acts .btn.danger{flex:0 0 auto}
+
+/* ---------- Overlays ---------- */
+.ov{position:fixed;inset:0;background:rgba(20,20,18,.66);z-index:80;display:grid;place-items:center;padding:16px;animation:fade .2s}
+@keyframes fade{from{opacity:0}}
+.alert{background:#fff;border-radius:22px;width:100%;max-width:470px;overflow:hidden;box-shadow:0 20px 70px rgba(0,0,0,.5);animation:up .35s cubic-bezier(.2,1.3,.4,1)}
+@keyframes up{from{transform:translateY(40px) scale(.94);opacity:0}}
+.alert-h{background:var(--or);padding:18px 20px;display:flex;gap:14px;align-items:center}
+.alert-h .bell{width:54px;height:54px;border-radius:50%;background:var(--ink);color:var(--or);display:grid;place-items:center;animation:ringb .9s infinite}
+.alert-h .bell .ico{width:28px;height:28px}
+@keyframes ringb{0%,100%{transform:rotate(0)}15%{transform:rotate(16deg)}30%{transform:rotate(-14deg)}45%{transform:rotate(9deg)}60%{transform:rotate(-6deg)}}
+.alert-h b{font-size:20px;font-weight:900;text-transform:uppercase;letter-spacing:.02em;display:block;line-height:1.1}
+.alert-h small{font-weight:700;color:rgba(0,0,0,.7)}
+.alert-b{padding:18px 20px;display:flex;flex-direction:column;gap:12px}
+.lb img{max-width:min(94vw,900px);max-height:88vh;border-radius:14px;display:block}
+
+@media(max-width:560px){
+  .top-in{padding:8px 12px;gap:8px}
+  .logo small{display:none}
+  .seg{width:100%} .seg button{flex:1;justify-content:center;padding:10px 6px}
+  .drv-wrap{padding:0}
+  .phone{border-radius:0;box-shadow:none;min-height:calc(100vh - 118px)}
+}
+</style>
+</head>
+<body>
+
+<!-- ======= Icon-Sprite: Abschlepp-LKW ======= -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <!-- Abschleppwagen mit Kranarm -->
+  <symbol id="i-tow" viewBox="0 0 80 48">
+    <path d="M13 24 L37 5" stroke="currentColor" stroke-width="5.5" stroke-linecap="round"/>
+    <path d="M37 5 V19" stroke="currentColor" stroke-width="2"/>
+    <path d="M37 19 v4 a3 3 0 1 1 -3 -3" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+    <path d="M22 26 L30 14" stroke="currentColor" stroke-width="2.4"/>
+    <rect x="4" y="22" width="44" height="8" rx="2" fill="currentColor"/>
+    <path d="M50 12h12c2 0 3 1 4 3l8 12v7H50z" fill="currentColor"/>
+    <path d="M54.5 16h7l5.5 9H54.5z" fill="#fff" opacity=".92"/>
+    <rect x="53" y="7" width="9" height="4" rx="1.5" fill="#FFB300"/>
+    <rect x="2" y="29" width="76" height="6" rx="2" fill="currentColor"/>
+    <g fill="#2b2b29" stroke="#fff" stroke-width="1.6"><circle cx="17" cy="38" r="6.2"/><circle cx="31" cy="38" r="6.2"/><circle cx="62" cy="38" r="6.2"/></g>
+    <g fill="#bdbdb8"><circle cx="17" cy="38" r="2"/><circle cx="31" cy="38" r="2"/><circle cx="62" cy="38" r="2"/></g>
+  </symbol>
+  <!-- Plateau-/Bergungsfahrzeug mit geneigter Ladefläche -->
+  <symbol id="i-flat" viewBox="0 0 80 48">
+    <path d="M2 21 L46 27 V31 L2 31 Z" fill="currentColor"/>
+    <rect x="9" y="12" width="26" height="10" rx="2.5" fill="currentColor" opacity=".55" transform="rotate(7 22 17)"/>
+    <circle cx="14" cy="22" r="2.6" fill="#2b2b29" transform="rotate(7 22 17)"/><circle cx="30" cy="22.5" r="2.6" fill="#2b2b29" transform="rotate(7 22 17)"/>
+    <path d="M50 12h12c2 0 3 1 4 3l8 12v7H50z" fill="currentColor"/>
+    <path d="M54.5 16h7l5.5 9H54.5z" fill="#fff" opacity=".92"/>
+    <rect x="53" y="7" width="9" height="4" rx="1.5" fill="#FFB300"/>
+    <rect x="2" y="29" width="76" height="6" rx="2" fill="currentColor"/>
+    <g fill="#2b2b29" stroke="#fff" stroke-width="1.6"><circle cx="16" cy="38" r="6.2"/><circle cx="30" cy="38" r="6.2"/><circle cx="62" cy="38" r="6.2"/></g>
+    <g fill="#bdbdb8"><circle cx="16" cy="38" r="2"/><circle cx="30" cy="38" r="2"/><circle cx="62" cy="38" r="2"/></g>
+  </symbol>
+  <!-- Schwerlast-Bergefahrzeug mit großem Kran -->
+  <symbol id="i-heavy" viewBox="0 0 80 48">
+    <path d="M10 25 L30 3 L40 3" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <path d="M40 3 V17" stroke="currentColor" stroke-width="2"/>
+    <path d="M40 17 v4 a3 3 0 1 1 -3 -3" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+    <path d="M20 26 L27 15" stroke="currentColor" stroke-width="3"/>
+    <rect x="3" y="21" width="45" height="9" rx="2" fill="currentColor"/>
+    <rect x="10" y="26" width="6" height="8" fill="currentColor"/><rect x="32" y="26" width="6" height="8" fill="currentColor"/>
+    <path d="M50 11h12c2 0 3 1 4 3l8 12v8H50z" fill="currentColor"/>
+    <path d="M54.5 15h7l5.5 9H54.5z" fill="#fff" opacity=".92"/>
+    <rect x="53" y="6" width="9" height="4" rx="1.5" fill="#FFB300"/>
+    <rect x="2" y="29" width="76" height="6" rx="2" fill="currentColor"/>
+    <g fill="#2b2b29" stroke="#fff" stroke-width="1.6"><circle cx="12" cy="38" r="6.2"/><circle cx="25" cy="38" r="6.2"/><circle cx="38" cy="38" r="6.2"/><circle cx="63" cy="38" r="6.2"/></g>
+    <g fill="#bdbdb8"><circle cx="12" cy="38" r="2"/><circle cx="25" cy="38" r="2"/><circle cx="38" cy="38" r="2"/><circle cx="63" cy="38" r="2"/></g>
+  </symbol>
+</defs></svg>
+
+<div id="app"></div>
+
+<script>
+/* =====================================================================
+   TRUCK RESCUE – interaktiver Prototyp (Fahrer-Ansicht + Disponenten-Ansicht)
+   Alles läuft im Browser. Aufträge werden in localStorage gehalten – öffnet
+   man die Seite in zwei Tabs, kommt die Meldung live beim Disponenten an.
+   ===================================================================== */
+const $app = document.getElementById('app');
+const KEY = 'truckrescue.v1';
+const DEMO_MS = 40000;                 // Anfahrt im Demo-Zeitraffer (40 s)
+
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const pad2 = n => String(n).padStart(2, '0');
+const fmtT = ts => { const d = new Date(ts); return pad2(d.getHours()) + ':' + pad2(d.getMinutes()) + ' Uhr'; };
+const mmss = s => pad2(Math.floor(s / 60)) + ':' + pad2(Math.floor(s % 60));
+
+/* ---------- UI-Icons (Strich-Icons) ---------- */
+const P = {
+  mic:'<rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v4"/>',
+  cam:'<path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/>',
+  chk:'<path d="M4 12.5l5 5L20 6.5"/>',
+  warn:'<path d="M12 3l10 18H2z"/><path d="M12 10v5M12 18v.1"/>',
+  pin:'<path d="M12 22s7-6.5 7-12a7 7 0 0 0-14 0c0 5.5 7 12 7 12z"/><circle cx="12" cy="10" r="2.5"/>',
+  phone:'<path d="M5 3h4l2 5-2.5 1.5a11 11 0 0 0 6 6L16 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 5a2 2 0 0 1 2-2z"/>',
+  play:'<path d="M7 4l13 8-13 8z" fill="currentColor"/>',
+  pause:'<path d="M7 4v16M17 4v16" stroke-width="4"/>',
+  stop:'<rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor"/>',
+  x:'<path d="M6 6l12 12M18 6L6 18"/>',
+  bell:'<path d="M6 17V11a6 6 0 0 1 12 0v6l2 2H4z"/><path d="M10 21a2 2 0 0 0 4 0"/>',
+  plus:'<path d="M12 5v14M5 12h14"/>',
+  arrow:'<path d="M5 12h14M13 6l6 6-6 6"/>',
+  back:'<path d="M19 12H5M11 6l-6 6 6 6"/>',
+  clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  driver:'<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
+  desk:'<rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/>',
+  shield:'<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/>',
+  hazard:'<path d="M12 3l10 18H2z"/><path d="M12 9v6"/>',
+  crane:'<path d="M3 20h18M6 20V10l10-6v6M16 10v6"/>',
+  send:'<path d="M3 11l18-8-8 18-2-8z"/>',
+};
+const ic = (n, c = '') => `<svg class="ico ${c}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P[n]}</svg>`;
+const truckIc = (k, w = 42, h = 26) => `<svg viewBox="0 0 80 48" width="${w}" height="${h}" aria-hidden="true"><use href="#i-${k}"/></svg>`;
+
+/* ---------- Stammdaten ---------- */
+const VX = [100, 260, 420, 580, 720], HY = [90, 200, 310, 430];   // Straßenraster der Karte
+const TRUCKS = [
+  { id:'T1', name:'Bergung 1', kind:'heavy', typ:'Schwerlast-Kran', driver:'Stefan K.', x:260, y:430, where:'Depot Zentrale' },
+  { id:'T2', name:'Bergung 2', kind:'tow',   typ:'Abschleppwagen',  driver:'Murat A.',  x:100, y:310, where:'Stadtring West' },
+  { id:'T3', name:'Plateau 3', kind:'flat',  typ:'Bergeplateau',    driver:'Jana W.',   x:720, y:90,  where:'B27 Nordring', busy:'Im Einsatz (B27 Nordring)' },
+  { id:'T4', name:'Bergung 4', kind:'tow',   typ:'Abschleppwagen',  driver:'Peter L.',  x:420, y:90,  where:'Gewerbegebiet Nord' },
+];
+const LOCS = [
+  { x:580, y:150, name:'A7 Richtung Hamburg, km 142,3', sub:'Nähe Rastplatz Allertal' },
+  { x:420, y:260, name:'B27, Abfahrt Industriegebiet Nord', sub:'Höhe Tankstelle Aral' },
+  { x:720, y:370, name:'Ostring 8, Logistikpark Ost', sub:'Zufahrt Tor 3' },
+  { x:100, y:150, name:'Hafenstraße 12, Gewerbegebiet West', sub:'vor der Spedition Brandt' },
+  { x:580, y:370, name:'A7 Richtung München, km 139,8', sub:'Standstreifen, Pannenbucht' },
+];
+const VTYPES = ['Sattelzug', 'Lkw > 7,5 t', 'Kipper', 'Bus', 'Transporter'];
+const QS = [
+  { k:'type',  q:'Was ist passiert?', grid:true, o:[['auffahr','Auffahrunfall'],['seite','Seitenkollision'],['kipp','Fahrzeug umgekippt'],['abk','Von Fahrbahn abgekommen'],['tech','Technischer Defekt'],['reifen','Reifenschaden']] },
+  { k:'drive', q:'Ist das Fahrzeug noch fahrbereit?', o:[['ja','Ja'],['einge','Eingeschränkt'],['nein','Nein']] },
+  { k:'block', q:'Wird die Fahrbahn blockiert?', o:[['nein','Nein'],['teil','Teilweise'],['komplett','Komplett']] },
+  { k:'hurt',  q:'Sind Personen verletzt?', o:[['nein','Nein'],['unklar','Unklar'],['ja','Ja – 112 informiert']] },
+];
+const CARGO = [['gefahr','Gefahrgut'],['leck','Kraftstoff / Flüssigkeit läuft aus'],['lad','Ladung verrutscht / verloren'],['kuehl','Kühl- / Frischware']];
+const LAB = {};
+QS.forEach(q => q.o.forEach(([v, l]) => LAB[q.k + ':' + v] = l));
+CARGO.forEach(([v, l]) => LAB['cargo:' + v] = l);
+
+/* ---------- Datenhaltung ---------- */
+function seed() {
+  return { seq: 1040, orders: [{
+    id:'E-1039', ts: Date.now() - 3600e3 * 5, plate:'H-TR 4410', vtype:'Sattelzug', name:'Ali Demir', phone:'+49 171 5550192',
+    loc: LOCS[4], a:{ type:'tech', drive:'nein', block:'nein', hurt:'nein', cargo:[] }, photos:[], memo:{ sec:14, bars:bars() },
+    status:'erledigt', truckId:'T2', eta:19, acceptedAt: Date.now() - 3600e3 * 4, seen:true }] };
+}
+function bars() { return Array.from({ length: 34 }, () => 6 + Math.round(Math.random() * 24)); }
+function load() { try { const d = JSON.parse(localStorage.getItem(KEY)); if (d && d.orders) return d; } catch (e) {} return seed(); }
+function save() {
+  try { localStorage.setItem(KEY, JSON.stringify(DB)); }
+  catch (e) { DB.orders.forEach(o => { if (o.status === 'erledigt') o.photos = []; }); try { localStorage.setItem(KEY, JSON.stringify(DB)); } catch (e2) {} }
+}
+let DB = load();
+const getO = id => DB.orders.find(o => o.id === id);
+const getT = id => TRUCKS.find(t => t.id === id);
+
+let myId = null; try { myId = sessionStorage.getItem('tr.my'); } catch (e) {}
+const setMy = id => { myId = id; try { id ? sessionStorage.setItem('tr.my', id) : sessionStorage.removeItem('tr.my'); } catch (e) {} };
+const myOrder = () => myId && getO(myId);
+
+const newForm = () => ({ plate:'', vtype:'Sattelzug', name:'Max Mustermann', phone:'+49 170 1234567', loc: LOCS[0],
+  a:{ type:null, drive:null, block:null, hurt:null, cargo:[] }, photos:[], memo:null });
+const U = { view:'driver', step:0, form:newForm(), err:'', sel:null, tab:'neu', pick:null, rec:null, play:null, lb:null, beeped:new Set(), sig:'' };
+
+/* ---------- Auftrags-Logik ---------- */
+const prog = o => o.acceptedAt ? Math.max(0, Math.min(1, (Date.now() - o.acceptedAt) / DEMO_MS)) : 0;
+function phase(o) {
+  if (o.status === 'neu' || o.status === 'abgelehnt' || o.status === 'erledigt') return o.status;
+  return prog(o) >= 1 ? 'vorort' : 'unterwegs';
+}
+const active = o => ['unterwegs', 'vorort'].includes(phase(o));
+const truckBusy = t => !!t.busy || DB.orders.some(o => o.truckId === t.id && active(o));
+const prio = o => (o.a.hurt === 'ja' || o.a.block === 'komplett' || o.a.cargo.includes('gefahr') || o.a.cargo.includes('leck')) ? 'Dringend' : 'Standard';
+
+function routePts(o, t) {
+  const s = { x:t.x, y:t.y }, e = { x:o.loc.x, y:o.loc.y }, m = { x:e.x, y:s.y };
+  const pts = [s]; if (m.x !== s.x) pts.push(m); if (e.y !== m.y) pts.push(e);
+  return pts.length > 1 ? pts : [s, { x:s.x + 1, y:s.y }];
+}
+const routeLen = pts => pts.slice(1).reduce((a, p, i) => a + Math.abs(p.x - pts[i].x) + Math.abs(p.y - pts[i].y), 0);
+function posAt(pts, p) {
+  let d = routeLen(pts) * p, dx = 1;
+  for (let i = 1; i < pts.length; i++) {
+    const a = pts[i - 1], b = pts[i], l = Math.abs(b.x - a.x) + Math.abs(b.y - a.y);
+    if (b.x !== a.x) dx = Math.sign(b.x - a.x);
+    if (d <= l || i === pts.length - 1) { const f = l ? Math.min(1, d / l) : 1; return { x:a.x + (b.x - a.x) * f, y:a.y + (b.y - a.y) * f, dx }; }
+    d -= l;
+  }
+}
+const distKm = (o, t) => routeLen(routePts(o, t)) / 20;
+const etaMin = (o, t) => Math.max(6, Math.round(distKm(o, t) * 1.15));
+const freeTrucks = o => TRUCKS.filter(t => !truckBusy(t)).sort((a, b) => distKm(o, a) - distKm(o, b));
+
+/* ---------- Karte ---------- */
+let BASE = '';
+function baseMap() {
+  if (BASE) return BASE;
+  const xs = [0, ...VX, 800], ys = [0, ...HY, 520];
+  let s = '<rect width="800" height="520" fill="#EDEBE6"/>';
+  for (let i = 0; i < xs.length - 1; i++) for (let j = 0; j < ys.length - 1; j++) {
+    const h = (i * 7 + j * 5) % 6, fill = h === 0 ? '#CFE3C0' : (h === 3 ? '#DAD7CE' : ((i + j) % 2 ? '#E4E1DA' : '#E9E6DF'));
+    s += `<rect x="${xs[i] + 12}" y="${ys[j] + 12}" width="${xs[i + 1] - xs[i] - 24}" height="${ys[j + 1] - ys[j] - 24}" rx="7" fill="${fill}"/>`;
+  }
+  s += '<path d="M-10 372 C150 340 260 488 470 478 S740 392 820 410" fill="none" stroke="#C4DEEE" stroke-width="34" stroke-linecap="round"/>';
+  HY.forEach(y => s += `<line x1="0" y1="${y}" x2="800" y2="${y}" stroke="#fff" stroke-width="13"/>`);
+  VX.forEach(x => { if (x !== 580) s += `<line x1="${x}" y1="0" x2="${x}" y2="520" stroke="#fff" stroke-width="13"/>`; });
+  s += '<line x1="580" y1="0" x2="580" y2="520" stroke="#E0A25A" stroke-width="25"/><line x1="580" y1="0" x2="580" y2="520" stroke="#FFC684" stroke-width="20"/><line x1="580" y1="0" x2="580" y2="520" stroke="#fff" stroke-width="2" stroke-dasharray="14 12"/>';
+  s += '<rect x="560" y="236" width="40" height="22" rx="5" fill="#1D1D1B"/><text x="580" y="252" text-anchor="middle" font-size="14" font-weight="900" fill="#FF7A00" font-family="Arial,sans-serif">A7</text>';
+  s += '<rect x="30" y="188" width="44" height="22" rx="5" fill="#2765C9"/><text x="52" y="204" text-anchor="middle" font-size="13" font-weight="900" fill="#fff" font-family="Arial,sans-serif">B27</text>';
+  s += '<g font-family="Arial,sans-serif" font-size="12" font-weight="700" fill="#9A978E" letter-spacing="1.2"><text x="318" y="262" text-anchor="middle">INNENSTADT</text><text x="64" y="66">HAFEN</text><text x="640" y="66">NORD</text><text x="640" y="486">LOGISTIKPARK</text><text x="140" y="500">WESTERBACH</text></g>';
+  s += '<rect x="244" y="414" width="32" height="32" rx="7" fill="#1D1D1B"/><path d="M251 436v-10l9-6 9 6v10z" fill="#FF7A00"/>';
+  return BASE = s;
+}
+function pinG(o, cls, extra = '') {
+  return `<g class="pin ${cls}" transform="translate(${o.loc.x},${o.loc.y}) scale(${cls.includes('sel') ? 1.3 : 1})" ${extra}>
+    <circle class="ring" r="18"/><path class="pb" d="M0 0C-12-15-17-24-17-31a17 17 0 1 1 34 0C17-24 12-15 0 0z"/>
+    <g class="pw" fill="#fff"><path d="M0-40l9 15.5h-18z"/></g><rect x="-1.3" y="-36" width="2.6" height="6.5" fill="#1D1D1B"/><circle cy="-26.8" r="1.5" fill="#1D1D1B"/></g>`;
+}
+function truckG(t, extra = '', label = '', busy = false, x = t.x, y = t.y) {
+  return `<g ${extra} transform="translate(${x},${y})"><circle r="19" fill="${busy ? '#8f8f8a' : '#1D1D1B'}" stroke="#fff" stroke-width="3.5"/>
+    <g class="flip"><use href="#i-${t.kind}" x="-14" y="-9" width="28" height="17" style="color:#fff"/></g>
+    ${label ? `<text y="34" text-anchor="middle" font-family="Arial,sans-serif" font-size="12" font-weight="800" fill="#1D1D1B" stroke="#fff" stroke-width="3" paint-order="stroke">${esc(label)}</text>` : ''}</g>`;
+}
+function mapSVG({ vb = '0 0 800 520', orders = [], fleet = false, sel = null, preview = null } = {}) {
+  let s = baseMap(), top = '', trucks = '';
+  const line = (pts, dash) => `<polyline points="${pts.map(p => p.x + ',' + p.y).join(' ')}" fill="none" stroke="#fff" stroke-width="${dash ? 9 : 11}" stroke-linejoin="round" stroke-linecap="round"/><polyline points="${pts.map(p => p.x + ',' + p.y).join(' ')}" fill="none" stroke="${dash ? '#1D1D1B' : '#FF7A00'}" stroke-width="5" stroke-linejoin="round" stroke-linecap="round" ${dash ? 'stroke-dasharray="2 11"' : ''}/>`;
+  const movingIds = new Set();
+  orders.forEach(o => {
+    const ph = phase(o), t = getT(o.truckId);
+    if (t && (ph === 'unterwegs' || ph === 'vorort')) {
+      const pts = routePts(o, t); s += line(pts, false); movingIds.add(t.id);
+      const pt = posAt(pts, prog(o));
+      trucks += truckG(t, `data-mv="${o.id}"`, t.name, false, pt.x, pt.y);
+    }
+  });
+  if (preview) s += line(routePts(preview.o, preview.t), true);
+  if (fleet) TRUCKS.filter(t => !movingIds.has(t.id)).forEach(t => trucks += truckG(t, '', t.name, truckBusy(t)));
+  orders.forEach(o => {
+    const ph = phase(o); if (ph === 'abgelehnt') return;
+    const cls = (ph === 'neu' ? 'new' : ph === 'erledigt' ? 'done' : 'act') + (o.id === sel ? ' sel' : '');
+    top += pinG(o, cls, `data-act="sel" data-id="${o.id}"`);
+  });
+  return `<svg viewBox="${vb}" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Karte">${s}${top}${trucks}</svg>`;
+}
+const miniVb = loc => { const w = 360, h = 190, x = Math.max(0, Math.min(800 - w, loc.x - w / 2)), y = Math.max(0, Math.min(520 - h, loc.y - h / 2 - 12)); return `${x} ${y} ${w} ${h}`; };
+
+/* ---------- Kopfzeile ---------- */
+const unseen = () => DB.orders.filter(o => o.status === 'neu' && !o.seen).length;
+function header() {
+  const n = unseen();
+  return `<header class="top"><div class="top-in">
+    <div class="logo"><div class="logo-mark"><svg viewBox="0 0 80 48"><use href="#i-tow"/></svg></div><div><b>Truck Rescue</b><small>Pannen- &amp; Bergungsdienst für LKW</small></div></div>
+    <nav class="seg" aria-label="Profil wechseln">
+      <button class="${U.view === 'driver' ? 'on' : ''}" data-act="view" data-v="driver">${ic('driver')} Fahrer</button>
+      <button class="${U.view === 'dispatch' ? 'on' : ''}" data-act="view" data-v="dispatch">${ic('desk')} Disponent${n ? `<span class="badge">${n}</span>` : ''}</button>
+    </nav></div></header>`;
+}
+
+/* ---------- Fahrer-Ansicht ---------- */
+const STEPS = ['Fahrzeug', 'Hergang', 'Fotos', 'Sprache', 'Senden'];
+function playerHTML(key, memo) {
+  const playing = U.play && U.play.key === key;
+  return `<div class="player"><button class="play" data-act="play" data-key="${key}" data-sec="${memo.sec}" aria-label="Abspielen">${ic(playing ? 'pause' : 'play')}</button>
+    <div class="wave" data-wave="${key}">${memo.bars.map((h, i) => `<i style="--h:${h}px" data-i="${i}"></i>`).join('')}</div>
+    <time data-playt="${key}">${mmss(memo.sec)}</time></div>`;
+}
+function driverView() {
+  const o = myOrder();
+  const body = o ? trackView(o) : wizard();
+  return `<div class="drv-wrap"><div class="phone">
+    <div class="phone-bar">${ic('driver')} Fahrer-App <small>${o ? 'Meldung ' + o.id : 'Neue Meldung'}</small></div>${body}</div></div>`;
+}
+function wizard() {
+  const f = U.form, st = U.step;
+  if (st === 0) return `<div class="phone-body">
+    <div class="hero"><svg class="bg-truck" viewBox="0 0 80 48"><use href="#i-heavy"/></svg>
+      <h1>Unfall oder<br>Panne mit dem <em>LKW?</em></h1><p>Wir schicken den nächsten Bergungs-LKW. Melde in 2 Minuten, was passiert ist.</p>
+      <button class="btn pri big" data-act="start">${ic('warn')} Hilfe anfordern</button></div>
+    <div class="card"><div class="locbox">${ic('pin')}<div><div class="lbl">Dein Standort</div><b>${esc(f.loc.name)}</b><div class="muted">${esc(f.loc.sub)}</div></div></div>
+      <div class="minimap">${mapSVG({ vb: miniVb(f.loc), orders: [{ id:'x', loc:f.loc, status:'neu', a:{ cargo:[] } }] })}</div></div>
+    <div class="tiles"><div class="tile">${ic('clock')}24/7 Einsatz</div><div class="tile">${ic('shield')}Gefahrgut-geschult</div><div class="tile">${ic('crane')}Schwerlast-Bergung</div></div>
+    <div class="err" style="background:#FFF6DD;color:#7A5A00">${ic('warn')} Bei Verletzten zuerst den Notruf 112 wählen.</div></div>`;
+
+  const stepper = `<div class="steps">${STEPS.map((s, i) => `<div class="${i + 1 < st ? 'done' : i + 1 === st ? 'cur' : ''}"><i></i>${s}</div>`).join('')}</div>`;
+  const err = U.err ? `<div class="err">${ic('warn')} ${esc(U.err)}</div>` : '';
+  let c = '';
+  if (st === 1) c = `<div><h2 class="h2">Fahrzeug &amp; Standort</h2><p class="sub">Wir haben deinen Standort automatisch erkannt.</p></div>
+    <div class="card"><div class="locbox">${ic('pin')}<div style="flex:1"><div class="lbl">Standort erkannt</div><b>${esc(f.loc.name)}</b><div class="muted">${esc(f.loc.sub)}</div></div><button class="btn ghost" style="min-height:40px;padding:8px 12px" data-act="reloc">Neu</button></div>
+      <div class="minimap">${mapSVG({ vb: miniVb(f.loc), orders: [{ id:'x', loc:f.loc, status:'neu', a:{ cargo:[] } }] })}</div></div>
+    <label class="field"><span>Kennzeichen</span><input class="plate" data-bind="plate" value="${esc(f.plate)}" placeholder="z. B. H-AB 1234" autocomplete="off" maxlength="12"></label>
+    <div><div class="lbl">Fahrzeugtyp</div><div class="opts">${VTYPES.map(v => `<button class="opt ${f.vtype === v ? 'on' : ''}" data-act="vt" data-v="${esc(v)}">${esc(v)}</button>`).join('')}</div></div>
+    <label class="field"><span>Telefon für Rückfragen</span><input data-bind="phone" value="${esc(f.phone)}" inputmode="tel"></label>`;
+  if (st === 2) c = `<div><h2 class="h2">Was ist passiert?</h2><p class="sub">Ein paar kurze Fragen – tippe einfach die passende Antwort.</p></div>
+    ${QS.map((q, i) => `<div class="q"><h3><span class="n">${i + 1}</span>${q.q}</h3><div class="${q.grid ? 'opt-grid' : 'opts'}">${q.o.map(([v, l]) => `<button class="opt ${f.a[q.k] === v ? 'on' : ''}" data-act="q" data-k="${q.k}" data-v="${v}">${l}</button>`).join('')}</div></div>`).join('')}
+    <div class="q"><h3><span class="n">5</span>Besonderheiten <span class="muted" style="font-weight:600">(Mehrfachauswahl)</span></h3><div class="opt-grid">${CARGO.map(([v, l]) => `<button class="opt multi ${f.a.cargo.includes(v) ? 'on' : ''}" data-act="cargo" data-v="${v}">${l}</button>`).join('')}</div></div>`;
+  if (st === 3) c = `<div><h2 class="h2">Fotos hinzufügen</h2><p class="sub">Je mehr der Disponent sieht, desto schneller kommt das richtige Fahrzeug.</p></div>
+    <label class="drop">${ic('cam')}Foto aufnehmen oder hochladen<small style="display:block;font-weight:600;color:var(--ink2);margin-top:2px">Mehrere Bilder möglich</small><input type="file" id="photoIn" accept="image/*" multiple capture="environment"></label>
+    <div class="hints">${['Gesamtansicht', 'Schaden', 'Kennzeichen', 'Umgebung / Fahrbahn'].map(h => `<span class="chip">${h}</span>`).join('')}</div>
+    ${f.photos.length ? `<div class="thumbs">${f.photos.map((p, i) => `<div class="thumb"><img src="${p}" alt="Foto ${i + 1}"><button data-act="rmPhoto" data-i="${i}" aria-label="Foto entfernen">${ic('x')}</button></div>`).join('')}</div>` : ''}
+    <button class="btn ghost" data-act="demoPhoto">${ic('plus')} Beispielfoto einfügen (Demo)</button>`;
+  if (st === 4) {
+    const rec = U.rec;
+    c = `<div><h2 class="h2">Sprachmemo</h2><p class="sub">Erkläre kurz, was passiert ist. Das hilft der Disposition enorm.</p></div>
+    <div class="card rec"><button class="mic ${rec ? 'on' : ''}" data-act="rec" aria-label="Aufnahme starten/stoppen">${ic(rec ? 'stop' : 'mic')}</button>
+      <div class="timer" id="recT">${mmss(rec ? rec.sec : f.memo ? f.memo.sec : 0)}</div>
+      <div class="wave ${rec ? 'live' : ''}">${Array.from({ length: 30 }, (_, i) => `<i style="--h:${8 + (i * 7) % 30}px;--d:${(i % 9) * -.09}s"></i>`).join('')}</div>
+      <div class="muted" style="font-weight:700">${rec ? 'Aufnahme läuft … zum Beenden tippen' : f.memo ? 'Aufnahme gespeichert' : 'Zum Aufnehmen tippen'}</div></div>
+    ${f.memo ? playerHTML('draft', f.memo) + `<button class="btn danger" data-act="memoDel">${ic('x')} Aufnahme löschen</button>` : ''}
+    <div class="muted" style="font-size:13px;text-align:center">Demo-Hinweis: Die Aufnahme wird nur simuliert – es wird noch kein Ton gespeichert.</div>`;
+  }
+  if (st === 5) c = `<div><h2 class="h2">Alles korrekt?</h2><p class="sub">Prüfe deine Angaben und sende die Meldung an den Disponenten.</p></div>
+    <div class="card pad sum"><dl>
+      <dt>Standort</dt><dd>${esc(f.loc.name)}</dd><dt>Fahrzeug</dt><dd>${esc(f.vtype)} · ${esc(f.plate)}</dd>
+      ${QS.map(q => `<dt>${q.q.replace('?', '')}</dt><dd>${LAB[q.k + ':' + f.a[q.k]]}</dd>`).join('')}
+      <dt>Besonderheiten</dt><dd>${f.a.cargo.length ? f.a.cargo.map(v => LAB['cargo:' + v]).join(', ') : 'keine'}</dd>
+      <dt>Fotos</dt><dd>${f.photos.length}</dd><dt>Sprachmemo</dt><dd>${f.memo ? mmss(f.memo.sec) + ' min' : 'keins'}</dd></dl></div>
+    ${f.photos.length ? `<div class="thumbs">${f.photos.slice(0, 6).map(p => `<div class="thumb"><img src="${p}" alt=""></div>`).join('')}</div>` : ''}`;
+  return `<div class="phone-body">${stepper}${err}${c}</div>
+    <div class="phone-foot"><button class="btn ghost" data-act="back">${ic('back')}</button>
+      ${st < 5 ? `<button class="btn pri" data-act="next">Weiter ${ic('arrow')}</button>` : `<button class="btn pri" data-act="send">${ic('send')} Notruf senden</button>`}</div>`;
+}
+function trackView(o) {
+  const ph = phase(o), t = getT(o.truckId), p = prog(o);
+  const tl = (done, cur, txt) => `<div class="${done ? 'd' : cur ? 'c' : ''}"><b>${done ? '✓' : ''}</b>${txt}</div>`;
+  let st;
+  if (ph === 'neu') st = `<div class="status"><div class="spin"></div><h2 class="h2">Meldung gesendet</h2><p class="sub">Der Disponent prüft deine Angaben und weist ein Fahrzeug zu. Bitte bleibe bei deinem Fahrzeug und sichere die Unfallstelle.</p></div>`;
+  else if (ph === 'abgelehnt') st = `<div class="status"><h2 class="h2">Leider kein Fahrzeug frei</h2><p class="sub">Die Disposition konnte deinen Auftrag nicht annehmen. Bitte ruf direkt an – wir suchen eine Alternative.</p><button class="btn pri" style="margin-top:14px;width:100%">${ic('phone')} Disposition anrufen</button></div>`;
+  else if (ph === 'erledigt') st = `<div class="status"><h2 class="h2">Einsatz abgeschlossen</h2><p class="sub">Danke! Gute und sichere Fahrt weiterhin.</p></div>`;
+  else st = `<div class="status ok"><div class="lbl" style="color:var(--or)">${ph === 'vorort' ? 'Hilfe ist da' : 'Hilfe ist unterwegs'}</div>
+      <div style="display:flex;align-items:center;gap:14px;margin:12px 0"><div class="ti" style="width:64px;height:42px;border-radius:10px;background:#fff;color:var(--ink);display:grid;place-items:center">${truckIc(t.kind, 52, 32)}</div>
+      <div><b style="font-size:18px">${t.name}</b><div style="color:#bbb">${t.typ} · ${t.driver}</div></div></div>
+      ${ph === 'vorort' ? `<div class="eta" style="font-size:34px">Ist vor Ort</div>` : `<div class="eta"><span data-eta="${o.id}">${Math.max(1, Math.ceil(o.eta * (1 - p)))}</span><small>Min. bis zur Ankunft</small></div>`}
+      <div class="bar"><i data-prog="${o.id}" style="width:${p * 100}%"></i></div>
+      <button class="btn pri" style="margin-top:16px;width:100%">${ic('phone')} ${t.driver} anrufen</button></div>`;
+  const acc = ph !== 'neu' && ph !== 'abgelehnt';
+  return `<div class="phone-body">${st}
+    ${acc ? `<div class="map" style="height:230px">${mapSVG({ orders:[o], sel:o.id, vb:'0 0 800 520' })}</div>` : ''}
+    <div class="card pad"><div class="lbl" style="margin-bottom:10px">Status deiner Meldung ${o.id}</div><div class="tl">
+      ${tl(true, false, 'Meldung gesendet · ' + fmtT(o.ts))}
+      ${tl(acc || ph === 'erledigt', ph === 'neu', 'Vom Disponenten angenommen')}
+      ${tl(ph === 'vorort' || ph === 'erledigt', ph === 'unterwegs', 'Bergungs-LKW unterwegs')}
+      ${tl(ph === 'erledigt', ph === 'vorort', 'Bergung vor Ort')}</div></div>
+    <button class="btn ghost" data-act="newReport">${ic('plus')} Neue Meldung erstellen</button></div>`;
+}
+
+/* ---------- Disponenten-Ansicht ---------- */
+function dispatchView() {
+  const all = DB.orders.slice().sort((a, b) => b.ts - a.ts);
+  const grp = { neu: all.filter(o => o.status === 'neu'), aktiv: all.filter(active), erledigt: all.filter(o => ['erledigt', 'abgelehnt'].includes(o.status)) };
+  if (!U.sel || !getO(U.sel)) U.sel = (grp.neu[0] || grp.aktiv[0] || all[0] || {}).id || null;
+  const list = grp[U.tab];
+  const free = TRUCKS.filter(t => !truckBusy(t)).length;
+  const sel = getO(U.sel);
+  return `<main class="disp"><aside style="display:flex;flex-direction:column;gap:12px">
+      <div class="stats"><div class="stat ${grp.neu.length ? 'hot' : ''}"><b>${grp.neu.length}</b><span>Neu</span></div><div class="stat"><b>${grp.aktiv.length}</b><span>Aktiv</span></div><div class="stat"><b>${free}/${TRUCKS.length}</b><span>Frei</span></div></div>
+      <div class="tabs">${[['neu', 'Neu'], ['aktiv', 'Aktiv'], ['erledigt', 'Archiv']].map(([k, l]) => `<button class="${U.tab === k ? 'on' : ''}" data-act="tab" data-v="${k}">${l}${grp[k].length && k !== 'erledigt' ? `<em>${grp[k].length}</em>` : ''}</button>`).join('')}</div>
+      <div class="orders">${list.length ? list.map(ordRow).join('') : `<div class="card empty">Keine Aufträge in dieser Liste.</div>`}</div>
+      <button class="btn ghost" data-act="simulate">${ic('bell')} Demo-Meldung simulieren</button>
+      <div class="card pad fleet"><div class="lbl" style="margin-bottom:6px">Fuhrpark</div>${TRUCKS.map(t => { const b = truckBusy(t); return `<div class="row ${b ? 'busy' : ''}"><div class="ti">${truckIc(t.kind)}</div><div><span class="nm">${t.name}</span><small>${t.typ} · ${t.driver}</small></div><span class="chip ${b ? '' : 'grn'}">${b ? 'Einsatz' : 'Frei'}</span></div>`; }).join('')}</div>
+    </aside>
+    <section class="dmain"><div class="mapcol"><div class="map tall">${mapSVG({ orders: DB.orders, fleet: true, sel: U.sel, preview: previewFor(sel) })}
+        <div class="map-badge">${ic('pin')} Live-Karte · Einsatzgebiet Hannover</div>
+        <div class="map-legend"><span><i></i>Neue Meldung</span><span><i style="background:#1D1D1B"></i>Aktiver Einsatz</span><span><i style="background:#9d9d98"></i>Erledigt</span></div></div></div>
+      <div>${sel ? detail(sel) : `<div class="card empty">Wähle einen Auftrag, um Details zu sehen.</div>`}</div></section></main>`;
+}
+function previewFor(o) {
+  if (!o || o.status !== 'neu') return null;
+  const t = getT(U.pick) && !truckBusy(getT(U.pick)) ? getT(U.pick) : freeTrucks(o)[0];
+  return t ? { o, t } : null;
+}
+const stChip = o => { const p = phase(o); return { neu:'<span class="chip or">Neu</span>', unterwegs:'<span class="chip dark">Unterwegs</span>', vorort:'<span class="chip grn">Vor Ort</span>', erledigt:'<span class="chip">Erledigt</span>', abgelehnt:'<span class="chip red">Abgelehnt</span>' }[p]; };
+function ordRow(o) {
+  return `<button class="ord ${o.id === U.sel ? 'on' : ''} ${o.status === 'neu' && !o.seen ? 'fresh' : ''}" data-act="sel" data-id="${o.id}">
+    <div class="r1"><b>${o.id}</b><span class="muted" style="font-weight:700;font-size:13px">${fmtT(o.ts)}</span></div>
+    <div class="r2">${esc(o.loc.name)}</div>
+    <div class="r3">${stChip(o)}<span class="chip ${prio(o) === 'Dringend' ? 'red' : ''}">${prio(o)}</span><span class="chip">${esc(o.vtype)}</span></div></button>`;
+}
+function detail(o) {
+  const ph = phase(o), t = getT(o.truckId);
+  const free = freeTrucks(o);
+  if (ph === 'neu' && !(getT(U.pick) && free.includes(getT(U.pick)))) U.pick = free[0] ? free[0].id : null;
+  const cargo = o.a.cargo.length ? o.a.cargo.map(v => `<span class="chip red">${LAB['cargo:' + v]}</span>`).join('') : '<span class="chip">keine</span>';
+  let tr = '';
+  if (ph === 'neu') tr = `<div class="sec"><span class="lbl">Fahrzeug zuweisen</span>${TRUCKS.map(x => { const b = truckBusy(x); return `<button class="pick ${U.pick === x.id ? 'on' : ''} ${b ? 'off' : ''}" data-act="pick" data-id="${x.id}"><div class="ti">${truckIc(x.kind)}</div><div><span class="nm">${x.name}</span><small>${x.typ} · ${b ? (x.busy || 'Im Einsatz') : x.where}</small></div><div class="go">${b ? '–' : `${distKm(o, x).toFixed(0)} km<small>${etaMin(o, x)} Min.</small>`}</div></button>`; }).join('')}</div>`;
+  else if (t) tr = `<div class="sec"><span class="lbl">Zugewiesenes Fahrzeug</span><div class="pick on" style="margin:0"><div class="ti">${truckIc(t.kind)}</div><div><span class="nm">${t.name}</span><small>${t.typ} · ${t.driver}</small></div><div class="go">${ph === 'unterwegs' ? `<span data-eta="${o.id}">${Math.max(1, Math.ceil(o.eta * (1 - prog(o))))}</span> Min.` : ph === 'vorort' ? 'Vor Ort' : 'Fertig'}</div></div></div>`;
+  let acts = '';
+  if (ph === 'neu') acts = `<div class="acts"><button class="btn danger" data-act="reject" data-id="${o.id}">Ablehnen</button><button class="btn grn" data-act="accept" data-id="${o.id}" ${U.pick ? '' : 'disabled'}>${ic('chk')} Auftrag annehmen</button></div>`;
+  else if (ph === 'unterwegs' || ph === 'vorort') acts = `<div class="acts"><button class="btn dark" data-act="finish" data-id="${o.id}">${ic('chk')} Einsatz abschließen</button></div>`;
+  return `<div class="card"><div class="dh"><div><div class="lbl">Auftrag</div><h2>${o.id}</h2><div class="muted" style="font-weight:700">Eingegangen ${fmtT(o.ts)}</div></div><div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">${stChip(o)}<span class="chip ${prio(o) === 'Dringend' ? 'red' : ''}">${ic('warn')} ${prio(o)}</span></div></div>
+    <div class="sec"><span class="lbl">Einsatzort</span><b style="font-size:17px">${esc(o.loc.name)}</b><div class="muted">${esc(o.loc.sub)}</div></div>
+    <div class="sec"><span class="lbl">Fahrzeug &amp; Fahrer</span><dl class="qa"><dt>Typ</dt><dd>${esc(o.vtype)}</dd><dt>Kennzeichen</dt><dd class="plate">${esc(o.plate || '–')}</dd><dt>Fahrer</dt><dd>${esc(o.name)}</dd><dt>Telefon</dt><dd>${esc(o.phone)}</dd></dl></div>
+    <div class="sec"><span class="lbl">Unfallhergang (Fahrer-Angaben)</span><dl class="qa"><dt>Ereignis</dt><dd>${LAB['type:' + o.a.type]}</dd><dt>Fahrbereit</dt><dd>${LAB['drive:' + o.a.drive]}</dd><dt>Fahrbahn blockiert</dt><dd>${LAB['block:' + o.a.block]}</dd><dt>Verletzte</dt><dd>${LAB['hurt:' + o.a.hurt]}</dd></dl><div class="chips" style="margin-top:10px">${cargo}</div></div>
+    <div class="sec"><span class="lbl">Fotos (${o.photos.length})</span>${o.photos.length ? `<div class="gal">${o.photos.map((p, i) => `<button data-act="zoom" data-id="${o.id}" data-i="${i}"><img src="${p}" alt="Foto ${i + 1}"></button>`).join('')}</div>` : '<span class="muted">Keine Fotos übermittelt.</span>'}</div>
+    <div class="sec"><span class="lbl">Sprachmemo</span>${o.memo ? playerHTML('o' + o.id, o.memo) : '<span class="muted">Kein Sprachmemo übermittelt.</span>'}</div>
+    ${tr}${acts}</div>`;
+}
+function overlays() {
+  let h = '';
+  if (U.view === 'dispatch') {
+    const a = DB.orders.find(o => o.status === 'neu' && !o.seen);
+    if (a) {
+      if (!U.beeped.has(a.id)) { U.beeped.add(a.id); beep(); }
+      const near = freeTrucks(a)[0];
+      h += `<div class="ov"><div class="alert"><div class="alert-h"><div class="bell">${ic('bell')}</div><div><b>Neuer Einsatz eingegangen</b><small>${a.id} · ${fmtT(a.ts)} · ${prio(a)}</small></div></div>
+        <div class="alert-b"><div><b style="font-size:18px">${esc(a.loc.name)}</b><div class="muted">${esc(a.loc.sub)}</div></div>
+        <div class="chips"><span class="chip dark">${esc(a.vtype)}</span><span class="chip">${LAB['type:' + a.a.type]}</span><span class="chip ${a.a.block !== 'nein' ? 'red' : ''}">Fahrbahn: ${LAB['block:' + a.a.block]}</span><span class="chip ${a.a.hurt === 'ja' ? 'red' : ''}">Verletzte: ${LAB['hurt:' + a.a.hurt]}</span></div>
+        <div class="muted" style="font-weight:700">${a.photos.length} Foto(s)${a.memo ? ' · Sprachmemo ' + mmss(a.memo.sec) : ''}${near ? ` · nächstes Fahrzeug: ${near.name} (${etaMin(a, near)} Min.)` : ''}</div>
+        <div style="display:flex;gap:8px"><button class="btn ghost" style="flex:1" data-act="alertView" data-id="${a.id}">Details ansehen</button>${near ? `<button class="btn grn" style="flex:1" data-act="alertAccept" data-id="${a.id}">${ic('chk')} Annehmen</button>` : ''}</div></div></div></div>`;
+    }
+  }
+  if (U.lb) h += `<div class="ov lb" data-act="unzoom"><img src="${U.lb}" alt="Foto"></div>`;
+  return h;
+}
+function beep() {
+  try {
+    const c = new (window.AudioContext || window.webkitAudioContext)(); let t = c.currentTime;
+    [880, 660, 880, 660].forEach(f => { const o = c.createOscillator(), g = c.createGain(); o.frequency.value = f; o.type = 'sine'; g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(.25, t + .02); g.gain.exponentialRampToValueAtTime(.0001, t + .22); o.connect(g).connect(c.destination); o.start(t); o.stop(t + .24); t += .26; });
+  } catch (e) {}
+}
+
+/* ---------- Rendern ---------- */
+const sigNow = () => DB.orders.map(o => o.id + phase(o)).join('|');
+function render() {
+  const keepY = window.scrollY;
+  $app.innerHTML = header() + (U.view === 'driver' ? driverView() : dispatchView()) + overlays();
+  U.sig = sigNow();
+  window.scrollTo(0, keepY);
+}
+
+/* ---------- Aktionen ---------- */
+function resizeImg(file) {
+  return new Promise(res => {
+    const r = new FileReader();
+    r.onload = () => { const im = new Image(); im.onload = () => {
+      const k = Math.min(1, 560 / Math.max(im.width, im.height)), c = document.createElement('canvas');
+      c.width = Math.round(im.width * k); c.height = Math.round(im.height * k); c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
+      res(c.toDataURL('image/jpeg', .7)); }; im.onerror = () => res(null); im.src = r.result; };
+    r.onerror = () => res(null); r.readAsDataURL(file);
+  });
+}
+function demoPhoto(n) {
+  const c = document.createElement('canvas'); c.width = 560; c.height = 400; const g = c.getContext('2d');
+  const sky = g.createLinearGradient(0, 0, 0, 260); sky.addColorStop(0, ['#9FC4E8', '#C9B8E0', '#F2B98A'][n % 3]); sky.addColorStop(1, '#EFE8DC');
+  g.fillStyle = sky; g.fillRect(0, 0, 560, 400); g.fillStyle = '#7C9A62'; g.fillRect(0, 240, 560, 60);
+  g.fillStyle = '#55555A'; g.fillRect(0, 290, 560, 110); g.fillStyle = '#fff'; for (let x = 10; x < 560; x += 90) g.fillRect(x, 345, 50, 6);
+  g.save(); g.translate(290, 270); g.rotate((n % 2 ? -1 : 1) * (.1 + (n % 3) * .12));
+  g.fillStyle = '#F4F4F2'; g.fillRect(-190, -90, 240, 100); g.fillStyle = '#FF7A00'; g.fillRect(-190, -90, 240, 14);
+  g.fillStyle = '#E26500'; g.fillRect(55, -60, 95, 70); g.fillStyle = '#BFD8EE'; g.fillRect(110, -52, 34, 26);
+  g.fillStyle = '#222'; [-150, -100, 85, 125].forEach(x => { g.beginPath(); g.arc(x, 18, 20, 0, 7); g.fill(); }); g.restore();
+  g.fillStyle = 'rgba(0,0,0,.55)'; g.fillRect(0, 370, 560, 30); g.fillStyle = '#fff'; g.font = '700 15px Arial'; g.fillText('Beispielfoto ' + (n + 1) + ' – Demo', 14, 390);
+  return c.toDataURL('image/jpeg', .7);
+}
+const A = {
+  view: d => { U.view = d.v; render(); window.scrollTo(0, 0); },
+  start: () => { U.step = 1; U.err = ''; render(); window.scrollTo(0, 0); },
+  back: () => { U.err = ''; U.step = Math.max(0, U.step - 1); render(); window.scrollTo(0, 0); },
+  next: () => {
+    const f = U.form; U.err = '';
+    if (U.step === 1 && !f.plate.trim()) U.err = 'Bitte gib das Kennzeichen ein.';
+    if (U.step === 2 && QS.some(q => !f.a[q.k])) U.err = 'Bitte beantworte die Fragen 1 bis 4.';
+    if (U.step === 4 && U.rec) stopRec();
+    if (!U.err) U.step++;
+    render(); window.scrollTo(0, 0);
+  },
+  vt: d => { U.form.vtype = d.v; render(); },
+  reloc: () => { const i = LOCS.indexOf(U.form.loc); U.form.loc = LOCS[(i + 1) % LOCS.length]; render(); },
+  q: d => { U.form.a[d.k] = d.v; render(); },
+  cargo: d => { const c = U.form.a.cargo, i = c.indexOf(d.v); i < 0 ? c.push(d.v) : c.splice(i, 1); render(); },
+  demoPhoto: () => { U.form.photos.push(demoPhoto(U.form.photos.length)); render(); },
+  rmPhoto: d => { U.form.photos.splice(+d.i, 1); render(); },
+  rec: () => { U.rec ? stopRec() : startRec(); render(); },
+  memoDel: () => { U.form.memo = null; U.play = null; render(); },
+  play: d => {
+    if (U.play && U.play.key === d.key) U.play = null; else U.play = { key: d.key, sec: +d.sec, start: Date.now() };
+    render();
+  },
+  send: () => {
+    const f = U.form; if (U.rec) stopRec();
+    const o = { id: 'E-' + (++DB.seq), ts: Date.now(), plate: f.plate.trim().toUpperCase(), vtype: f.vtype, name: f.name, phone: f.phone, loc: f.loc,
+      a: JSON.parse(JSON.stringify(f.a)), photos: f.photos.slice(), memo: f.memo, status: 'neu', seen: false };
+    DB.orders.push(o); save(); setMy(o.id); U.form = newForm(); U.step = 0; render(); window.scrollTo(0, 0);
+  },
+  newReport: () => { setMy(null); U.form = newForm(); U.step = 0; render(); window.scrollTo(0, 0); },
+  tab: d => { U.tab = d.v; render(); },
+  sel: d => { U.sel = d.id; const o = getO(d.id); if (o && o.status === 'neu') { o.seen = true; save(); } if (o) U.tab = o.status === 'neu' ? 'neu' : active(o) ? 'aktiv' : 'erledigt'; render(); },
+  pick: d => { U.pick = d.id; render(); },
+  accept: d => doAccept(d.id, U.pick),
+  alertAccept: d => { const o = getO(d.id), t = freeTrucks(o)[0]; doAccept(d.id, t && t.id); },
+  alertView: d => { const o = getO(d.id); o.seen = true; save(); U.sel = d.id; U.tab = 'neu'; render(); },
+  reject: d => { const o = getO(d.id); o.status = 'abgelehnt'; o.seen = true; save(); render(); },
+  finish: d => { getO(d.id).status = 'erledigt'; save(); U.tab = 'erledigt'; render(); },
+  simulate: () => {
+    const i = DB.seq % LOCS.length, k = QS.map(q => q.o[(DB.seq + q.k.length) % q.o.length][0]);
+    const o = { id: 'E-' + (++DB.seq), ts: Date.now(), plate: ['H-KL 7731', 'WOB-TR 902', 'HI-SP 5520'][i % 3], vtype: VTYPES[i % 4], name: ['Jens Boldt', 'Tomasz Kowal', 'Sven Richter'][i % 3], phone: '+49 160 5550' + (100 + i),
+      loc: LOCS[i], a: { type: k[0], drive: k[1], block: k[2], hurt: k[3], cargo: i % 2 ? ['lad'] : [] }, photos: [demoPhoto(i), demoPhoto(i + 1)], memo: { sec: 9 + i * 3, bars: bars() }, status: 'neu', seen: false };
+    DB.orders.push(o); save(); render();
+  },
+  zoom: d => { U.lb = getO(d.id).photos[+d.i]; render(); },
+  unzoom: () => { U.lb = null; render(); },
+};
+function doAccept(id, tid) {
+  const o = getO(id), t = getT(tid); if (!o || !t) return;
+  Object.assign(o, { status: 'angenommen', truckId: t.id, eta: etaMin(o, t), acceptedAt: Date.now(), seen: true });
+  save(); U.sel = id; U.tab = 'aktiv'; render();
+}
+function startRec() { U.rec = { sec: 0, t0: Date.now() }; }
+function stopRec() {
+  const s = Math.max(1, Math.round((Date.now() - U.rec.t0) / 1000)); U.form.memo = { sec: s, bars: bars() }; U.rec = null;
+}
+
+document.addEventListener('click', e => {
+  const t = e.target.closest('[data-act]'); if (!t || !A[t.dataset.act]) return;
+  if (t.dataset.act === 'unzoom' && e.target.tagName === 'IMG') return;
+  A[t.dataset.act](t.dataset, t, e);
+});
+document.addEventListener('input', e => {
+  const b = e.target.dataset && e.target.dataset.bind; if (!b) return;
+  if (b === 'plate') e.target.value = e.target.value.toUpperCase();
+  U.form[b] = e.target.value;
+});
+document.addEventListener('change', async e => {
+  if (e.target.id !== 'photoIn') return;
+  for (const f of e.target.files) { const d = await resizeImg(f); if (d) U.form.photos.push(d); }
+  render();
+});
+window.addEventListener('storage', e => {            // Live-Sync zwischen zwei Browser-Tabs
+  if (e.key !== KEY) return; DB = load();
+  if (U.view === 'driver' && !myOrder()) return;       // Fahrer mitten im Formular nicht stören
+  render();
+});
+
+/* ---------- Ticker: Fahrzeugbewegung, ETA, Aufnahme, Wiedergabe ---------- */
+setInterval(() => {
+  const now = Date.now();
+  document.querySelectorAll('[data-mv]').forEach(g => {
+    const o = getO(g.dataset.mv), t = o && getT(o.truckId); if (!t) return;
+    const pt = posAt(routePts(o, t), prog(o));
+    g.setAttribute('transform', `translate(${pt.x},${pt.y})`);
+    const fl = g.querySelector('.flip'); if (fl) fl.setAttribute('transform', pt.dx < 0 ? 'scale(-1,1)' : '');
+  });
+  document.querySelectorAll('[data-eta]').forEach(el => { const o = getO(el.dataset.eta); if (o) el.textContent = Math.max(1, Math.ceil(o.eta * (1 - prog(o)))); });
+  document.querySelectorAll('[data-prog]').forEach(el => { const o = getO(el.dataset.prog); if (o) el.style.width = prog(o) * 100 + '%'; });
+  if (U.rec) { U.rec.sec = (now - U.rec.t0) / 1000; const el = document.getElementById('recT'); if (el) el.textContent = mmss(U.rec.sec); }
+  if (U.play) {
+    const p = (now - U.play.start) / (U.play.sec * 1000), w = document.querySelector(`[data-wave="${U.play.key}"]`);
+    if (p >= 1) { U.play = null; render(); }
+    else if (w) {
+      w.querySelectorAll('i').forEach((b, i, all) => b.classList.toggle('on', i / all.length < p));
+      const tt = document.querySelector(`[data-playt="${U.play.key}"]`); if (tt) tt.textContent = mmss(p * U.play.sec);
+    }
+  }
+  if (sigNow() !== U.sig) render();                   // Phase hat gewechselt (z. B. Fahrzeug angekommen)
+}, 200);
+
+render();
+</script>
+</body>
+</html>
