@@ -137,7 +137,7 @@ input{font:inherit}
  body{font-size:14px;overscroll-behavior-y:none}
  .top-in{padding:6px 10px;gap:8px;flex-wrap:nowrap}
  .logo{gap:8px;min-width:0}.logo-mark{width:34px;height:34px;border-radius:9px}.logo b{font-size:14px;letter-spacing:.03em}.logo small{display:none}
- .toplink{display:none}
+ .toplink{display:none}.logo b{display:none}.carchip{flex-shrink:0}.top-in{justify-content:space-between}
  .seg{padding:3px}.seg button{padding:8px 11px;font-size:13px;gap:6px}
  .wrap{padding:0;gap:0;display:block}
  #stage{position:sticky;top:50px;z-index:20;aspect-ratio:auto;height:52vh;height:52dvh;min-height:300px;border-radius:0 0 18px 18px;box-shadow:0 6px 20px rgba(0,0,0,.5)}
@@ -182,6 +182,16 @@ input{font:inherit}
 #adm .aempty{padding:14px;text-align:center;color:var(--mute);border:2px dashed var(--line);border-radius:12px;font-weight:700}
 @media(max-width:760px){#adm{top:auto;left:0;right:0;bottom:0;width:auto;max-width:none;height:62vh;height:62dvh;border-radius:20px 20px 0 0}#adm.peek{height:30dvh}#bAdm{display:none}}
 @media(min-width:761px){#bAdmH{display:none}}
+
+.carchip{background:rgba(0,0,0,.2);color:var(--ink);padding:8px 13px;border-radius:999px;font-weight:900;font-size:13px;white-space:nowrap;cursor:pointer}
+.carchip:hover{background:var(--ink);color:#fff}
+.upg{display:flex;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid rgba(0,0,0,.08)}
+.upg .ui{font-size:26px;width:40px;text-align:center}.upg .ut{flex:1;min-width:0}.upg .ut small{display:block;color:#8a8a85;font-weight:600;margin:1px 0 5px}
+.pips{display:flex;gap:4px}.pips i{width:22px;height:7px;border-radius:4px;background:rgba(0,0,0,.14)}.pips i.on{background:#FF7A00}
+.achg{display:grid;grid-template-columns:1fr 1fr;gap:6px}.ach{display:flex;gap:8px;align-items:center;padding:8px 10px;border-radius:12px;background:rgba(0,0,0,.05);opacity:.55}.ach.on{opacity:1;background:rgba(47,191,113,.16)}.ach span{font-size:20px}.ach small{display:block;color:#8a8a85;font-weight:600;font-size:11px}.scn.lock{opacity:.5}
+.sjb{display:flex;gap:8px;margin:-4px 0 10px;flex-wrap:wrap}
+.sjc.open{border-left:4px solid #e5483f}.sjc.enroute,.sjc.work,.sjc.return,.sjc.queued{border-left:4px solid #FF7A00}
+@media(max-width:760px){.carchip{padding:6px 9px;font-size:11.5px}}
 </style>
 </head>
 <body>
@@ -193,6 +203,7 @@ input{font:inherit}
 <header class="top"><div class="top-in">
   <div class="logo"><div class="logo-mark"><svg viewBox="0 0 80 48"><use href="#i-tow"/></svg></div><div><b>Truck Rescue</b><small>Autobahn-Demo · Unfall, Brand, Stau &amp; Bergung</small></div></div>
   <nav class="seg" aria-label="Profil wechseln"><button id="vDrv" class="on" data-act="view" data-v="driver"></button><button id="vDis" data-act="view" data-v="dispatch"></button></nav>
+  <button class="carchip" id="hCar" type="button" data-act="shop" title="Konto, Ruf & Upgrades"></button>
   <button class="toplink" id="bAdm" type="button">⚙ Admin</button><a class="toplink" href="index.html">Zur Disposition-App</a>
 </div></header>
 <div class="wrap">
@@ -1224,7 +1235,7 @@ function artic(v, hd, dt) {   // Auflieger folgt der Zugmaschine kinematisch (De
 function stepTraffic(dt) {
   const WF = envWf(), HWF = envHw();
   const T = G.traf, hwU = G.units.filter(u => u.mode === 'hw' || u.mode === 'depart'), sirens = hwU.filter(u => u.siren), AO = allObs();
-  const lam = [.3 * TRF.dens, .48 * TRF.dens, .38 * TRF.dens], alertOn = G.units.some(u => u.mode !== 'gone' && u.mode !== 'return' && !u.site && u.siren && G.acc);
+  const lam = [.3 * trfD(), .48 * trfD(), .38 * trfD()], alertOn = G.units.some(u => u.mode !== 'gone' && u.mode !== 'return' && !u.site && u.siren && G.acc);
   for (let l = 0; l < 3; l++) { G.spawn[l] -= dt; if (G.spawn[l] <= 0) { G.spawn[l] = rnd(.6, 1.4) / lam[l]; if (!T.some(v => v.lane === l && v.s < 70 + v.len)) T.push(newVeh(l, -30)); } }
   const yielders = new Map(); for (const z of T) if (z.zwait && z.zip) { let y = null; for (const o of T) if (o.lane === 1 && !o.wreck && o.s < z.s - z.len / 2 - 2 && z.s - o.s < 150 && (!y || o.s > y.s)) y = o; if (y) yielders.set(y, z); }
   // Ausweich-Ausfahrt für diesen Moment: letzte Ausfahrt vor dem Stauende, Wiedereinfahrt hinter der Unfallstelle
@@ -1328,7 +1339,7 @@ function genZones(avoid) {
   G.zones = (G.zones || []).filter(z => z.admin); const n = G.zones.length + (TRF.rand ? 3 + (Math.random() * 2 | 0) : 0);
   for (let k = 0; k < 60 && G.zones.length < n; k++) {
     const len = rnd(130, 250), s0 = rnd(500, Lh - 800), s1 = s0 + len;
-    if (!RAMPS.every(r => s1 < r.s + 10 || s0 > r.s + 290) || !OFFS.every(o => s1 < o.s - 140 || s0 > o.s - 10) || (s1 > KZ0 && s0 < KZ1) || s1 + 200 > EXIT.s - 100) continue;
+    if (!RAMPS.every(r => s1 < r.s + 10 || s0 > r.s + 290) || !OFFS.every(o => s1 < o.s - 280 || s0 > o.s + 40) || (s1 > KZ0 && s0 < KZ1) || s1 + 200 > EXIT.s - 100) continue;
     if (CROSS.some(c => c.s > s0 - 40 && c.s < s1 + 40)) continue;
     if (G.zones.some(z => s0 < z.s1 + 350 && s1 > z.s0 - 350)) continue;
     if (avoid != null && s0 < avoid + 250 && s1 > avoid - 700) continue;
@@ -1369,7 +1380,7 @@ function startScenario(k) {
   G.fleet.forEach(f => f.state = 'depot'); G.ws = [0, 1, 2].map(() => ({ cur: null, q: [] })); G.reps = []; G.fixed = 0; G.step = 1; G.towSel = null; G.routeSel = null; G.routeManual = false; G.alertSeen = true; G.t = 0;
   // Unfallort: weit stromabwärts, nicht in/an Baustellen oder Auffahrten
   let sAcc = 2500;
-  for (let i = 0; i < 120; i++) { const c = rnd(760, Lh - 640); if (G.zones.every(z => c < z.s0 - 120 || c > z.s1 + 80) && RAMPS.every(r => c < r.s - 110 || c > r.s + 180) && CROSS.every(x => Math.abs(x.s - c) > 120)) { sAcc = c; break; } }
+  for (let i = 0; i < 120; i++) { const c = rnd(760, Lh - 640); if (G.zones.every(z => c < z.s0 - 120 || c > z.s1 + 80) && RAMPS.every(r => c < r.s - 600 || c > r.s + 340) && (c < KZ0 - 320 || c > KZ1 + 320) && CROSS.every(x => Math.abs(x.s - c) > 120)) { sAcc = c; break; } }
   const sc = SCEN[k], hero = newVeh(1, sAcc - 190, sc.hero); hero.hero = true; hero.vd = 48; hero.v = 48; hero.col = hero.kind === 'van' ? '#f1f1f1' : '#c8453b'; hero.col2 = '#eceae4';
   // Platz für den Hauptdarsteller schaffen: überlappende Fahrzeuge in Spur 1 aus dem Weg räumen
   G.traf = G.traf.filter(v => v.lane !== 1 || Math.abs(v.s - hero.s) > (v.len + hero.len) / 2 + 30);
@@ -1413,7 +1424,7 @@ const USP = {
   fw: { label: 'Feuerwehr', abbr: 'FW', len: 40, wid: 12.6, vFree: 115, vJam: 52, vLoc: 92, delay: 6, base: 'fw', tlat: CORR, off: 14, work: 14, col: '#d9322b' },
   rd: { label: 'Rettungsdienst', abbr: 'RD', len: 32, wid: 13, vFree: 125, vJam: 56, vLoc: 100, delay: 4, base: 'rd', tlat: CORR, off: 12, work: 12, col: '#ff8a00' },
 };
-function towSpec(tt) { const T = TOWSP[tt], B = TOWT[tt]; return { label: 'Abschleppdienst', abbr: 'TOW', len: T.L * .56, wid: Math.min(T.W * .56, 11.4), vFree: B.vFree, vJam: B.vJam, vLoc: 80, delay: 3, base: 'depot', tlat: CORR, off: 9, work: B.work, col: '#FF7A00' }; }
+function towSpec(tt) { const T = TOWSP[tt], B = TOWT[tt], sp = 1 + .07 * CAR.up.speed; return { label: 'Abschleppdienst', abbr: 'TOW', len: T.L * .56, wid: Math.min(T.W * .56, 11.4), vFree: B.vFree * sp, vJam: B.vJam * (1 + .04 * CAR.up.speed), vLoc: 80 * sp, delay: 3, base: 'depot', tlat: CORR, off: 9, work: B.work * (1 - .09 * CAR.up.crane), col: '#FF7A00' }; }
 const _lp = {};
 function lpath(b, i, bay) {
   if (b === 'depot') { const bb = bay == null ? 4 : bay, k = 'd' + bb + '_' + i; return _lp[k] || (_lp[k] = mkPath(yardOutPts(bb).concat(Lseg(YD.gateS, RAMPS[i].s - 110), rampConn(i)))); }
@@ -1564,12 +1575,12 @@ function stepRepairs(dt) {
       if (r.tow && r.pd > r.path.len * .72) { const u = r.tow; r.tow = null; u.mode = 'return'; u.homing = true; u.path = mkPath(spotToBay(r.slot, u.fleet.bay)); u.pd = 0; }
       if (r.pd >= r.path.len) { r.st = 'fix'; if (r.tow) { const u = r.tow; r.tow = null; u.mode = 'return'; u.homing = true; u.path = mkPath(spotToBay(r.slot, u.fleet.bay)); u.pd = 0; } addLog('repair_' + r.slot + '_' + Math.round(G.t), 'Werkstatt: Reparatur beginnt (Platz ' + (r.slot + 1) + ')'); }
     } else if (r.st === 'fix') {
-      r.t += dt; r.prog = clamp(r.t / r.dur, 0, 1);
+      r.t += dt * (1 + .14 * CAR.up.bay); r.prog = clamp(r.t / r.dur, 0, 1);
       if (Math.random() < dt * 9) { const p = yp(YD.ws[r.slot].s + rnd(-8, 8), YD.ws[r.slot].lat + rnd(-10, 10)); part(G, p.x, p.y, 'spark'); }
       if (r.prog >= 1) {
         r.st = 'out'; G.ws[r.slot].cur = null; const k = RAMPS.findIndex(q => q.s - 90 > YD.gateS + 60), L = r.load, kd = L.rig ? L.kind : L.kind;
         G.det.push({ id: ++G.uid, path: mkPath(wsOutPts(r.slot).concat(Lseg(YD.gateS, RAMPS[k].s - 110), rampConn(k))), pd: 0, v: 0, vd: rnd(46, 56), len: L.len, wid: L.wid, kind: kd, col: L.col, col2: L.col2, k });
-        G.fixed = (G.fixed || 0) + 1; toast('Werkstatt: ' + (L.rig ? 'Lkw' : 'Fahrzeug') + ' repariert und zurück auf der Autobahn', 'good'); G.reps = G.reps.filter(x => x !== r);
+        G.fixed = (G.fixed || 0) + 1; carEarn(Math.round(150 * repF() / 10) * 10, 'Reparatur abgeschlossen', 4); toast('Werkstatt: ' + (L.rig ? 'Lkw' : 'Fahrzeug') + ' repariert und zurück auf der Autobahn', 'good'); G.reps = G.reps.filter(x => x !== r);
       }
     }
   }
@@ -1626,7 +1637,7 @@ function stepUnits(dt) {
 }
 function finishWreck(tow, w) {
   w.done = true; w.clear = 1; tow.load = towLoadInfo(w); if (w.veh) G.traf = G.traf.filter(v => v !== w.veh); tow.site = false; tow.wreck = null; tow.mode = 'depart'; tow.tlat = CORR2;
-  addLog('wreck_' + w.id, w.label + ' geborgen'); updateObs();
+  addLog('wreck_' + w.id, w.label + ' geborgen'); updateObs(); { const pay = Math.round([260, 420, 720][w.need || 0] * repF() * (1 + .1 * CAR.up.radio) / 10) * 10; G.paidTow = (G.paidTow || 0) + pay; carEarn(pay, w.label + ' geborgen', 8); }
   const left = G.wrecks.filter(x => !x.done).length; toast(w.label + ' geborgen' + (left ? ' – noch ' + left + ' Wrack/Wracks' : ''), 'good'); sfx.ok();
   if (!left) {
     const A = G.acc; A.cleared = true; A.clear = 1; G.ev.cleared = G.t; G.clearAt = G.t; addLog('cleared', 'Unfallstelle geräumt – Fahrbahn frei'); toast('Fahrbahn frei – der Stau löst sich auf', 'good');
@@ -1651,12 +1662,13 @@ function buildResults() {
   const d = (a, b) => (e[a] != null && e[b] != null) ? e[a] - e[b] : null;
   const fit = jobs.length && jobs.every(x => x.f.type >= x.w.need && x.f.type <= x.w.need + 1);
   const stars = [d('dispatch', 'report') != null && d('dispatch', 'report') <= 25, fit, d('cleared', 'accident') != null && d('cleared', 'accident') <= 60 + 35 * G.wrecks.length].filter(Boolean).length;
-  G.results = { stars, jamMax: j.max || 0, dur: d('cleared', 'accident'), toPol: d('arr_pol', 'accident'), toRd: d('arr_rd', 'accident'), toFw: d('arr_fw', 'accident'), toTow: d('arr_tow', 'accident'), disp: d('dispatch', 'report'), rep: d('report', 'accident'), wrecks: G.wrecks.length, tows: jobs.length };
+  const jm = j.max || 0, bonus = Math.max(0, stars * 220 - Math.round(jm * 2 / 25)), repD = (stars - 1) * 2.2 - clamp(jm * 2 / 2500, 0, 1.5); carEarn(bonus, 'Einsatz-Bonus (' + stars + ' ★)', 25 + stars * 20); carRep(repD); CAR.main++; CAR.best = Math.max(CAR.best || 0, stars); carSave(); achCheck();
+  G.results = { pay: { tow: G.paidTow || 0, bonus, rep: repD, total: bonus + (G.paidTow || 0) }, stars, jamMax: j.max || 0, dur: d('cleared', 'accident'), toPol: d('arr_pol', 'accident'), toRd: d('arr_rd', 'accident'), toFw: d('arr_fw', 'accident'), toTow: d('arr_tow', 'accident'), disp: d('dispatch', 'report'), rep: d('report', 'accident'), wrecks: G.wrecks.length, tows: jobs.length };
   G.phase = 'done'; showOverlay('results');
 }
 /* ===== NPC-Verkehr auf dem Straßennetz: Links, Ampeln, Routing ===== */
 const A7E = { id: 'A7+', legacy: true, cv: CV7, L: Lh, dir: 1 };
-const NS = { svc: [], t: 0, uid: 5e6, spawn: {}, on: true, count: 0, junc: [], links: [], leg: [], nodes: [], dests: [], zones: [], sinkOf: {}, mergers: [], lastAct: 0 };
+const NS = { arr: [], lost: [], svc: [], t: 0, uid: 5e6, spawn: {}, on: true, count: 0, junc: [], links: [], leg: [], nodes: [], dests: [], zones: [], sinkOf: {}, mergers: [], lastAct: 0 };
 const rdS = (rd, x, y) => { const k = kproj(rd.cv, x, y).s; return rd.dir > 0 ? k : rd.cv.L - k; };
 function dedupe(pts) { const o = [pts[0]]; for (let i = 1; i < pts.length; i++) { const a = o[o.length - 1], b = pts[i]; if (Math.hypot(a.x - b.x, a.y - b.y) > .6) o.push(b); } return o; }
 function mkLink(id, pts, o) {
@@ -1709,7 +1721,7 @@ function nsBuildGraph() {
   }
   NS.legSinks = [];
   for (const r of NET.roads) {
-    if (r.link) { if (r.legTo) { const sk = mk(r, r.L, null, true); sk.leg = true; sk.name = r.id; r.endNode.e.push({ to: sk, c: 2 }); NS.legSinks.push(sk); sinks.push(sk); } else { const t = r.to.rd; const arr = t.nodes.find(n => n.s >= r.to.s - 2) || t.endNode; r.endNode.e.push({ to: arr, c: 1 }); } }
+    if (r.link) { if (r.legTo) { const sk = mk(r, r.L, null, true); sk.leg = true; sk.name = r.id; r.endNode.e.push({ to: sk, c: 2 }); NS.legSinks.push(sk); sinks.push(sk); } else { const t = r.to.rd; const arr = t.nodes.find(n => n.s >= r.to.s - 2) || t.endNode; r.endNode.e.push({ to: arr, c: 1 + Math.max(0, arr.s - r.to.s) / SPD(t) }); } }
     else sinks.push(r.endNode);
   }
   const any = mk(null, 0, null, true); any.leg = true; any.name = 'A7E'; for (const sk of NS.legSinks) sk.e.push({ to: any, c: 0 }); sinks.push(any); NS.anyLeg = any;
@@ -1718,10 +1730,14 @@ function nsBuildGraph() {
   NS.dests = sinks.map((sk, di) => ({ sk, d: new Float32Array(N.length), di, leg: !!sk.leg, any: sk === any }));
   nsCompute();
 }
-function nsCompute() {
-  const N = NS.nodes, rev = NS.rev;
-  for (const dd of NS.dests) { const d = dd.d, done = new Uint8Array(N.length); d.fill(1e9); d[dd.sk.id] = 0; for (let it = 0; it < N.length; it++) { let b = -1, bd = 1e9; for (let i = 0; i < N.length; i++) if (!done[i] && d[i] < bd) { bd = d[i]; b = i; } if (b < 0) break; done[b] = 1; for (const q of rev[b]) if (d[b] + q.e.c < d[q.from.id]) d[q.from.id] = d[b] + q.e.c; } }
+function nsRevDij(d, skId, flt) {
+  const N = NS.nodes, rev = NS.rev, done = new Uint8Array(N.length); d.fill(1e9); d[skId] = 0;
+  for (let it = 0; it < N.length; it++) { let b = -1, bd = 1e9; for (let i = 0; i < N.length; i++) if (!done[i] && d[i] < bd) { bd = d[i]; b = i; } if (b < 0) break; done[b] = 1; for (const q of rev[b]) { if (flt && !flt(q.from, q.e)) continue; if (d[b] + q.e.c < d[q.from.id]) d[q.from.id] = d[b] + q.e.c; } }
 }
+const nsMotOk = (n, e) => e.link ? (e.link.legTo || (e.link.to && e.link.to.rd.kind === 'mot')) : (e.to.leg || (e.to.rd && e.to.rd.kind === 'mot'));
+function nsCompute() { for (const dd of NS.dests) { nsRevDij(dd.d, dd.sk.id); if (!dd.dm) dd.dm = new Float32Array(NS.nodes.length); if (!dd.dmDone) { nsRevDij(dd.dm, dd.sk.id, nsMotOk); dd.dmDone = 1; } } }
+/* Ziel an einer beliebigen Stelle (Einsatzfahrten): Entfernungstabelle zum nächsten Knoten */
+function nsMkDest(rd, s) { const n = nsNext(rd, s), d = new Float32Array(NS.nodes.length); nsRevDij(d, n.id); return { sk: n, d, di: -1, leg: false, tmp: true }; }
 /* Stau/Baustellen verteuern die Strecke → NPCs weichen aus */
 function nsRecost() {
   if (!NS.rev) return;
@@ -1729,13 +1745,23 @@ function nsRecost() {
   nsCompute();
 }
 const nsNext = (r, s) => { const a = r.nodes; for (let i = 0; i < a.length; i++) if (a[i].s >= s - 1) return a[i]; return r.endNode; };
-function nsPickDest(rd, s, avoidLeg) {
+function nsPickDest(rd, s, mode) {   // 'exit': aus der A7 ausgefahren → meist wieder auffahren / lokale Ziele · 'mot': Autobahnverkehr bleibt meist auf Autobahnen
   const n = nsNext(rd, s), L = []; let tot = 0;
-  for (const d of NS.dests) { const c = d.d[n.id]; if (c > 9e8 || c < 8) continue; if (d.leg && (d.any ? false : true)) continue; if (d.leg && avoidLeg) continue; const w = d.leg ? 2.2 : d.sk.rd && d.sk.rd.kind === 'mot' ? 1.3 : .3; L.push([d, w]); tot += w; }
+  for (const d of NS.dests) {
+    const c = d.d[n.id]; if (c > (mode === 'exit' ? 230 : 175) || c < 8) continue; if (d.leg && !d.any) continue;
+    const mot = d.sk.rd && d.sk.rd.kind === 'mot'; if (mode === 'mot' && !(d.dm && d.dm[n.id] < 1e8)) continue;
+    const w = mode === 'exit' ? (d.leg ? 7 : mot ? .35 : .8) : mode === 'mot' ? (d.leg ? 1.2 : mot ? 1.3 : .012) : (d.leg ? 1 : mot ? .3 : .8); L.push([d, w]); tot += w;
+  }
   if (!L.length) return null; let r = Math.random() * tot; for (const [d, w] of L) { r -= w; if (r <= 0) return d; } return L[0][0];
 }
-function nsDecide(v, n) {   // am Ausfahrtsknoten: Link nehmen, wenn er auf dem kürzesten Weg zum Ziel liegt
-  if (!v.dest) return null; let best = null, bc = 1e9; for (const e of n.e) { const c = e.c + v.dest.d[e.to.id]; if (c < bc - 1e-3) { bc = c; best = e; } } return best && best.link ? best.link : null;
+function nsDecide(v, n) {   // am Ausfahrtsknoten: Link nehmen, wenn er auf dem kürzesten Weg zum Ziel liegt (gleichzeitige Abzweige beachten)
+  if (!v.dest) return null;
+  for (let k = 0; k < 6 && n; k++) {
+    let best = null, bc = 1e9; for (const e of n.e) { const c = e.c + v.dest.d[e.to.id]; if (c < bc - 1e-3) { bc = c; best = e; } }
+    if (!best) return null; if (best.link) return n.o;
+    if (best.to.rd === n.rd && best.to.o && best.to.s - n.s < 1) { n = best.to; continue; } return null;
+  }
+  return null;
 }
 /* ===== NPC-Verkehr: Fahrzeuge, Fahrverhalten, Zonen, Ampeln, Übergaben ===== */
 const PERS = [{ n: 'normal', sp: 1, hw: 1, pol: .55, lc: 1 }, { n: 'raser', sp: 1.14, hw: .72, pol: .15, lc: 1.6 }, { n: 'vorsichtig', sp: .9, hw: 1.3, pol: .85, lc: .6 }, { n: 'gelassen', sp: .97, hw: 1.1, pol: .7, lc: .8 }];
@@ -1753,13 +1779,13 @@ function nsNew(rd, s, ln, kind, o) {
 function nsSort(r) { const a = r.veh; for (let i = 1; i < a.length; i++) { const x = a[i]; let j = i - 1; while (j >= 0 && a[j].s > x.s) { a[j + 1] = a[j]; j--; } a[j + 1] = x; } }
 function nsLeader(r, i, v, ln) {
   const a = r.veh; let best = null, gap = 1e9;
-  for (let j = i + 1; j < a.length; j++) { const o = a[j]; if (o.s - v.s > 320) break; if (o.ln === ln || Math.abs(o.lat - r.lanes[ln]) < (o.wid + v.wid) / 2 + .2) { const g = o.s - o.len / 2 - (v.s + v.len / 2); if (g < gap) { gap = g; best = o; } break; } }
+  for (let j = i + 1; j < a.length; j++) { const o = a[j]; if (o.s - v.s > 320) break; if ((o.lo < 9 && o.ln === ln) || Math.abs(o.lat - r.lanes[ln]) < (o.wid + v.wid) / 2 + .2) { const g = o.s - o.len / 2 - (v.s + v.len / 2); if (g < gap) { gap = g; best = o; } break; } }
   return { o: best, gap };
 }
 function nsLaneFree(r, i, v, ln, k) {
   const a = r.veh, lat = r.lanes[ln]; k = k || 1;
-  for (let j = i - 1; j >= 0; j--) { const o = a[j]; if (v.s - o.s > 90) break; if ((o.ln === ln || Math.abs(o.lat - lat) < (o.wid + v.wid) / 2) && Math.abs(o.s - v.s) < (o.len + v.len) / 2 + (2 + 4 * k) + Math.max(0, o.v - v.v) * .5 * k) return false; }
-  for (let j = i + 1; j < a.length; j++) { const o = a[j]; if (o.s - v.s > 90) break; if ((o.ln === ln || Math.abs(o.lat - lat) < (o.wid + v.wid) / 2) && Math.abs(o.s - v.s) < (o.len + v.len) / 2 + (2 + 6 * k) + Math.max(0, v.v - o.v) * .6 * k) return false; }
+  for (let j = i - 1; j >= 0; j--) { const o = a[j]; if (v.s - o.s > 90) break; if (((o.lo < 9 && o.ln === ln) || Math.abs(o.lat - lat) < (o.wid + v.wid) / 2) && Math.abs(o.s - v.s) < (o.len + v.len) / 2 + (2 + 4 * k) + Math.max(0, o.v - v.v) * .5 * k) return false; }
+  for (let j = i + 1; j < a.length; j++) { const o = a[j]; if (o.s - v.s > 90) break; if (((o.lo < 9 && o.ln === ln) || Math.abs(o.lat - lat) < (o.wid + v.wid) / 2) && Math.abs(o.s - v.s) < (o.len + v.len) / 2 + (2 + 6 * k) + Math.max(0, v.v - o.v) * .6 * k) return false; }
   return true;
 }
 function nsLatBlocked(r, i, v, nl) {
@@ -1797,7 +1823,7 @@ function nsLinkEntryFree(L, v) {
 /* Fahrzeug aus der A7-Ost (Legacy) auf einen Link übergeben */
 function nsFromLegacy(v, link, destSk) {
   const n = nsNew(link, Math.max(0, v.s - link.fromO.s), 0, v.kind, { id: v.id, col: v.col, col2: v.col2, v: v.v, vd: v.vd, len: v.len, wid: v.wid, lat: link.lanes[0], yaw: v.yaw || 0, th: v.th, tr: v.tr || 0, hero: false });
-  n.dest = destSk ? NS.dests.find(d => d.sk === destSk) : nsPickDest(link, 0, true); if (!n.dest) n.dest = nsPickDest(link, 0, true);
+  n.dest = destSk ? NS.dests.find(d => d.sk === destSk) : nsPickDest(link, 0, 'exit'); if (!n.dest) n.dest = nsPickDest(link, 0, 'exit');
   link.veh.push(n); return n;
 }
 /* Fahrzeug von einer Link-Spitze in die Legacy-Autobahn A7-Ost einfädeln */
@@ -1810,14 +1836,15 @@ function nsStepRoad(r, dt, WF, HWF) {
   nsSort(r); const a = r.veh, nl = r.lanes.length, mot = nl > 1, zs = r.zones, sg = r.sigs, isL = r.link, inn = r.inn, needPos = NS.needPos;
   let yl = null; if (zs.length && mot) { for (const w of a) if (w.zw) for (let j = a.length - 1; j >= 0; j--) { const y = a[j]; if (y.s < w.s - w.len / 2 - 2 && w.s - y.s < 150 && y.ln !== w.ln) { (yl = yl || new Map()).set(y, w); break; } } }
   let ym = null; if (r.ym && r.ym.t > NS.t - .6) ym = r.ym;
+  let tws = null; for (const x of a) if (x.tow && !x.hold && !x.dead) (tws = tws || []).push(x);
   let gafLo = -1, gafHi = -1; if (r === A7W && G.acc && !G.acc.cleared) { gafLo = Lh - G.acc.s1 - 150; gafHi = Lh - G.acc.front + 150; }
   for (let i = 0; i < a.length; i++) {
     const v = a[i]; if (v.dead || v.xf) continue;
     // --- Routing-Entscheidung am nächsten Ausgang
     while (v.on < r.out.length && r.out[v.on].s < v.s - 2) v.on++;
     const no = v.on < r.out.length ? r.out[v.on] : null;
-    if (no && v.decO !== no && no.s - v.s < 800) { v.decO = no; v.take = nsDecide(v, no.node) ? no : null; }
-    if (v.take && v.take !== no) v.take = null;
+    if (no && v.decO !== no && no.s - v.s < 800) { v.decO = no; v.take = nsDecide(v, no.node); }
+    if (v.take && v.take.s < v.s - 3) v.take = null;
     const take = v.take, dTk = take ? take.s - v.s : 1e9;
     // --- Anführer, Ampel, Sperrzone
     const L = nsLeader(r, i, v, v.ln); let gap = L.gap, lead = L.o, lim = lead ? lead.s - lead.len / 2 - v.len / 2 - 1.2 : 1e9;
@@ -1825,7 +1852,7 @@ function nsStepRoad(r, dt, WF, HWF) {
     for (const sx of sg) { const d = sx.s - (v.s + v.len / 2); if (d > -3) { const gr = sx.a.green; if (d < 160 && (gr === 0 || (gr === 2 && d > v.v * v.v / 150))) { if (d - 2 < gap) gap = d - 2; lim = Math.min(lim, sx.s - v.len / 2 - 1); } break; } }
     let zst = null, bz = zs.length ? nsZoneBlk(r, v.ln, v) : null;
     if (bz && !v.noZ) { const d = bz.s0 - (v.s + v.len / 2); if (d > -2 && (v.lcFail || d < 40)) { zst = bz; if (d - 3 < gap) gap = d - 3; lim = Math.min(lim, bz.s0 - v.len / 2 - 3); } }
-    let vt = Math.min(v.vd * WF, r.vmax * (v.kind === 'car' || v.kind === 'van' ? 1 : .8) * WF * (isL ? 1 : v.pr.sp > 1.05 ? 1.08 : 1));
+    let vt = Math.min(v.vd * WF, r.vmax * (v.tow ? 1.18 : v.kind === 'car' || v.kind === 'van' ? 1 : .8) * WF * (isL ? 1 : v.pr.sp > 1.05 ? 1.08 : 1));
     for (const z of zs) if (v.s > z.s0 - 70 && v.s < z.s1) vt = Math.min(vt, z.vmax * (z.kind === 'jam' ? 1 : 1));
     if (v.s > gafLo && v.s < gafHi) vt = Math.min(vt, 30);
     v.zw = !!zst && v.v < 6;
@@ -1836,7 +1863,11 @@ function nsStepRoad(r, dt, WF, HWF) {
     if (gap < 1e8) vt = Math.min(vt, Math.max(0, (gap - 4.5) / (.85 * HWF * v.pr.hw * (lead && lead.braking && lead.v < v.v ? 1.3 : 1) * (1 - (TRF.aggr - .5) * .4))));
     // Legacy-Fahrzeuge (Einsatzkräfte, Werkstatt-Rückfahrer) und Blaulicht
     let yld = false; if (needPos && !mot) { v.px = r.pos(v.s, v.lat); const pa = v.px; if (pathVehAhead(pa.x, pa.y, pa.a, v.len, { type: 0, ns: 1 })) vt = 0; yld = G.units.some(u => u.siren && u.type !== 'tow' && (u.mode === 'local' || u.mode === 'return') && u.x && Math.cos(u.a - pa.a) > .3 && (() => { const dx = pa.x - u.x, dy = pa.y - u.y, fw = dx * Math.cos(u.a) + dy * Math.sin(u.a), lt = -dx * Math.sin(u.a) + dy * Math.cos(u.a); return fw > -6 && fw < 260 && Math.abs(lt) < 18; })()); if (yld) vt = 0; }
-    v.lo += clamp((yld ? 7.5 : 0) - v.lo, -14 * dt, 14 * dt);
+    if (v.tow && v.goal) { const gl = v.goal; if (r === gl.rd && !v.hold) { const d = gl.s - v.s; if (gl.end) { if (d < 2) { v.dead = 1; v.arrived = 1; } } else { if (d < 120) vt = Math.min(vt, Math.max(0, (d - 2) * .9 + 3)); if (d < 90) v.slide = 1; if (d < 3 && v.v < 3.5) { v.hold = 1; NS.arr.push(v); } } } }
+    if (v.broken) { vt = Math.max(0, v.v - 24 * dt); v.slide = 1; } if (v.hold) vt = 0;
+    let sbY = false, sbT = null; if (tws && !v.tow) for (const t of tws) { const d = v.s - t.s; if (d > -2 && d < (CAR.up.siren ? 270 : 180) && (mot ? t.ln === v.ln : true)) { sbY = true; sbT = t; break; } }
+    if (sbY && !mot) vt = Math.min(vt, 24);
+    v.lo += clamp((v.slide || (sbY && !mot) ? (mot ? 17 : 14) : yld ? 7.5 : 0) - v.lo, -14 * dt, 14 * dt);
     // --- Link-Ende: Einfädeln
     let endHold = false;
     if (isL) {
@@ -1856,8 +1887,8 @@ function nsStepRoad(r, dt, WF, HWF) {
     if (take && !mot && ns >= take.s - .2 && !nsLinkEntryFree(take.link, v)) { ns = Math.min(ns, take.s - .3); v.v = Math.min(v.v, 3); }
     v.s = Math.max(v.s, ns);
     if (v.v < 8) v.stopT += dt; else v.stopT = Math.max(0, v.stopT - dt * 2);
-    v.hz = v.stopT > 3 && mot;
-    if (v.stopT > 110 && v.v < 2 && !zs.length) { let rd = false; for (const sx of sg) { const d = sx.s - (v.s + v.len / 2); if (d > -3 && d < 70 && sx.a.green !== 1) rd = true; } if (!rd) { v.dead = 1; NS.culled = (NS.culled || 0) + 1; if ((NS.cullLog = NS.cullLog || []).length < 40) NS.cullLog.push([r.id, Math.round(v.s), Math.round(NS.t), v.gp > 1e8 ? "-" : Math.round(v.gp), Math.round(v.vt), v.lm < 1e8 ? Math.round(v.lm - v.s) : "-", v.take ? v.take.link.id : "", v.ln, sg.map(x => Math.round(x.s - v.s) + ":" + x.a.green).join("|")]); (NS.cullAt = NS.cullAt || {})[r.id] = (NS.cullAt[r.id] || 0) + 1; } }
+    v.hz = (v.stopT > 3 && mot) || !!v.broken;
+    if (v.stopT > 110 && v.v < 2 && !zs.length && !v.tow && !v.broken) { let rd = false; for (const sx of sg) { const d = sx.s - (v.s + v.len / 2); if (d > -3 && d < 70 && sx.a.green !== 1) rd = true; } if (!rd) { v.dead = 1; NS.culled = (NS.culled || 0) + 1; if ((NS.cullLog = NS.cullLog || []).length < 40) NS.cullLog.push([r.id, Math.round(v.s), Math.round(NS.t), v.gp > 1e8 ? "-" : Math.round(v.gp), Math.round(v.vt), v.lm < 1e8 ? Math.round(v.lm - v.s) : "-", v.take ? v.take.link.id : "", v.ln, sg.map(x => Math.round(x.s - v.s) + ":" + x.a.green).join("|")]); (NS.cullAt = NS.cullAt || {})[r.id] = (NS.cullAt[r.id] || 0) + 1; } }
     // --- Spurwahl (Autobahn)
     if (mot) {
       v.lcT -= dt; const cur = v.ln;
@@ -1875,6 +1906,7 @@ function nsStepRoad(r, dt, WF, HWF) {
           const nx = take.ln > cur ? cur + 1 : cur - 1; if (nsLaneFree(r, i, v, nx, dTk < 260 ? .5 : .9) && blkOk(nx)) { pick = nx; urg = dTk < 260; }
         } else if (lead && gap < 95 && lead.v < v.vd * WF - 6 && v.v > 10 && lft && nsLaneFree(r, i, v, cur + 1) && blkOk(cur + 1) && !(take && dTk < 500)) pick = cur + 1;
         else if (cur > 0 && gap > 110 && !(take && dTk < 800 && take.ln < cur) && Math.random() < .5 * v.pr.pol + .2 && nsLaneFree(r, i, v, cur - 1) && blkOk(cur - 1) && !(take && take.ln > cur - 1 && dTk < 700)) pick = cur - 1;
+        if (pick < 0 && sbY && mot) { for (const c of [cur + 1, cur - 1]) if (c >= 0 && c < nl && nsLaneFree(r, i, v, c, .8) && !(zs.length && nsZoneBlk(r, c, v))) { pick = c; break; } }
         // Reinlassen: vor Einmündungen Platz machen
         if (pick < 0 && cur === 0 && inn.length) for (const q of inn) if (q.ln === 0 && v.s > q.s - 170 && v.s < q.s + 10 && q.link.veh.some(o => q.link.L - o.s < 240) && Math.random() < .55 * v.pr.pol + .1 && nl > 1 && nsLaneFree(r, i, v, 1) && !take) { pick = 1; v.lcT = rnd(3, 5); break; }
         if (pick >= 0) { v.lcP = pick; v.lcD = urg ? .25 : .55; v.sg = pick > cur ? -1 : 1; }
@@ -1903,19 +1935,20 @@ function nsApply(r) {
   for (let i = a.length - 1; i >= 0; i--) {
     const v = a[i]; if (!(v.dead || v.xf)) continue; a.splice(i, 1);
     if (v.toLeg) { nsToLegacy(v); continue; }
-    if (v.xf) { const T = v.xf; v.xf = null; T.cnt = (T.cnt || 0) + 1; v.rd = T; v.s = v.xs; v.on = 0; v.decO = null; v.take = null; v.ln = v.xln ?? 0; v.xln = null; v.lat = T.lanes[v.ln]; v.sg = 0; v.wm = 0; v.lcP = -1; T.veh.push(v); }
+    if (v.tow && v.dead) { if (v.arrived) NS.arr.push(v); else NS.lost.push(v); continue; }
+    if (v.xf) { const T = v.xf; v.xf = null; T.cnt = (T.cnt || 0) + 1; v.prev = v.rd.id; v.rd = T; v.s = v.xs; v.on = 0; v.decO = null; v.take = null; v.ln = v.xln ?? 0; v.xln = null; v.lat = T.lanes[v.ln]; v.sg = 0; v.wm = 0; v.lcP = -1; T.veh.push(v); }
   }
 }
 /* ===== NPC-Verkehr: Ampeln, Quellen, Schritt, Zeichnen, Brücken ===== */
 const NSRC = [];
 function nsInit() {
   lifeInit();
-  nsBuildLinks(); nsBuildGraph(); NS.leg.forEach((x, i) => { x.i = i; x.p = x.link.id[0] === "K" ? .1 : .07; });
+  nsBuildLinks(); nsBuildGraph(); NS.leg.forEach((x, i) => { x.i = i; x.p = x.link.id[0] === "K" ? .08 : .05; });
   for (const l of NS.links) { if (l.legTo || (l.to && l.to.rd.kind === 'mot')) l.vmax = 56; else if (l.to && l.from && l.from.rd.kind === 'mot') l.vmax = 40; if (l.turn) { const p0 = l.pos(0, l.lanes[0]), p1 = l.pos(l.L, l.lanes[0]), d = Math.sin(p1.a - p0.a); l.turnDir = Math.abs(d) < .35 ? 0 : Math.sign(d); } }
   NS.svc = NET.roads.filter(r => r.kind !== 'mot');
   NSRC.push({ rd: A7W, rate: [.2, .3, .2] }, { rd: A1.f, rate: [.2, .24] }, { rd: A1.b, rate: [.2, .24] }, { rd: A9.f, rate: [.18, .22] }, { rd: A9.b, rate: [.18, .22] });
-  for (const c of [LS, LN]) NSRC.push({ rd: c.f, rate: [.035] }, { rd: c.b, rate: [.035] });
-  for (const f of FEED) NSRC.push({ rd: f.f, rate: [.03] }, { rd: f.b, rate: [.03] });
+  for (const c of [LS, LN]) NSRC.push({ rd: c.f, rate: [.05] }, { rd: c.b, rate: [.05] });
+  for (const f of FEED) NSRC.push({ rd: f.f, rate: [.04] }, { rd: f.b, rate: [.04] });
   NS.legIn = {}; { const arr = NS.links.filter(l => l.legTo).map(l => ({ s: l.legTo.s, ln: 0, link: l })); for (const q of arr) NS.legIn[q.link.id] = arr; }
   for (const J of NS.junc) { J.cur = (Math.random() * 2) | 0; J.st = 'g'; J.pt = rnd(0, 4); }
   // Decks (Brücken) je Straße
@@ -1924,7 +1957,7 @@ function nsInit() {
   for (const b of NET.bridges) for (const r of NET.roads) if (r.cv === b.U.cv) { const c = r.dir > 0 ? b.sU : r.cv.L - b.sU; r.decks.push({ a: c - b.R, b: c + b.R }); }
 }
 function nsJunc(dt) {
-  const eu = G.units.filter(u => (u.mode === 'local' || u.mode === 'return') && u.x != null);
+  const eu = G.units.filter(u => (u.mode === 'local' || u.mode === 'return') && u.x != null); for (const r of NS.svc) for (const v of r.veh) if (v.tow && !v.hold) { const p = r.pos(v.s, v.lat); eu.push({ x: p.x, y: p.y, a: p.a }); }
   for (const J of NS.junc) {
     J.pt += dt;
     if (eu.length) {   // Einsatzfahrzeuge bekommen Grün
@@ -1941,8 +1974,8 @@ function nsJunc(dt) {
 function nsStep(dt) {
   if (!NS.on) return; NS.t += dt; const WF = envWf(), HWF = envHw();
   NS.needPos = G.det.length > 0 || G.units.some(u => (u.mode === 'local' || u.mode === 'return') && u.x != null);
-  NS.mergers.length = 0; nsJunc(dt); lifeStep(dt);
-  for (const sc of NSRC) { const dn = sc.rd.kind === 'mot' ? TRF.dens : Math.sqrt(TRF.dens); for (let ln = 0; ln < sc.rd.lanes.length; ln++) { const k = sc.rd.id + ln; NS.spawn[k] = (NS.spawn[k] ?? rnd(0, 2)) - dt; if (NS.spawn[k] <= 0) { NS.spawn[k] = rnd(.6, 1.4) / (sc.rate[ln] * dn); if (!sc.rd.veh.some(v => v.ln === ln && v.s < 70 + v.len)) { const v = nsNew(sc.rd, -20, ln); v.dest = nsPickDest(sc.rd, 0); if (v.dest) sc.rd.veh.push(v); } } } }
+  NS.mergers.length = 0; nsJunc(dt); lifeStep(dt); sjStep(dt);
+  for (const sc of NSRC) { const dn = sc.rd.kind === 'mot' ? trfD() : Math.sqrt(trfD()); for (let ln = 0; ln < sc.rd.lanes.length; ln++) { const k = sc.rd.id + ln; NS.spawn[k] = (NS.spawn[k] ?? rnd(0, 2)) - dt; if (NS.spawn[k] <= 0) { NS.spawn[k] = rnd(.6, 1.4) / (sc.rate[ln] * dn); if (!sc.rd.veh.some(v => v.ln === ln && v.s < 70 + v.len)) { const v = nsNew(sc.rd, -20, ln); v.dest = nsPickDest(sc.rd, 0, sc.rd.kind === 'mot' ? 'mot' : null); if (v.dest) sc.rd.veh.push(v); } } } }
   for (const r of NET.roads) if (r.veh.length) nsStepRoad(r, dt, WF, HWF);
   NS.count = 0; for (const r of NET.roads) { if (r.veh.length) nsApply(r); NS.count += r.veh.length; }
 }
@@ -1956,7 +1989,10 @@ function nsDraw(g, vw, now, pass) {
     for (const v of r.veh) {
       const e = hasD ? nsElev(r, v.s) : 0; if ((e > 0) !== (pass === 1)) continue;
       const p = r.pos(v.s, v.lat); if (p.x < vw.x0 - 90 || p.x > vw.x1 + 90 || p.y < vw.y0 - 90 || p.y > vw.y1 + 90) continue;
-      g.save(); g.translate(p.x, p.y - 10 * e); g.rotate(p.a + v.yaw); if (r.ring) g.scale(.8, .8); drawVeh(g, v, now); nsBlink(g, v, now); g.restore();
+      g.save(); g.translate(p.x, p.y - 10 * e); g.rotate(p.a + v.yaw); if (r.ring) g.scale(.8, .8); drawVeh(g, v, now); nsBlink(g, v, now);
+      if (v.load) { g.save(); g.translate(-v.len * .1, -4); g.scale(.52, .52); drawVeh(g, { len: v.load.len, wid: v.load.wid, kind: v.load.kind, col: v.load.col, col2: v.load.col2, wreck: true }, now); g.restore(); }
+      if (v.siren) { const on = Math.floor(now * 6) % 2; g.fillStyle = on ? '#ffb21a' : '#ff7a00'; g.beginPath(); g.arc(v.len / 2 - 9, 0, 2.3, 0, 7); g.fill(); g.globalAlpha = .3; g.beginPath(); g.arc(v.len / 2 - 9, 0, 7, 0, 7); g.fill(); g.globalAlpha = 1; }
+      g.restore();
     }
   }
 }
@@ -2053,6 +2089,178 @@ function lifeDraw(g, vw, now, pass) {
     const st = Math.sin(now * 8 + q.t * 90) * .6; g.fillStyle = 'rgba(0,0,0,.28)'; g.beginPath(); g.ellipse(x + 1.2, y + 1.6, 1.9, 1.3, 0, 0, 7); g.fill(); g.fillStyle = q.col; g.beginPath(); g.arc(x, y + st * .3, 1.7, 0, 7); g.fill(); g.fillStyle = '#f0cfae'; g.beginPath(); g.arc(x, y - 1.6 + st * .3, 1.1, 0, 7); g.fill();
   }
 }
+/* ===== Fahrzeug-Inspektor: antippen → Fahrer, Ziel & geplante Route ===== */
+const INS = { v: null, ref: null, follow: false };
+const insName = d => !d ? '–' : d.leg ? 'A7 Ost (Auffahrt)' : d.sk.rd ? d.sk.rd.name + (d.sk.rd.dir > 0 ? ' ↘' : ' ↖') : '–';
+function insPick(e) {
+  if (ADM.pick) return false;
+  const r = cv.getBoundingClientRect(), mx = (e.clientX - r.left) / r.width * W, my = (e.clientY - r.top) / r.height * H, wx = CAM.x + (mx - W / 2) / CAM.z, wy = CAM.y + (my - H / 2) / CAM.z; let best = null, bd = 30 / CAM.z;
+  for (const rd of NET.roads) for (const v of rd.veh) { if (v.dead) continue; const p = rd.pos(v.s, v.lat), d = Math.hypot(p.x - wx, p.y - wy) - v.len * .25; if (d < bd) { bd = d; best = { v, rd, leg: false }; } }
+  for (const v of G.traf) { const p = P(v.s, v.lat), d = Math.hypot(p.x - wx, p.y - wy) - v.len * .25; if (d < bd) { bd = d; best = { v, rd: null, leg: true }; } }
+  if (!best) { if (INS.v) { INS.v = null; INS.follow = false; if (G.camFollow === 'ins') G.camFollow = null; return true; } return false; }
+  if (INS.v === best.v) { INS.follow = !INS.follow; G.camFollow = INS.follow ? 'ins' : null; } else { INS.v = best.v; INS.ref = best; INS.follow = false; if (G.camFollow === 'ins') G.camFollow = null; }
+  return true;
+}
+function insPos(h) { return h.leg ? P(h.v.s, h.v.lat) : h.v.rd.pos(h.v.s, h.v.lat); }
+function insRoute(v) {
+  const pts = []; if (!v.dest || !v.rd || v.rd.ring) return pts; const add = (rd, a, b) => { for (let q = a; q <= b; q += 26) pts.push(rd.pos(q, rd.lanes[0])); };
+  let cur = { rd: v.rd, s: v.s }, n = nsNext(v.rd, v.s);
+  for (let hop = 0; hop < 40 && n; hop++) {
+    if (n.rd === cur.rd) add(cur.rd, cur.s, n.s); if (n.end || !n.e.length) break;
+    let best = null, bc = 1e9; for (const e of n.e) { const c = e.c + v.dest.d[e.to.id]; if (c < bc) { bc = c; best = e; } } if (!best) break;
+    if (best.link) { const L = best.link; add(L, 0, L.L); const en = L.endNode, arr = en.e[0] && en.e[0].to; if (!L.to || !arr) break; cur = { rd: L.to.rd, s: L.to.s }; n = arr; } else { cur = { rd: n.rd, s: n.s }; n = best.to; }
+  }
+  return pts;
+}
+function insDraw(g, vw, now) {
+  const h = INS.ref; if (!INS.v || !h) return; const v = h.v; if (v.dead || (!h.leg && !v.rd.veh.includes(v)) || (h.leg && !G.traf.includes(v))) { INS.v = null; return; }
+  const p = insPos(h);
+  if (!h.leg) { const rt = insRoute(v); if (rt.length > 1) { g.strokeStyle = 'rgba(255,122,0,.9)'; g.lineWidth = 2.6; g.setLineDash([9, 7]); g.lineDashOffset = -now * 30; g.beginPath(); rt.forEach((q, i) => i ? g.lineTo(q.x, q.y) : g.moveTo(q.x, q.y)); g.stroke(); g.setLineDash([]); const e = rt[rt.length - 1]; g.fillStyle = '#FF7A00'; g.beginPath(); g.arc(e.x, e.y, 5, 0, 7); g.fill(); g.strokeStyle = '#fff'; g.lineWidth = 1.6; g.stroke(); chipAt(g, e.x, e.y - 12, 'Ziel', '#FF7A00', '#1d1d1b', 9); } }
+  g.strokeStyle = '#fff'; g.lineWidth = 2.4; g.beginPath(); g.arc(p.x, p.y, v.len * .5 + 5 + Math.sin(now * 5), 0, 7); g.stroke();
+  chipAt(g, p.x, p.y - v.len * .5 - 22, (KLAB[v.kind] || v.kind) + (v.pr ? ' · ' + v.pr.n : '') + (v.tow ? ' · Abschlepper' : v.broken ? ' · Panne' : ''), '#1d1d1b', '#fff', 10);
+  chipAt(g, p.x, p.y - v.len * .5 - 9, Math.round(v.v * 2.2) + ' km/h' + (h.leg ? ' · A7 Ost' : ' → ' + insName(v.dest)) + (INS.follow ? ' · folgt' : ''), '#FF7A00', '#1d1d1b', 9);
+}
+/* ===== Karriere: Konto, Ruf, Upgrades · Pannenhilfe-Aufträge im ganzen Netz ===== */
+const CAR = { cash: 2500, rep: 50, xp: 0, jobs: 0, main: 0, earned: 0, best: 0, fast: 0, ach: {}, up: { speed: 0, crane: 0, bay: 0, radio: 0, siren: 0 } };
+function carLoad() { try { const o = JSON.parse(localStorage.getItem('tr_career') || '{}'); for (const k of ['cash', 'rep', 'xp', 'jobs', 'main', 'earned', 'best', 'fast']) if (isFinite(o[k])) CAR[k] = o[k]; if (o.ach && typeof o.ach === 'object') CAR.ach = o.ach; if (o.up) for (const k in CAR.up) if (isFinite(o.up[k])) CAR.up[k] = o.up[k]; } catch (_) { } }
+function carSave() { try { localStorage.setItem('tr_career', JSON.stringify(CAR)); } catch (_) { } }
+const fmtE = n => Math.round(n).toLocaleString('de-DE'), carLvl = () => Math.floor(Math.sqrt(CAR.xp / 60)) + 1;
+const repF = () => .8 + CAR.rep / 250;
+function carEarn(amt, label, xp) {
+  CAR.cash += amt; if (amt > 0) CAR.earned += amt; CAR.xp += xp || 0; carSave(); careerChip(); achCheck();
+  if (label) toast((amt >= 0 ? '+ € ' : '− € ') + fmtE(Math.abs(amt)) + ' · ' + label, amt >= 0 ? 'good' : 'bad');
+}
+const carRep = d => { CAR.rep = clamp(CAR.rep + d, 0, 100); carSave(); careerChip(); achCheck(); };
+const SCEN_LVL = { A: 1, B: 1, C: 1, D: 2 };
+const ACH = [
+  { id: 'p5', ic: '🔧', n: 'Pannen-Profi', d: '5 Pannenhilfen abschließen', ok: () => CAR.jobs >= 5, r: 500 },
+  { id: 'p20', ic: '🚛', n: 'Pannen-Legende', d: '20 Pannenhilfen abschließen', ok: () => CAR.jobs >= 20, r: 1800 },
+  { id: 'fast5', ic: '⚡', n: 'Blitzschnell', d: '5 Schnell-Boni bei Pannenhilfen', ok: () => CAR.fast >= 5, r: 900 },
+  { id: 'm1', ic: '🚨', n: 'Erster Großeinsatz', d: 'Ein Unfall-Szenario abschließen', ok: () => CAR.main >= 1, r: 400 },
+  { id: 's3', ic: '⭐', n: 'Mustergültig', d: 'Einen Einsatz mit 3 Sternen abschließen', ok: () => CAR.best >= 3, r: 800 },
+  { id: 'm5', ic: '🏅', n: 'Routinier', d: '5 Großeinsätze abschließen', ok: () => CAR.main >= 5, r: 1500 },
+  { id: 'rep80', ic: '🌟', n: 'Bester Ruf', d: 'Ruf von 4 ★ erreichen', ok: () => CAR.rep >= 80, r: 1200 },
+  { id: 'rich', ic: '💶', n: 'Unternehmer', d: '€ 20.000 verdient', ok: () => CAR.earned >= 20000, r: 2500 },
+];
+function achCheck() { for (const a of ACH) if (!CAR.ach[a.id] && a.ok()) { CAR.ach[a.id] = 1; CAR.cash += a.r; CAR.earned += a.r; carSave(); careerChip(); toast('🏆 Erfolg: ' + a.n + ' · + € ' + fmtE(a.r), 'good'); sfx.ok(); } }
+const UPG = [
+  { id: 'speed', ic: '🚚', n: 'Fahrertraining & Motortuning', d: 'Abschleppwagen fahren +7 % schneller je Stufe', max: 5, cost: l => 1400 + l * 1100 },
+  { id: 'crane', ic: '🏗️', n: 'Hochleistungs-Kran', d: 'Bergungszeit −9 % je Stufe (Unfälle & Pannenhilfe)', max: 5, cost: l => 1800 + l * 1300 },
+  { id: 'bay', ic: '🔧', n: 'Werkstatt-Ausbau', d: 'Reparaturen am Hof −14 % je Stufe', max: 4, cost: l => 1600 + l * 1200 },
+  { id: 'radio', ic: '📡', n: 'Digitalfunk & Leitstelle', d: '+10 % Honorar je Stufe, häufiger Pannenaufträge', max: 4, cost: l => 1200 + l * 1000 },
+  { id: 'siren', ic: '🚨', n: 'Sonderrechte-Paket', d: 'Ampelvorrang auch für Pannenhilfe-Fahrten, Verkehr weicht früher aus', max: 2, cost: l => 2600 + l * 2200 },
+];
+function careerChip() { const e = document.getElementById('hCar'); if (!e) return; const t = '€ ' + fmtE(CAR.cash) + ' · ★ ' + (CAR.rep / 20).toFixed(1).replace('.', ',') + ' · Lvl ' + carLvl(); if (e.textContent !== t) e.textContent = t; }
+function shopHTML() {
+  return `<div class="modal" style="max-width:640px"><div class="m-h"><div><h1>Werkstatt &amp; Fuhrpark</h1><p>Investiere dein Einkommen in schnellere Einsätze</p></div></div><div class="m-b">
+  <div class="stat4"><div><b>€ ${fmtE(CAR.cash)}</b><small>Konto</small></div><div><b>${(CAR.rep / 20).toFixed(1).replace('.', ',')} ★</b><small>Ruf</small></div><div><b>Lvl ${carLvl()}</b><small>Erfahrung</small></div><div><b>${CAR.jobs + CAR.main}</b><small>Einsätze (${CAR.jobs} Pannen)</small></div></div>
+  ${UPG.map(u => { const lv = CAR.up[u.id], max = lv >= u.max, c = u.cost(lv), ok = !max && CAR.cash >= c; return `<div class="upg"><div class="ui">${u.ic}</div><div class="ut"><b>${u.n}</b><small>${u.d}</small><div class="pips">${Array.from({ length: u.max }, (_, i) => `<i class="${i < lv ? 'on' : ''}"></i>`).join('')}</div></div><button class="btn ${ok ? '' : 'ghost'}" style="width:auto;min-width:96px" data-act="buy" data-id="${u.id}" ${ok ? '' : 'disabled'}>${max ? 'Max.' : '€ ' + fmtE(c)}</button></div>`; }).join('')}
+  <div class="h2" style="font-size:15px;margin:14px 0 6px">Erfolge · ${ACH.filter(a => CAR.ach[a.id]).length}/${ACH.length}</div><div class="achg">${ACH.map(a => `<div class="ach ${CAR.ach[a.id] ? 'on' : ''}"><span>${a.ic}</span><div><b>${a.n}</b><small>${a.d} · € ${fmtE(a.r)}</small></div></div>`).join('')}</div>
+  <div class="row" style="gap:8px;margin-top:12px"><button class="btn" data-act="closeOv">Weiter</button><button class="btn ghost" style="width:auto" data-act="careerReset">Zurücksetzen</button></div></div></div>`;
+}
+function careerResultHTML() {
+  const p = G.results && G.results.pay; if (!p) return '';
+  return `<div class="card" style="margin:10px 0"><div class="row"><b>Einnahmen &amp; Ruf</b><span style="margin-left:auto;font-weight:900;color:#2fbf71">+ € ${fmtE(p.total)}</span></div><div style="font-size:13px;color:#9a9a93;margin-top:4px">Bergungen € ${fmtE(p.tow)} · Bonus € ${fmtE(p.bonus)} · Ruf ${p.rep >= 0 ? '+' : ''}${p.rep.toFixed(1).replace('.', ',')} · Konto € ${fmtE(CAR.cash)}</div><button class="btn ghost" style="margin-top:8px" data-act="shop">🔧 Upgrades kaufen</button></div>`;
+}
+/* ---------- Tagesverlauf: Berufsverkehr ---------- */
+const gaus = (x, m, s) => Math.exp(-((x - m) ** 2) / (2 * s * s));
+const rushF = () => { const h = ENV.hour; return clamp(.42 + .55 * gaus(h, 7.8, 1.5) + .6 * gaus(h, 17.2, 1.9) + .22 * gaus(h, 12.5, 2.2) + .1 * gaus(h, 21, 1.5), .35, 1.5); };
+const trfD = () => TRF.dens * rushF();
+/* ---------- Pannenhilfe ---------- */
+const SJ = { list: [], t: 22, id: 0 };
+const SJK = { car: 'Pkw', van: 'Transporter', truck: 'Lkw', semi: 'Sattelzug', bus: 'Bus' }, SJWHY = ['Motorschaden', 'Reifenpanne', 'Kühlwasser leer', 'Batterie leer', 'Getriebeschaden', 'Kupplungsschaden', 'Kraftstoff leer', 'Überhitzt'];
+const sjEta = (rd, s) => { const d = nsMkDest(rd, s).d, f = d[nsNext(LS.f, sjGate(LS.f)).id], b = d[nsNext(LS.b, sjGate(LS.b)).id]; return Math.min(f, b); };
+const sjGate = rd => { const p = P(YD.gateS, LATB(YD.gateS)); return rdS(rd, p.x, p.y); };
+const sjWx = () => ({ clear: 1, cloudy: 1, rain: 1.5, storm: 1.9, fog: 1.4, snow: 2 }[ENV.weather] || 1);
+const sjOpen = () => SJ.list.filter(j => j.state === 'open' || j.state === 'queued');
+function sjPick() {
+  const rds = NET.roads.filter(r => !r.link && !r.ring && r.veh.length);
+  for (let k = 0; k < 60; k++) {
+    const r = rds[(Math.random() * rds.length) | 0], v = r.veh[(Math.random() * r.veh.length) | 0];
+    if (!v || v.tow || v.broken || v.ln !== 0 || v.v < 12 || v.kind === 'tractor' || v.dead || v.s < 160 || v.s > r.L - 260) continue;
+    if (r.out.some(o => v.s < o.s + 60 && v.s > o.s - 320) || r.inn.some(q => v.s > q.s - 220 && v.s < q.s + 320) || r.sigs.some(x => Math.abs(x.s - v.s) < 280) || r.decks.some(d => v.s > d.a - 100 && v.s < d.b + 60) || r.zones.some(z => v.s > z.s0 - 200 && v.s < z.s1 + 50)) continue;
+    const p = r.pos(v.s, v.lat); if (p.x < 60 || p.y < 60 || p.x > WW - 60 || p.y > WH - 60) continue;
+    const eta = sjEta(r, v.s + 60); if (!(eta < 400)) continue;
+    return { r, v, eta };
+  }
+  return null;
+}
+function sjSpawn() {
+  const c = sjPick(); if (!c) return; const { r, v, eta } = c, need = KNEED[v.kind] ?? 0, base = [200, 340, 600][need];
+  v.broken = 1; v.on = 1e9; v.take = null; v.dest = null; v.sg = 0; v.lcP = -1;
+  const j = { id: ++SJ.id, rd: r, veh: v, s: v.s + v.v * v.v / 48, need, kind: v.kind, why: SJWHY[(Math.random() * SJWHY.length) | 0], eta, state: 'open', pay: Math.round(base * repF() * (1 + .1 * CAR.up.radio) * (r.kind === 'mot' ? 1.25 : 1) * (envNight() > .5 ? 1.2 : 1) / 10) * 10, dl: G.t + eta * 1.5 + rnd(55, 105), t0: G.t };
+  SJ.list.push(j); toast('Neue Panne: ' + SJK[v.kind] + ' · ' + r.name + ' km ' + kmOf(j.s) + ' · € ' + j.pay, 'blu'); sfx.alert();
+}
+function sjDispatch(id) {
+  const j = SJ.list.find(x => x.id === id); if (!j || j.state !== 'open') return false;
+  const f = G.fleet.filter(x => x.state === 'depot' && x.type >= j.need).sort((a, b) => a.type - b.type)[0];
+  if (!f) { toast('Kein passender Abschleppwagen frei (' + TOWT[j.need].size + ' benötigt)', 'bad'); return false; }
+  j.f = f; f.state = 'side'; j.state = 'queued'; sfx.go(); toast(f.name + ' fährt zur Pannenstelle', 'good'); return true;
+}
+function sjLaunch(j) {
+  const dest = nsMkDest(j.rd, j.s), rf = LS.f, rb = LS.b, sf = sjGate(rf), sb = sjGate(rb), cf = dest.d[nsNext(rf, sf).id], cb = dest.d[nsNext(rb, sb).id];
+  if (Math.min(cf, cb) > 9e8) { j.f.state = 'depot'; j.f = null; j.state = 'open'; toast('Pannenstelle nicht erreichbar', 'bad'); return true; }
+  const rd = cf <= cb ? rf : rb, s0 = cf <= cb ? sf : sb; if (rd.veh.some(o => Math.abs(o.s - s0) < (o.len + 60) / 2 + 10)) return false;
+  const kind = j.need === 0 ? 'van' : j.need === 1 ? 'truck' : 'semi', K = KIND[kind];
+  const v = nsNew(rd, s0, 0, kind, { tow: true, siren: true, job: j, fleet: j.f, col: '#FF7A00', col2: '#ffffff', dest, vd: 66 * (1 + .07 * CAR.up.speed), pr: PERS[1], v: 16, goal: { rd: j.rd, s: j.s - (K.len / 2 + j.veh.len / 2 + 12), end: false } });
+  rd.veh.push(v); j.tow = v; j.state = 'enroute'; j.tl = G.t; return true;
+}
+function sjGoHome(v) {   // zurück zum Hof (Tor an der Landstraße)
+  const dF = nsMkDest(LS.f, sjGate(LS.f)), dB = nsMkDest(LS.b, sjGate(LS.b)), n = nsNext(v.rd, v.s), cF = dF.d[n.id], cB = dB.d[n.id];
+  if (Math.min(cF, cB) > 9e8) return false; const f = cF <= cB;
+  v.dest = f ? dF : dB; v.goal = { rd: f ? LS.f : LS.b, s: sjGate(f ? LS.f : LS.b), end: true }; v.hold = false; v.slide = false; v.decO = null; v.take = null; return true;
+}
+function sjFree(j) { if (j.f) { j.f.state = 'depot'; j.f = null; } }
+function sjArrive(v) {
+  const j = v.job; if (v.aborted || !j) return;
+  if (j.state === 'enroute') { j.state = 'work'; j.wt = j.wt0 = (TOWT[j.need].work * 1.1 + 3) * (1 - .09 * CAR.up.crane); j.ta = G.t; }
+}
+function sjStep(dt) {
+  SJ.t -= dt; if (SJ.t <= 0 && !TRF.sj) SJ.t = 20; if (SJ.t <= 0) { SJ.t = rnd(32, 66) / (sjWx() * (1 + .15 * CAR.up.radio) * (envNight() > .5 ? 1.15 : 1)); if (sjOpen().length < 4 && G.phase !== 'crash') sjSpawn(); }
+  for (const j of SJ.list) {
+    if (j.state === 'open' || j.state === 'queued' || j.state === 'enroute') { if (j.veh.v > .5) j.s = j.veh.s + j.veh.v * j.veh.v / 48; else j.s = j.veh.s; }
+    if (j.state === 'queued') { if (sjLaunch(j)) { } }
+    else if (j.state === 'work') {
+      j.wt -= dt; if (j.wt <= 0) {   // aufgeladen
+        const b = j.veh, v = j.tow; b.dead = 1; v.load = { kind: b.kind === 'semi' ? 'truck' : b.kind, col: b.col, col2: b.col2, len: b.len, wid: b.wid }; j.state = 'return'; if (!sjGoHome(v)) { j.state = 'fail'; sjFree(j); }
+      }
+    }
+    if ((j.state === 'open' || j.state === 'queued' || j.state === 'enroute') && G.t > j.dl) {   // zu spät
+      const was = j.state; j.state = 'fail'; j.fin = G.t; carRep(-3.5); carEarn(-60, 'Panne zu spät: ' + SJK[j.kind] + ' abgeschleppt (privat)', 0); j.veh.dead = 1;
+      if (j.tow) { j.tow.aborted = 1; sjGoHome(j.tow); j.tow = null; } else sjFree(j);
+    }
+  }
+  for (const v of NS.arr) { if (v.goal && v.goal.end) sjDone(v); else sjArrive(v); } NS.arr.length = 0;
+  for (const v of NS.lost) { const j = v.job; if (v.fleet) v.fleet.state = 'depot'; if (j && j.tow === v) { j.tow = null; j.state = j.state === 'return' ? 'fail' : 'open'; j.f = null; toast('Abschlepper nicht angekommen', 'bad'); } } NS.lost.length = 0;
+  SJ.list = SJ.list.filter(j => !((j.state === 'done' || j.state === 'fail') && G.t - (j.fin || 0) > 25));
+}
+function sjDone(v) {
+  const j = v.job; if (v.aborted || !j || j.tow !== v) { if (v.fleet) v.fleet.state = 'depot'; return; }
+  const fast = j.ta && (j.ta - j.t0) < (j.dl - j.t0) * .5; if (fast) CAR.fast++;
+  const _f = fast, tot = j.pay + (_f ? Math.round(j.pay * .2 / 10) * 10 : 0);
+  j.state = 'done'; j.fin = G.t; sjFree(j); j.tow = null; CAR.jobs++; carRep(1.1 + (fast ? .6 : 0)); carEarn(tot, 'Pannenhilfe ' + SJK[j.kind] + (fast ? ' · Schnell-Bonus' : ''), 12 + j.need * 6);
+}
+function sjReset() { for (const j of SJ.list) { if (j.veh) j.veh.dead = 1; if (j.tow) j.tow.dead = 1; if (j.f) j.f.state = 'depot'; } for (const r of NET.roads) for (const v of r.veh) if (v.tow) v.dead = 1; SJ.list = []; SJ.t = 18; }
+function sjRecall(id) { const j = SJ.list.find(x => x.id === id); if (!j || j.state !== 'enroute' || !j.tow) return; const v = j.tow; v.aborted = 1; sjGoHome(v); j.tow = null; j.state = 'open'; j.ta = null; toast('Abschlepper zurückgerufen', ''); }
+const sjLive = id => { const j = SJ.list.find(x => x.id === id); if (!j) return ''; if (j.state === 'work') return Math.round((1 - j.wt / j.wt0) * 100) + ' %'; return rt(Math.max(0, j.dl - G.t)); };
+const sjSt = j => ({ open: 'Wartet auf Disposition', queued: 'Fahrzeug rückt aus …', enroute: 'unterwegs · ' + (j.f ? j.f.name : ''), work: 'Bergung läuft', return: 'Fahrt zum Hof', done: 'abgeschlossen', fail: 'verfehlt' }[j.state]);
+function sjBoard() {
+  const L = SJ.list.filter(j => j.state !== 'done' && j.state !== 'fail');
+  let h = `<div class="h"><span>🚧 Pannenhilfe · Aufträge</span><span>${L.length} offen</span></div>`;
+  if (!L.length) h += `<div class="empty">Keine offenen Pannen – neue Meldungen kommen automatisch.</div>`;
+  for (const j of L) h += `<div class="pk sjc ${j.state}" style="cursor:default"><div class="ti dk">${tIc(j.need, 40, 24)}</div><div><span class="nm">${SJK[j.kind]} · ${esc(j.why)}</span><small>${esc(j.rd.name)} km ${kmOf(j.s)} · ${sjSt(j)}${j.state === 'open' ? ' · Anfahrt ≈ ' + minTx(j.eta) : ''}</small></div><div class="go" style="text-align:right"><b style="color:#2fbf71">€ ${fmtE(j.pay)}</b><div style="font-size:12px;color:#9a9a93">${j.state === 'work' ? '' : '⏱ '}<span data-live="sj:${j.id}">${sjLive(j.id)}</span></div></div></div>
+    <div class="sjb">${j.state === 'open' ? `<button class="btn" style="width:auto" data-act="sjGo" data-id="${j.id}">${ic('send')} Abschlepper schicken (${TOWT[j.need].name})</button>` : j.state === 'enroute' ? `<button class="btn ghost" style="width:auto" data-act="sjBack" data-id="${j.id}">↩ Zurückrufen</button>` : ''}<button class="btn ghost" style="width:auto" data-act="sjZoom" data-id="${j.id}">⌖ Zeigen</button></div>`;
+  return h;
+}
+function sjZoom(id) { const j = SJ.list.find(x => x.id === id); if (!j) return; const p = j.rd.pos(j.veh.s, 0); G.camFollow = null; CAM.x = p.x; CAM.y = p.y; CAM.z = Math.max(CAM.z, .9); clampCam(); }
+function sjDraw(g, vw, now) {
+  for (const j of SJ.list) {
+    if (j.state === 'done' || j.state === 'fail') continue; const b = j.veh, p = j.rd.pos(b.s, b.lat); if (p.x < vw.x0 - 60 || p.x > vw.x1 + 60 || p.y < vw.y0 - 60 || p.y > vw.y1 + 60) continue;
+    const k = (now * 1.3 + j.id) % 1; g.strokeStyle = `rgba(255,122,0,${.6 * (1 - k)})`; g.lineWidth = 3; g.beginPath(); g.arc(p.x, p.y, 16 + k * 26, 0, 7); g.stroke();
+    chipAt(g, p.x, p.y - 30, (j.state === 'work' ? '🔧 ' + sjLive(j.id) : '€ ' + fmtE(j.pay) + ' · ' + sjLive(j.id)), j.state === 'open' ? '#e5483f' : '#FF7A00', j.state === 'open' ? '#fff' : '#1d1d1b', 10);
+    if (j.state === 'work') { g.fillStyle = 'rgba(0,0,0,.6)'; rr(g, p.x - 18, p.y - 22, 36, 5, 2.5); g.fill(); g.fillStyle = '#2fbf71'; rr(g, p.x - 17, p.y - 21, 34 * (1 - j.wt / j.wt0), 3, 1.5); g.fill(); }
+  }
+}
 /* ===== Kamera, Zeichnen, Minimap ===== */
 const cv = $('#cv'), ctx = cv.getContext('2d'), mini = $('#mini'), mctx = mini.getContext('2d'); let K = 1;
 const CAM = { x: 3000, y: 1700, z: .62 }; let ZMIN = Math.max(W / WW, H / WH) + .001, ZMAX = 2.2;
@@ -2060,6 +2268,7 @@ function fit() { const r = cv.getBoundingClientRect(), d = Math.min(MOB ? 1.5 : 
 function clampCam() { CAM.z = clamp(CAM.z, ZMIN, ZMAX); CAM.x = clamp(CAM.x, W / 2 / CAM.z, WW - W / 2 / CAM.z); CAM.y = clamp(CAM.y, H / 2 / CAM.z, WH - H / 2 / CAM.z); }
 function camTarget() {
   if (G.camFollow === 'hero') { const h = G.traf.find(v => v.hero), r = G.crash && G.crash.s0; if (h) { const p = P(h.s + 40, 20); return { x: p.x, y: p.y, z: 1.15 }; } if (r) { const p = P(r + 60, 20); return { x: p.x, y: p.y, z: 1.15 }; } }
+  if (G.camFollow === 'ins' && INS.v && INS.ref) { const p = insPos(INS.ref); return { x: p.x, y: p.y, z: Math.max(1.1, CAM.z) }; }
   if (G.camFollow === 'acc' && G.acc) { const p = P(G.acc.mid - 120, 10); return { x: p.x, y: p.y, z: Math.max(.9, CAM.z) }; }
   return null;
 }
@@ -2189,7 +2398,7 @@ function draw() {
     if (u.fade >= 1) { const e = unitEta(u); chipAt(g, x, y - 20, u.sp.abbr + (u.type === 'tow' && u.fleet ? ' ' + u.fleet.name.split(' ').pop() : '') + (e != null && e > .5 && u.mode !== 'depart' && u.mode !== 'return' ? ' · ' + minTx(e) : ''), u.sp.col, u.type === 'rd' ? '#1d1d1b' : '#fff'); }
     if (u.site && u.mode === 'hw' && G.acc && !G.acc.cleared) drawCrew(g, u, x, y, a, now);
   });
-  nsDecks(g, vw, now); nsSignals(g, vw, now);
+  nsDecks(g, vw, now); nsSignals(g, vw, now); sjDraw(g, vw, now); insDraw(g, vw, now);
   G.wrecks.forEach(w => { const an = craneAnim(w); if (an) drawCrane(g, w, an, now); });
   // Leitkegel der Polizei
   const pol = unitsOf('pol').find(u => u.site); if (pol && G.acc) { const n = Math.floor(Math.min(1, pol.wt / 6) * 12); for (let i = 0; i < n; i++) { const p = P(G.acc.front - 36 - i * 12, 58 - i * 3.4); g.fillStyle = 'rgba(0,0,0,.25)'; g.beginPath(); g.arc(p.x + 1, p.y + 1.5, 2.6, 0, 7); g.fill(); g.fillStyle = '#ff6a1a'; g.beginPath(); g.arc(p.x, p.y, 2.5, 0, 7); g.fill(); g.fillStyle = '#fff'; g.beginPath(); g.arc(p.x, p.y, 1.2, 0, 7); g.fill(); } }
@@ -2249,6 +2458,7 @@ function drawMini(now) {
   g.setTransform(1, 0, 0, 1, 0, 0); g.drawImage(MINIBG, 0, 0); g.setTransform(k, 0, 0, k, 0, 0);
   NS.zones.forEach(z => { const r = NET.R[z.rd]; if (!r) return; g.strokeStyle = z.kind === 'jam' ? '#e5483f' : '#f2b705'; g.lineWidth = 26; g.beginPath(); for (let s = z.s0; s <= z.s1; s += 30) { const q = r.pos(s, 0); s === z.s0 ? g.moveTo(q.x, q.y) : g.lineTo(q.x, q.y); } g.stroke(); });
   G.zones.forEach(z => { g.strokeStyle = '#f2b705'; g.lineWidth = 26; g.beginPath(); for (let s = z.s0; s <= z.s1; s += 30) { const p = P(s, 50); s === z.s0 ? g.moveTo(p.x, p.y) : g.lineTo(p.x, p.y); } g.stroke(); });
+  SJ.list.forEach(j => { if (j.state === 'done' || j.state === 'fail') return; const p = j.rd.pos(j.veh.s, j.veh.lat); g.fillStyle = '#FF7A00'; g.beginPath(); g.arc(p.x, p.y, 34 + 12 * Math.sin(now * 5 + j.id), 0, 7); g.fill(); });
   if (G.jam.active && G.acc) { g.strokeStyle = 'rgba(229,72,63,.9)'; g.lineWidth = 30; g.beginPath(); for (let s = G.jam.tail; s <= G.acc.front; s += 30) { const p = P(s, 35); s === G.jam.tail ? g.moveTo(p.x, p.y) : g.lineTo(p.x, p.y); } g.stroke(); }
   const dot = (x, y, r, c) => { g.fillStyle = c; g.beginPath(); g.arc(x, y, r, 0, 7); g.fill(); };
   if (G.acc && !G.acc.cleared) { const p = P(G.acc.mid, 30); dot(p.x, p.y, 52 + 14 * Math.sin(now * 5), '#e5483f'); }
@@ -2296,7 +2506,7 @@ const bars = () => Array.from({ length: 30 }, () => 5 + Math.round(Math.random()
 /* --- Fahrer --- */
 function driverPanel() {
   if (G.phase === 'select') return `<div><div class="h2">Szenario wählen</div><p class="sub">Du bist Lkw-Fahrer auf der A7. Wähle, was gleich passiert – danach meldest du den Unfall, der Disponent koordiniert die Bergung.</p></div>
-    ${Object.entries(SCEN).map(([k, s]) => `<button class="scn ${G.scen === k ? 'on' : ''}" data-act="scen" data-k="${k}"><div class="ti">${tIc(s.need)}</div><div><b>${s.title}</b><small>${s.desc}</small></div></button>`).join('')}
+    ${Object.entries(SCEN).map(([k, s]) => `<button class="scn ${G.scen === k ? 'on' : ''} ${carLvl() < (SCEN_LVL[k] || 1) ? 'lock' : ''}" data-act="scen" data-k="${k}"><div class="ti">${tIc(s.need)}</div><div><b>${s.title}${carLvl() < (SCEN_LVL[k] || 1) ? ' 🔒' : ''}</b><small>${carLvl() < (SCEN_LVL[k] || 1) ? 'Ab Level ' + SCEN_LVL[k] + ' – sammle Erfahrung mit Pannenhilfe &amp; Einsätzen' : s.desc}</small></div></button>`).join('')}
     <button class="btn big" data-act="startScen">${ic('arrow')} Fahrt starten</button><div class="muted" style="font-size:12px;color:#8a8a85;text-align:center">Tipp: Mit „Disponent“ oben wechselst du die Seite. Die Simulation läuft in 10-fachem Zeitraffer.</div>`;
   if (G.phase === 'drive') return `<div class="card" style="display:flex;gap:14px;align-items:center"><div class="spin"></div><div><div class="h2" style="font-size:18px">Du fährst auf der A7 …</div><p class="sub" style="margin:2px 0 0">${esc(SCEN[G.scen].vtype)} · Spur 2 · Fahrtrichtung Hamburg</p></div></div>`;
   if (G.phase === 'crash') return `<div class="err" style="font-size:16px"><b>Unfall!</b> Bleib ruhig – gleich kannst du die Meldung erstellen.</div>`;
@@ -2339,7 +2549,8 @@ function tracking() {
 const curWreck = () => G.wrecks.find(w => w.id === G.selWreck) || G.wrecks.find(w => !w.done && !w.tow) || G.wrecks[0];
 const routeList = () => G.acc ? RAMPS.filter(r => r.s + 70 < G.acc.front - 130).slice(-4) : [];
 function fleetBack(f) { const u = G.units.find(x => x.fleet === f); if (!u) return null; if (u.mode === 'return') return (u.path.len - u.pd) / u.sp.vLoc; if (u.mode === 'depart') return Math.max(0, ((u.exitS || EXIT.s) - u.s) / 60) + backPath(gateU('depot'), u.exitS).len / 80; return null; }
-function dispatchPanel() {
+function dispatchPanel() { return sjBoard() + dispatchPanel0(); }
+function dispatchPanel0() {
   if (!G.acc) return `<div class="card" style="display:flex;gap:12px;align-items:center"><div class="spin"></div><div><b>Leitstelle bereit</b><small style="display:block;color:#9a9a93">${G.phase === 'select' ? 'Wechsle zum Fahrer und starte ein Szenario.' : 'Verkehr normal – warte auf Meldungen …'}</small></div></div>`;
   const r = G.report, W = curWreck(), nW = G.wrecks.length, dW = G.wrecks.filter(w => w.done).length;
   let h = `<div class="card" style="border-left:5px solid var(--red)"><div class="row"><b style="font-size:16px">Unfall A7 · km ${kmOf(G.acc.mid)}</b><span class="chip red" style="margin-left:auto">${G.acc.cleared ? 'geräumt' : 'aktiv'}</span></div><div style="color:#9a9a93;font-weight:600;margin-top:4px">Stau: <b style="color:#fff" data-live="jam">0 m</b> · Rettungsgasse: <b style="color:#fff" data-live="gasse">–</b>${G.fire && G.fire.on ? ' · <b style="color:#ff8a4d">BRAND</b>' : ''}</div></div>`;
@@ -2365,20 +2576,20 @@ function dispatchPanel() {
   return h;
 }
 function sigNow() {
-  return [G.view, G.phase, G.step, !!G.report, G.alertSeen, G.towSel, G.jobs.length, G.selWreck, G.wrecks.filter(w => w.done).length, G.wrecks.filter(w => w.tow).length, G.acc && G.acc.cleared, G.fire && G.fire.on, G.units.map(u => u.type + u.mode + (u.site ? 1 : 0) + (u.rel ? 1 : 0)).join(','), G.fleet.map(f => f.state).join(''), G.reps.map(r => r.st + Math.round(r.prog * 10)).join(), G.ws.map(w => w.q.length).join(), G.fixed, !!G.rec, G.log.length, G.err, G.form && G.form.photos.length, G.form && !!G.form.memo, G.play && G.play.key, G.scen].join('|');
+  return [G.view, G.phase, G.step, !!G.report, G.alertSeen, G.towSel, G.jobs.length, G.selWreck, G.wrecks.filter(w => w.done).length, G.wrecks.filter(w => w.tow).length, G.acc && G.acc.cleared, G.fire && G.fire.on, G.units.map(u => u.type + u.mode + (u.site ? 1 : 0) + (u.rel ? 1 : 0)).join(','), G.fleet.map(f => f.state).join(''), carLvl(), SJ.list.map(j => j.id + j.state).join(','), Math.round(CAR.cash), G.reps.map(r => r.st + Math.round(r.prog * 10)).join(), G.ws.map(w => w.q.length).join(), G.fixed, !!G.rec, G.log.length, G.err, G.form && G.form.photos.length, G.form && !!G.form.memo, G.play && G.play.key, G.scen].join('|');
 }
 function renderPanel(force) {
   const s = sigNow(); if (!force && s === lastSig) return; lastSig = s;
   const ctl = document.activeElement; if (!force && ctl && ctl.tagName === 'INPUT' && panel.contains(ctl)) return;
   panel.className = G.view === 'driver' ? 'light' : ''; panel.innerHTML = G.view === 'driver' ? driverPanel() : dispatchPanel();
   $('#vDrv').className = G.view === 'driver' ? 'on' : ''; $('#vDis').className = G.view === 'dispatch' ? 'on' : '';
-  $('#vDrv').innerHTML = ic('driver') + ' Fahrer'; const n = G.report && !G.alertSeen ? 1 : 0; $('#vDis').innerHTML = ic('desk') + ' Disponent' + (n ? `<span class="badge">${n}</span>` : '');
+  $('#vDrv').innerHTML = ic('driver') + ' Fahrer'; const n = (G.report && !G.alertSeen ? 1 : 0) + SJ.list.filter(j => j.state === 'open').length; $('#vDis').innerHTML = ic('desk') + ' Disponent' + (n ? `<span class="badge">${n}</span>` : '');
   if (G.view === 'dispatch' && G.report && !G.alertSeen && !$('#ov').classList.contains('on')) showOverlay('alert');
   setBtns();
 }
 
 /* ===== Admin-Menü: Baustellen, Stau, Wetter, Verkehr ===== */
-const TRF = { dens: 1, trucks: 1, aggr: .5, divert: .1, slow: true, rand: true };
+const TRF = { dens: 1, trucks: 1, aggr: .5, divert: .1, slow: true, rand: true, sj: true };
 const ADM = { open: false, tab: 'wx', pick: null, pend: null, zid: 0 };
 function trfLoad() { try { const o = JSON.parse(localStorage.getItem('tr_trf') || '{}'); for (const k in TRF) if (k in o && typeof o[k] === typeof TRF[k]) TRF[k] = o[k]; } catch (_) { } }
 function trfSave() { try { localStorage.setItem('tr_trf', JSON.stringify(TRF)); } catch (_) { } }
@@ -2386,7 +2597,7 @@ function admSave() { try { localStorage.setItem('tr_zones', JSON.stringify(allZ(
 function admLoadZones() { try { const a = JSON.parse(localStorage.getItem('tr_zones') || '[]'); for (const z of a) if (isFinite(z.s0) && isFinite(z.s1) && z.s1 > z.s0) { const kind = z.kind === 'jam' ? 'jam' : 'work', rid = z.rd || 'A7+'; if (rid === 'A7+') G.zones.push({ id: ++ADM.zid + 100, s0: z.s0, s1: z.s1, vmax: z.vmax, kind, seed: (Math.random() * 9999) | 0, admin: true }); else if (NET.R[rid]) NS.zones.push({ id: ++ADM.zid + 100, rd: rid, s0: z.s0, s1: z.s1, vmax: z.vmax, kind, lanes: nsZoneLanes(NET.R[rid], kind), seed: (Math.random() * 9999) | 0, admin: true }); } rebuildZobs(); } catch (_) { } }
 function rebuildZobs() { G.zobs = G.zones.filter(z => z.kind !== 'jam').map(z => ({ s0: z.s0, s1: z.s1, l0: 46.8, l1: 58, zone: true })); }
 const KMH = 2.2;
-function admZoneOk(s0, s1) { if (s0 < 120 || s1 > Lh - 400) return 'Zu nah am Streckenanfang/-ende.'; for (const r of RAMPS) if (s1 > r.s + 10 && s0 < r.s + 290) return 'Überschneidet die Einfädelspur der ' + r.name + '.'; for (const o of OFFS) if (s1 > o.s - 140 && s0 < o.s - 10) return 'Überschneidet die Ausfahrt vor ' + (RAMPS[o.id] ? RAMPS[o.id].name : 'AS Ende') + '.'; if (s1 > KZ0 && s0 < KZ1) return 'Im Bereich des Autobahnkreuzes nicht möglich.'; if (G.acc && !G.acc.cleared && s1 > G.acc.front - 300 && s0 < G.acc.s1 + 100) return 'Zu nah an der Unfallstelle.'; return null; }
+function admZoneOk(s0, s1) { if (s0 < 120 || s1 > Lh - 400) return 'Zu nah am Streckenanfang/-ende.'; for (const r of RAMPS) if (s1 > r.s + 10 && s0 < r.s + 290) return 'Überschneidet die Einfädelspur der ' + r.name + '.'; for (const o of OFFS) if (s1 > o.s - 280 && s0 < o.s + 40) return 'Überschneidet die Ausfahrt vor ' + (RAMPS[o.id] ? RAMPS[o.id].name : 'AS Ende') + '.'; if (s1 > KZ0 && s0 < KZ1) return 'Im Bereich des Autobahnkreuzes nicht möglich.'; if (G.acc && !G.acc.cleared && s1 > G.acc.front - 300 && s0 < G.acc.s1 + 100) return 'Zu nah an der Unfallstelle.'; return null; }
 function admAdd(kind, s0, len, vmaxKmh, rid) {
   rid = rid || 'A7+'; if (rid !== 'A7+') { if (!nsAddZone(kind, rid, s0, len, vmaxKmh)) return false; admSave(); toast((kind === 'jam' ? 'Stau' : 'Baustelle') + ' platziert · ' + nsRoadName(rid), 'good'); return true; }
   const err = admZoneOk(s0, s0 + len); if (err) { toast(err, 'bad'); return false; }
@@ -2420,7 +2631,7 @@ function admHtml() {
     if (zs.some(z => z.admin)) h += `<button class="abtn ghost" data-adm="clear">Alle eigenen ${kind === 'jam' ? 'Staus' : 'Baustellen'} entfernen</button>`;
   } else if (t === 'trf') {
     h += `<div class="ah">Verkehr</div>` + admSlider('dens', Math.round(TRF.dens * 100), 30, 250, 5, 'Verkehrsdichte', v => v + ' %') + admSlider('trucks', Math.round(TRF.trucks * 100), 40, 250, 10, 'Lkw-Anteil', v => v + ' %') + admSlider('aggr', Math.round(TRF.aggr * 100), 0, 100, 5, 'Fahrstil (vorsichtig ↔ aggressiv)', v => v + ' %') + admSlider('divert', Math.round(TRF.divert * 100), 0, 60, 5, 'Umleiter bei Baustellen', v => v + ' %');
-    h += `<label class="achk"><input type="checkbox" id="a_slow" ${TRF.slow ? 'checked' : ''}> Zufällige Schleicher / Pannen im Verkehr</label>`;
+    h += `<label class="achk"><input type="checkbox" id="a_slow" ${TRF.slow ? 'checked' : ''}> Zufällige Schleicher / Pannen im Verkehr</label><label class="achk"><input type="checkbox" id="a_sj" ${TRF.sj ? 'checked' : ''}> Pannenhilfe-Aufträge im ganzen Netz</label>`;
     h += `<div class="anote">Gilt sofort für alle Fahrzeuge auf der Karte.</div>`;
   } else {
     h += `<div class="ah">Unfall auslösen</div><div class="anote">Wähle ein Szenario – Fahrer-Profil meldet, Disponent koordiniert.</div>` + Object.entries(SCEN).map(([k, s]) => `<button class="abtn ghost left" data-adm="scen" data-k="${k}"><b>${k}</b> · ${esc(s.title || s.name || 'Szenario')}</button>`).join('') + `<button class="abtn red" data-adm="reset">Simulation neu starten</button>`;
@@ -2453,7 +2664,7 @@ function admInit() {
   });
   e.addEventListener('change', ev => {
     const t = ev.target, id = t.id || ''; if (!id.startsWith('a_')) return; const k = id.slice(2);
-    if (k === 'auto') ENV.auto = t.checked; else if (k === 'rand') { TRF.rand = t.checked; trfSave(); } else if (k === 'slow') { TRF.slow = t.checked; trfSave(); }
+    if (k === 'auto') ENV.auto = t.checked; else if (k === 'rand') { TRF.rand = t.checked; trfSave(); } else if (k === 'slow') { TRF.slow = t.checked; trfSave(); } else if (k === 'sj') { TRF.sj = t.checked; trfSave(); }
     if (['wint', 'hour', 'tspd', 'auto'].includes(k)) envSave(); if (['dens', 'trucks', 'aggr', 'divert'].includes(k)) trfSave(); if (k[0] === 'z') { admSave(); }
   });
   for (const id of ['bAdm', 'bAdmH']) { const b = document.getElementById(id); if (b) b.onclick = () => admOpen(); }
@@ -2531,7 +2742,7 @@ function releaseEta() {
   return e;
 }
 function LV(k, ri) {
-  const [a, b] = k.split(':');
+  const [a, b] = k.split(':'); if (a === 'sj') return sjLive(+b);
   if (a === 'us') return uStat(b); if (a === 'ue') return uEta(b);
   if (a === 'jam') return Math.round(G.jam.len * 2) + ' m (' + G.jam.count + ' Fzg.)'; if (a === 'gasse') return G.jam.active ? Math.round(G.jam.gasse * 100) + ' %' : '–';
   if (!ri) return null; const e = ri.est[+b];
@@ -2548,7 +2759,7 @@ function liveTick(dt) {
     if (p >= 1) { G.play = null; renderPanel(true); } else if (w) { w.querySelectorAll('i').forEach((b, i, all) => b.classList.toggle('on', i / all.length < p)); const t = document.querySelector(`[data-playt="${G.play.key}"]`); if (t) t.textContent = mmss(p * G.play.sec); }
   }
   liveT -= dt; if (liveT > 0) return; liveT = .25;
-  renderPanel(false);
+  careerChip(); renderPanel(false);
   const ri = G.acc && G.view === 'dispatch' && curWreck() && !curWreck().tow && !curWreck().done ? routeInfo() : null;
   if (ri && !G.routeManual) G.routeSel = ri.best ? ri.best.i : null;
   document.querySelectorAll('[data-route]').forEach(b => b.classList.toggle('on', +b.dataset.route === G.routeSel));
@@ -2557,11 +2768,12 @@ function liveTick(dt) {
 function showOverlay(kind) {
   const ov = $('#ov'); if (!kind) { ov.classList.remove('on'); ov.innerHTML = ''; return; }
   if (kind === 'intro') ov.innerHTML = `<div class="modal"><div class="m-h"><div><h1>Unfall auf der Autobahn</h1><p>Demo: Meldung, Alarmierung, Brand, Stau, Rettungsgasse und mehrfache Bergung</p></div></div><div class="m-b"><div class="how"><div><b>1 · Fahrer</b><span>Du fährst auf der A7. Ein Unfall passiert – du meldest ihn per App (Fotos, Fragen, Sprachmemo).</span></div><div><b>2 · Automatik</b><span>Polizei, Rettungsdienst und Feuerwehr werden automatisch alarmiert und fahren selbstständig an.</span></div><div><b>3 · Stau &amp; Rettungsgasse</b><span>Nachkommende Fahrzeuge stauen sich und bilden eine Rettungsgasse. Zufällige Baustellen und Schleicher sorgen für Verkehr – die Routen berücksichtigen alles.</span></div><div><b>4 · Disponent</b><span>Du wechselst die Rolle und schickst für jedes Wrack den passenden Abschleppwagen los. Karte: ziehen, Mausrad bzw. zwei Finger zoomen, Minimap unten links.</span></div></div><button class="btn big" data-act="closeOv">Los geht’s</button></div></div>`;
+  if (kind === 'shop') ov.innerHTML = shopHTML();
   if (kind === 'pause') ov.innerHTML = `<div class="modal" style="max-width:380px"><div class="m-h"><div><h1>Pause</h1></div></div><div class="m-b"><button class="btn big" data-act="resume">Weiter</button></div></div>`;
   if (kind === 'alert') { const r = G.report, a = r.a; ov.innerHTML = `<div class="modal" style="max-width:520px"><div class="m-h"><div class="bell">${ic('bell')}</div><div><h1>Neuer Einsatz</h1><p>Fahrer-Meldung · A7 km ${kmOf(G.acc.mid)}</p></div></div><div class="m-b"><div class="chips"><span class="chip or">${esc(r.vtype)}</span><span class="chip">${LAB['type:' + a.type]}</span><span class="chip ${a.block !== 'nein' ? 'red' : ''}">Fahrbahn: ${LAB['block:' + a.block]}</span><span class="chip ${a.hurt === 'ja' ? 'red' : ''}">Verletzte: ${LAB['hurt:' + a.hurt]}</span></div><div style="color:#cfcfc9">${r.photos.length} Foto(s)${r.memo ? ' · Sprachmemo ' + mmss(r.memo.sec) : ''}. Polizei${G.alarmed.rd ? ', Rettungsdienst' : ''}${G.alarmed.fw ? ' und Feuerwehr' : ''} sind bereits automatisch alarmiert.</div><button class="btn big" data-act="alertView">Details ansehen &amp; disponieren</button></div></div>`; sfx.alert(); }
   if (kind === 'results') { const R = G.results, t = v => v == null ? '–' : rt(v) + ' min'; ov.innerHTML = `<div class="modal" style="max-width:520px"><div class="m-h"><div><h1>Einsatz abgeschlossen</h1><p>Die Fahrbahn ist wieder frei.</p></div></div><div class="m-b"><div class="stars">${[0, 1, 2].map(i => `<svg viewBox="0 0 24 24" class="${i < R.stars ? 'on' : ''}">${IC.star}</svg>`).join('')}</div>
     <div class="stat4"><div><b>${t(R.dur)}</b><small>Unfall bis Freigabe</small></div><div><b>${Math.round(R.jamMax * 2)} m</b><small>Max. Staulänge</small></div><div><b>${t(R.toPol)}</b><small>Polizei vor Ort</small></div><div><b>${t(R.toRd)}</b><small>Rettungsdienst</small></div><div><b>${t(R.toFw)}</b><small>Feuerwehr</small></div><div><b>${t(R.toTow)}</b><small>Abschleppdienst</small></div><div><b>${R.wrecks}</b><small>Wracks · ${R.tows} Abschleppwagen</small></div><div><b>${t(R.rep)}</b><small>Meldung des Fahrers</small></div><div><b>${t(R.disp)}</b><small>Disposition bis Abfahrt</small></div></div>
-    <div style="color:#9a9a93;font-size:12px">Sterne: schnelle Disposition (≤ 4 min), passendes Fahrzeug, zügige Räumung (≤ 18 min). Zeiten im Zeitraffer.</div><button class="btn big" data-act="newSim">Neue Simulation</button></div></div>`; }
+    ${careerResultHTML()}<div style="color:#9a9a93;font-size:12px">Sterne: schnelle Disposition (≤ 4 min), passendes Fahrzeug, zügige Räumung (≤ 18 min). Zeiten im Zeitraffer.</div><button class="btn big" data-act="newSim">Neue Simulation</button></div></div>`; }
   ov.classList.add('on');
 }
 /* ===== Foto-Hilfen ===== */
@@ -2580,12 +2792,12 @@ function sendReport() {
   onReport(); sfx.ok(); toast('Meldung gesendet', 'good'); renderPanel(true);
 }
 function startRec() { G.rec = { sec: 0, t0: performance.now() }; } function stopRec() { const s = Math.max(1, Math.round((performance.now() - G.rec.t0) / 1000)); G.form.memo = { sec: s, bars: bars() }; G.rec = null; }
-function newSim() { G.phase = 'select'; G.acc = null; G.crash = null; G.obs = []; G.units = []; G.parts = []; G.report = null; G.jobs = []; G.returns = []; G.wrecks = []; G.fire = null; G.skids = []; G.selWreck = null; G.results = null; G.alarmed = {}; G.ev = {}; G.log = []; G.sched = []; genZones(); G.fleet.forEach(f => f.state = 'depot'); G.camFollow = null; G.jam = { active: false, tail: 0, len: 0, count: 0, gasse: 0, growth: 0, hist: [] }; G.traf = G.traf.filter(v => !v.hero); G.paused = false; G.view = 'driver'; showOverlay(null); renderPanel(true); }
+function newSim() { sjReset(); G.paidTow = 0; G.phase = 'select'; G.acc = null; G.crash = null; G.obs = []; G.units = []; G.parts = []; G.report = null; G.jobs = []; G.returns = []; G.wrecks = []; G.fire = null; G.skids = []; G.selWreck = null; G.results = null; G.alarmed = {}; G.ev = {}; G.log = []; G.sched = []; genZones(); G.fleet.forEach(f => f.state = 'depot'); G.camFollow = null; G.jam = { active: false, tail: 0, len: 0, count: 0, gasse: 0, growth: 0, hist: [] }; G.traf = G.traf.filter(v => !v.hero); G.paused = false; G.view = 'driver'; showOverlay(null); renderPanel(true); }
 const ACT = {
   view: d => { G.view = d.v; renderPanel(true); },
   closeOv: () => showOverlay(null),
   resume: () => { G.paused = false; showOverlay(null); renderPanel(true); },
-  scen: d => { G.scen = d.k; renderPanel(true); },
+  scen: d => { if (carLvl() < (SCEN_LVL[d.k] || 1)) { toast('Szenario ab Level ' + SCEN_LVL[d.k] + ' verfügbar', 'bad'); return; } G.scen = d.k; renderPanel(true); },
   startScen: () => { startScenario(G.scen); renderPanel(true); },
   vt: d => { G.form.vtype = d.v; renderPanel(true); },
   q: d => { G.form.a[d.k] = d.v; renderPanel(true); },
@@ -2607,6 +2819,12 @@ const ACT = {
   accept: () => { if (G.routeSel == null) { const ri = routeInfo(); G.routeSel = ri.best ? ri.best.i : RAMPS.length - 1; } if (dispatchTow(G.towSel, G.routeSel, curWreck().id)) { G.towSel = null; G.routeManual = false; renderPanel(true); } },
   alertView: () => { G.alertSeen = true; showOverlay(null); renderPanel(true); },
   newSim: () => newSim(),
+  shop: () => showOverlay('shop'),
+  buy: d => { const u = UPG.find(x => x.id === d.id); if (!u) return; const lv = CAR.up[u.id], c = u.cost(lv); if (lv >= u.max || CAR.cash < c) return; CAR.cash -= c; CAR.up[u.id]++; carSave(); careerChip(); sfx.ok(); showOverlay('shop'); },
+  careerReset: () => { if (!confirm('Fortschritt wirklich zurücksetzen?')) return; Object.assign(CAR, { cash: 2500, rep: 50, xp: 0, jobs: 0, main: 0, earned: 0, up: { speed: 0, crane: 0, bay: 0, radio: 0, siren: 0 } }); carSave(); careerChip(); showOverlay('shop'); },
+  sjGo: d => { sjDispatch(+d.id); renderPanel(true); },
+  sjBack: d => { sjRecall(+d.id); renderPanel(true); },
+  sjZoom: d => sjZoom(+d.id),
 };
 document.addEventListener('click', e => { const t = e.target.closest('[data-act]'); if (t && ACT[t.dataset.act]) ACT[t.dataset.act](t.dataset); });
 document.addEventListener('input', e => { const b = e.target.dataset && e.target.dataset.bind; if (!b || !G.form) return; if (b === 'plate') e.target.value = e.target.value.toUpperCase(); G.form[b] = e.target.value; });
@@ -2627,7 +2845,7 @@ cv.addEventListener('pointermove', e => {
   if (!drag) return; const r = cv.getBoundingClientRect(), k = W / r.width / CAM.z; const dx = (e.clientX - drag.x) * k, dy = (e.clientY - drag.y) * k; if (Math.abs(dx) + Math.abs(dy) > 2) G.camFollow = null; CAM.x = drag.cx - dx; CAM.y = drag.cy - dy; clampCam();
 });
 const pup = e => { ptrs.delete(e.pointerId); if (ptrs.size < 2) pinch = null; if (ptrs.size === 1) { const q = [...ptrs.values()][0]; drag = { x: q.x, y: q.y, cx: CAM.x, cy: CAM.y }; } else if (!ptrs.size) { drag = null; cv.classList.remove('drag'); } };
-cv.addEventListener('pointerup', e => { if (drag && Math.hypot(e.clientX - drag.x, e.clientY - drag.y) < 6 && ptrs.size <= 1 && admMapClick(e)) { } pup(e); }); cv.addEventListener('pointercancel', pup);
+cv.addEventListener('pointerup', e => { if (drag && Math.hypot(e.clientX - drag.x, e.clientY - drag.y) < 6 && ptrs.size <= 1 && (admMapClick(e) || insPick(e))) { } pup(e); }); cv.addEventListener('pointercancel', pup);
 cv.addEventListener('wheel', e => { e.preventDefault(); const r = cv.getBoundingClientRect(), mx = (e.clientX - r.left) / r.width * W, my = (e.clientY - r.top) / r.height * H, z0 = CAM.z, wx = CAM.x + (mx - W / 2) / z0, wy = CAM.y + (my - H / 2) / z0; CAM.z = clamp(z0 * (e.deltaY < 0 ? 1.15 : 1 / 1.15), ZMIN, ZMAX); CAM.x = wx - (mx - W / 2) / CAM.z; CAM.y = wy - (my - H / 2) / CAM.z; G.camFollow = null; clampCam(); }, { passive: false });
 const miniGo = e => { const r = mini.getBoundingClientRect(); CAM.x = (e.clientX - r.left) / r.width * WW; CAM.y = (e.clientY - r.top) / r.height * WH; G.camFollow = null; clampCam(); };
 let mdrag = false; mini.addEventListener('pointerdown', e => { mdrag = true; mini.setPointerCapture(e.pointerId); miniGo(e); }); mini.addEventListener('pointermove', e => { if (mdrag) miniGo(e); }); mini.addEventListener('pointerup', () => mdrag = false);
@@ -2636,7 +2854,7 @@ $('#bCtr').onclick = () => { G.camFollow = G.acc ? 'acc' : G.phase === 'drive' |
 /* ===== Start ===== */
 window.addEventListener('pointerdown', () => { try { AC = AC || new (window.AudioContext || window.webkitAudioContext)(); if (AC.state === 'suspended') AC.resume(); } catch (_) { } }, { once: true });
 if (window.visualViewport) visualViewport.addEventListener('resize', fit); window.addEventListener('orientationchange', () => setTimeout(fit, 250));
-envLoad(); BG = buildBG(); admInit(); fit(); genZones(); nsInit(); warm(150); CAM.x = P(1500, 120).x; CAM.y = P(1500, 120).y; CAM.z = .7; clampCam(); G.slowT = 30; G.phase = 'select'; renderPanel(true); showOverlay('intro'); requestAnimationFrame(frame);
+carLoad(); careerChip(); envLoad(); BG = buildBG(); admInit(); fit(); genZones(); nsInit(); warm(150); CAM.x = P(1500, 120).x; CAM.y = P(1500, 120).y; CAM.z = .7; clampCam(); G.slowT = 30; G.phase = 'select'; renderPanel(true); showOverlay('intro'); requestAnimationFrame(frame);
 </script>
 </body>
 </html>
