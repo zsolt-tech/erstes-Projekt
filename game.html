@@ -131,6 +131,28 @@ input{font:inherit}
 .how{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}@media(max-width:560px){.how{grid-template-columns:1fr}}
 .how div{background:var(--ink3);border-radius:14px;padding:12px}.how b{display:block;margin-bottom:3px}.how span{color:#c9c9c2;font-size:13px}
 .stars{display:flex;gap:4px}.stars svg{width:30px;height:30px;color:#4a4a45}.stars svg.on{color:var(--or)}
+
+#cv{touch-action:none}
+@media(max-width:760px),(pointer:coarse) and (max-width:1060px){
+ body{font-size:14px;overscroll-behavior-y:none}
+ .top-in{padding:6px 10px;gap:8px;flex-wrap:nowrap}
+ .logo{gap:8px;min-width:0}.logo-mark{width:34px;height:34px;border-radius:9px}.logo b{font-size:14px;letter-spacing:.03em}.logo small{display:none}
+ .toplink{display:none}
+ .seg{padding:3px}.seg button{padding:8px 11px;font-size:13px;gap:6px}
+ .wrap{padding:0;gap:0;display:block}
+ #stage{position:sticky;top:50px;z-index:20;aspect-ratio:auto;height:52vh;height:52dvh;min-height:300px;border-radius:0 0 18px 18px;box-shadow:0 6px 20px rgba(0,0,0,.5)}
+ #hud{padding:6px;gap:6px}
+ .pill{padding:4px 9px;min-height:34px;font-size:13px;border-radius:11px}.pill small{font-size:8.5px}
+ .hbtn{width:36px;height:36px;border-radius:11px}
+ #bZin,#bZout{display:none}
+ #mini{width:116px;left:6px;bottom:6px;border-width:1.5px;border-radius:9px}
+ #toasts{top:96px;width:94%}.toast{font-size:12.5px;padding:6px 10px}
+ #side{border-radius:0;min-height:0;max-height:none;box-shadow:none;overflow:visible}
+ #panel{padding:10px;overflow:visible}
+ .btn{min-height:48px}
+ #ov{padding:8px}.modal{max-height:94vh;max-height:94dvh;border-radius:20px}
+}
+@media(max-width:380px){.pill:nth-child(3){display:none}}
 </style>
 </head>
 <body>
@@ -163,7 +185,8 @@ input{font:inherit}
 'use strict';
 /* ===== Hilfen ===== */
 const $ = s => document.querySelector(s);
-const W = 1280, H = 720, WW = 6000, WH = 3400, TZ = 10;   // W/H = Ansichtsfenster, WW/WH = Welt                         // TZ: Zeitraffer (1 Sim-Sekunde = 10 s Echtzeit)
+const MOBF = /*MOBF*/false, MOB = MOBF || (window.matchMedia && matchMedia('(pointer:coarse)').matches) || Math.min(screen.width || 9999, innerWidth) < 760;
+let W = MOB ? (innerWidth < 760 ? 560 : 900) : 1280, H = 720; const WW = 6000, WH = 3400, TZ = 10;   // W/H = Ansichtsfenster, WW/WH = Welt                         // TZ: Zeitraffer (1 Sim-Sekunde = 10 s Echtzeit)
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v)), lerp = (a, b, t) => a + (b - a) * t, rnd = (a, b) => a + Math.random() * (b - a);
 const ss = t => { t = clamp(t, 0, 1); return t * t * (3 - 2 * t); };
 const pad2 = n => String(n).padStart(2, '0'), mmss = s => pad2(Math.floor(s / 60)) + ':' + pad2(Math.floor(s % 60));
@@ -264,7 +287,7 @@ const CROSSP = CROSS.map((c, i) => crossPts(i));
 
 /* ===== Statischer Hintergrund: Kacheln (grob komplett + fein bei Bedarf) ===== */
 let BG = null;                       // grobe Gesamtkarte
-const SLO = .5, TS = 600, SHI = 1.5, TILES = new Map(); let tileN = 0;
+const SLO = .5, TS = 600, SHI = MOB ? 1.1 : 1.5, TILES = new Map(); let tileN = 0;
 const RIV = [
   (t) => ({ x: 1500 + 260 * Math.sin(t * 4.6) + 200 * t, y: -40 + 3480 * t }),
   (t) => ({ x: 4400 + 240 * Math.sin(t * 3.9 + 1) - 160 * t, y: -40 + 3480 * t })];
@@ -376,7 +399,7 @@ function hiTile(tx, ty) {
   const T = { x0: tx * TS, y0: ty * TS, x1: Math.min(WW, (tx + 1) * TS), y1: Math.min(WH, (ty + 1) * TS), cull: true };
   const pad = 8; T.x0 -= pad; T.y0 -= pad; T.x1 += pad; T.y1 += pad;
   const c = makeTile(tx, ty, SHI, T); TILES.set(key, { c, u: ++tileN, x0: T.x0, y0: T.y0 });
-  if (TILES.size > 28) { let k0 = null, u0 = Infinity; TILES.forEach((v, k) => { if (v.u < u0) { u0 = v.u; k0 = k; } }); TILES.delete(k0); }
+  if (TILES.size > (MOB ? 10 : 28)) { let k0 = null, u0 = Infinity; TILES.forEach((v, k) => { if (v.u < u0) { u0 = v.u; k0 = k; } }); TILES.delete(k0); }
   return c;
 }
 function drawBGWorld(g, vx, vy, vw, vh, z) {
@@ -499,6 +522,7 @@ function drawRig(g, st, now, clear, an) {
 }
 /* ===== Partikel ===== */
 function part(st, x, y, k, o = {}) {
+  if (MOB && st.parts.length > 260) return;
   const p = { k, x, y, vx: o.vx ?? rnd(-8, 8), vy: o.vy ?? rnd(-8, 8), l: o.l ?? 2, m: o.l ?? 2, r: o.r ?? rnd(3, 6), rot: rnd(0, 6), col: o.col };
   if (k === 'spark') { p.l = p.m = .5; p.vx = rnd(-70, 70); p.vy = rnd(-70, 70); } if (k === 'box') { p.l = p.m = 6; p.vx = rnd(-30, 30); p.vy = rnd(-30, 30); p.r = rnd(3, 5); p.col = ['#c98b4a', '#a96b2b', '#e1b36a'][(Math.random() * 3) | 0]; }
   if (k === 'fire') { p.l = p.m = rnd(.6, 1.1); p.vy = rnd(-40, -16); p.vx = rnd(-8, 8); p.r = rnd(4.5, 9); }
@@ -652,7 +676,7 @@ function stepTraffic(dt) {
     v.shT = want && emerg ? (G.acc && v.s > G.acc.front - (v.lane === 0 ? 400 : 300) ? SHIFT : SHIFTN)[v.lane] : 0;
     if (v.shT > 0) { for (const o of AO) if (o.zone && o.s1 > v.s - 5 && o.s0 - v.s < 160 && (v.v > 3 || v.s + v.len / 2 > o.s0 - 3)) while (v.shT > 0 && ovl(LAT[v.lane] + v.shT, v.wid, o)) v.shT -= .5; if (v.shT < 0) v.shT = 0; }
     // Ausweichen vor dem Stau: Entscheidung einmalig vor der Ausfahrt
-    if (v.divert == null && !v.hero && !v.noBrake && !dv) for (const q of dvz) if (q && v.s > q.ex.s - 650 && v.s < q.ex.s - 80) { if (Math.random() < .3) { v.divert = q.ex.id; v.zd = q; } else v.divert = -1; break; }
+    if (v.divert == null && !v.hero && !v.noBrake && !dv) for (const q of dvz) if (q && v.s > q.ex.s - 650 && v.s < q.ex.s - 80) { if (Math.random() < .1) { v.divert = q.ex.id; v.zd = q; } else v.divert = -1; break; }
     if (dv && v.divert == null && !v.hero && !v.noBrake && v.s > dv.ex.s - 700 && v.s < dv.ex.s - 60) v.divert = Math.random() < .7 ? dv.ex.id : -1;
     v.lcT -= dt;
     const urgentZip = zc && v.lane === 0;
@@ -1045,8 +1069,8 @@ function buildResults() {
 }
 /* ===== Kamera, Zeichnen, Minimap ===== */
 const cv = $('#cv'), ctx = cv.getContext('2d'), mini = $('#mini'), mctx = mini.getContext('2d'); let K = 1;
-const CAM = { x: 3000, y: 1700, z: .62 }, ZMIN = Math.max(W / WW, H / WH) + .001, ZMAX = 2.2;
-function fit() { const r = cv.getBoundingClientRect(), d = Math.min(2, window.devicePixelRatio || 1); cv.width = Math.max(2, Math.round(r.width * d)); cv.height = Math.max(2, Math.round(r.width * H / W * d)); K = cv.width / W; mini.width = 240 * 2; mini.height = Math.round(240 * WH / WW) * 2; }
+const CAM = { x: 3000, y: 1700, z: .62 }; let ZMIN = Math.max(W / WW, H / WH) + .001, ZMAX = 2.2;
+function fit() { const r = cv.getBoundingClientRect(), d = Math.min(MOB ? 1.5 : 2, window.devicePixelRatio || 1); H = clamp(Math.round(W * r.height / Math.max(1, r.width)), 360, 1600); cv.width = Math.max(2, Math.round(r.width * d)); cv.height = Math.max(2, Math.round(r.height * d)); K = cv.width / W; ZMIN = Math.max(W / WW, H / WH) + .001; mini.width = 240 * 2; mini.height = Math.round(240 * WH / WW) * 2; clampCam(); }
 function clampCam() { CAM.z = clamp(CAM.z, ZMIN, ZMAX); CAM.x = clamp(CAM.x, W / 2 / CAM.z, WW - W / 2 / CAM.z); CAM.y = clamp(CAM.y, H / 2 / CAM.z, WH - H / 2 / CAM.z); }
 function camTarget() {
   if (G.camFollow === 'hero') { const h = G.traf.find(v => v.hero), r = G.crash && G.crash.s0; if (h) { const p = P(h.s + 40, 20); return { x: p.x, y: p.y, z: 1.15 }; } if (r) { const p = P(r + 60, 20); return { x: p.x, y: p.y, z: 1.15 }; } }
@@ -1183,7 +1207,7 @@ function draw() {
   // Beschriftungen im Bildschirmraum (bleiben bei jedem Zoom lesbar)
   g.setTransform(K, 0, 0, K, 0, 0);
   for (const l of LBL) { const X = (l.x - vx) * z, Y = (l.y - vy) * z; if (X < -80 || X > W + 80 || Y < -20 || Y > H + 20) continue; g.font = `900 ${l.size + 1}px system-ui,Arial`; g.textAlign = 'center'; const w = g.measureText(l.txt).width + 12; g.fillStyle = l.bg; rr(g, X - w / 2, Y - l.size, w, l.size * 1.9, 6); g.fill(); g.fillStyle = l.fg; g.fillText(l.txt, X, Y + l.size * .45); }
-  drawMini(now);
+  if (!MOB || (fcnt++ % 3) === 0) drawMini(now);
 }
 function drawCrew(g, u, x, y, a, now) {
   const w = G.wrecks.find(w2 => !w2.done), wp = w ? P((w.box.s0 + w.box.s1) / 2, Math.min(60, (w.box.l0 + w.box.l1) / 2)) : cposAcc(), k = ss(u.wt / 3);
@@ -1221,7 +1245,7 @@ function drawRepairs(g, now, vw) {
   G.ws.forEach((w, i) => { if (!w.q.length) return; const q = yp(wsStop(i) + 14, YD.ws[i].spot - 22); if (q.x < vw.x0 - 60 || q.x > vw.x1 + 60 || q.y < vw.y0 - 60 || q.y > vw.y1 + 60) return; chipAt(g, q.x, q.y, 'wartet ' + w.q.length, '#5a5d65', '#fff', 9); });
 }
 /* ----- Minimap ----- */
-let MINIBG = null;
+let MINIBG = null, fcnt = 0;
 function drawMini(now) {
   const g = mctx, mw = mini.width, mh = mini.height, k = mw / WW; if (!MINIBG) { MINIBG = document.createElement('canvas'); MINIBG.width = mw; MINIBG.height = mh; MINIBG.getContext('2d').drawImage(BG, 0, 0, mw, mh); }
   g.setTransform(1, 0, 0, 1, 0, 0); g.drawImage(MINIBG, 0, 0); g.setTransform(k, 0, 0, k, 0, 0);
@@ -1241,7 +1265,7 @@ function frame(ts) {
   camStep(dt); draw(); hudT -= dt; if (hudT <= 0) { hudT = .12; updateHud(); } liveTick(dt);
   requestAnimationFrame(frame);
 }
-function warm(sec) { for (let i = 0; i < sec * 10; i++) step(.1); G.t = 0; G.units = []; G.parts = []; }
+function warm(sec) { if (MOB) sec = Math.min(sec, 110); for (let i = 0; i < sec * 10; i++) step(.1); G.t = 0; G.units = []; G.parts = []; }
 /* ===== Oberfläche ===== */
 const panel = $('#panel'); let lastSig = '';
 const fmtLoc = () => 'A7 · Fahrtrichtung Hamburg · km ' + kmOf(G.acc ? G.acc.mid : G.crash ? G.crash.s0 : 1000);
@@ -1397,7 +1421,7 @@ function liveTick(dt) {
 }
 function showOverlay(kind) {
   const ov = $('#ov'); if (!kind) { ov.classList.remove('on'); ov.innerHTML = ''; return; }
-  if (kind === 'intro') ov.innerHTML = `<div class="modal"><div class="m-h"><div><h1>Unfall auf der Autobahn</h1><p>Demo: Meldung, Alarmierung, Brand, Stau, Rettungsgasse und mehrfache Bergung</p></div></div><div class="m-b"><div class="how"><div><b>1 · Fahrer</b><span>Du fährst auf der A7. Ein Unfall passiert – du meldest ihn per App (Fotos, Fragen, Sprachmemo).</span></div><div><b>2 · Automatik</b><span>Polizei, Rettungsdienst und Feuerwehr werden automatisch alarmiert und fahren selbstständig an.</span></div><div><b>3 · Stau &amp; Rettungsgasse</b><span>Nachkommende Fahrzeuge stauen sich und bilden eine Rettungsgasse. Zufällige Baustellen und Schleicher sorgen für Verkehr – die Routen berücksichtigen alles.</span></div><div><b>4 · Disponent</b><span>Du wechselst die Rolle und schickst für jedes Wrack den passenden Abschleppwagen los. Karte: ziehen, Mausrad zoomen, Minimap unten links.</span></div></div><button class="btn big" data-act="closeOv">Los geht’s</button></div></div>`;
+  if (kind === 'intro') ov.innerHTML = `<div class="modal"><div class="m-h"><div><h1>Unfall auf der Autobahn</h1><p>Demo: Meldung, Alarmierung, Brand, Stau, Rettungsgasse und mehrfache Bergung</p></div></div><div class="m-b"><div class="how"><div><b>1 · Fahrer</b><span>Du fährst auf der A7. Ein Unfall passiert – du meldest ihn per App (Fotos, Fragen, Sprachmemo).</span></div><div><b>2 · Automatik</b><span>Polizei, Rettungsdienst und Feuerwehr werden automatisch alarmiert und fahren selbstständig an.</span></div><div><b>3 · Stau &amp; Rettungsgasse</b><span>Nachkommende Fahrzeuge stauen sich und bilden eine Rettungsgasse. Zufällige Baustellen und Schleicher sorgen für Verkehr – die Routen berücksichtigen alles.</span></div><div><b>4 · Disponent</b><span>Du wechselst die Rolle und schickst für jedes Wrack den passenden Abschleppwagen los. Karte: ziehen, Mausrad bzw. zwei Finger zoomen, Minimap unten links.</span></div></div><button class="btn big" data-act="closeOv">Los geht’s</button></div></div>`;
   if (kind === 'pause') ov.innerHTML = `<div class="modal" style="max-width:380px"><div class="m-h"><div><h1>Pause</h1></div></div><div class="m-b"><button class="btn big" data-act="resume">Weiter</button></div></div>`;
   if (kind === 'alert') { const r = G.report, a = r.a; ov.innerHTML = `<div class="modal" style="max-width:520px"><div class="m-h"><div class="bell">${ic('bell')}</div><div><h1>Neuer Einsatz</h1><p>Fahrer-Meldung · A7 km ${kmOf(G.acc.mid)}</p></div></div><div class="m-b"><div class="chips"><span class="chip or">${esc(r.vtype)}</span><span class="chip">${LAB['type:' + a.type]}</span><span class="chip ${a.block !== 'nein' ? 'red' : ''}">Fahrbahn: ${LAB['block:' + a.block]}</span><span class="chip ${a.hurt === 'ja' ? 'red' : ''}">Verletzte: ${LAB['hurt:' + a.hurt]}</span></div><div style="color:#cfcfc9">${r.photos.length} Foto(s)${r.memo ? ' · Sprachmemo ' + mmss(r.memo.sec) : ''}. Polizei${G.alarmed.rd ? ', Rettungsdienst' : ''}${G.alarmed.fw ? ' und Feuerwehr' : ''} sind bereits automatisch alarmiert.</div><button class="btn big" data-act="alertView">Details ansehen &amp; disponieren</button></div></div>`; sfx.alert(); }
   if (kind === 'results') { const R = G.results, t = v => v == null ? '–' : rt(v) + ' min'; ov.innerHTML = `<div class="modal" style="max-width:520px"><div class="m-h"><div><h1>Einsatz abgeschlossen</h1><p>Die Fahrbahn ist wieder frei.</p></div></div><div class="m-b"><div class="stars">${[0, 1, 2].map(i => `<svg viewBox="0 0 24 24" class="${i < R.stars ? 'on' : ''}">${IC.star}</svg>`).join('')}</div>
@@ -1459,16 +1483,24 @@ document.addEventListener('keydown', e => { if (e.target.tagName === 'INPUT') re
 document.addEventListener('visibilitychange', () => { if (document.hidden && !G.paused) { G.paused = true; setBtns(); } });
 window.addEventListener('resize', fit);
 /* Kamera: ziehen, zoomen, Minimap */
-let drag = null;
-cv.addEventListener('pointerdown', e => { drag = { x: e.clientX, y: e.clientY, cx: CAM.x, cy: CAM.y }; cv.setPointerCapture(e.pointerId); cv.classList.add('drag'); });
-cv.addEventListener('pointermove', e => { if (!drag) return; const r = cv.getBoundingClientRect(), k = W / r.width / CAM.z; const dx = (e.clientX - drag.x) * k, dy = (e.clientY - drag.y) * k; if (Math.abs(dx) + Math.abs(dy) > 2) G.camFollow = null; CAM.x = drag.cx - dx; CAM.y = drag.cy - dy; clampCam(); });
-cv.addEventListener('pointerup', () => { drag = null; cv.classList.remove('drag'); });
+let drag = null, pinch = null; const ptrs = new Map();
+const pd = () => { const a = [...ptrs.values()]; return Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y) || 1; };
+cv.addEventListener('pointerdown', e => { ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY }); try { cv.setPointerCapture(e.pointerId); } catch (_) { } if (ptrs.size === 1) { drag = { x: e.clientX, y: e.clientY, cx: CAM.x, cy: CAM.y }; cv.classList.add('drag'); } else if (ptrs.size === 2) { drag = null; pinch = { d: pd(), z: CAM.z }; } });
+cv.addEventListener('pointermove', e => {
+  if (ptrs.has(e.pointerId)) ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (pinch && ptrs.size >= 2) { CAM.z = clamp(pinch.z * pd() / pinch.d, ZMIN, ZMAX); G.camFollow = null; clampCam(); return; }
+  if (!drag) return; const r = cv.getBoundingClientRect(), k = W / r.width / CAM.z; const dx = (e.clientX - drag.x) * k, dy = (e.clientY - drag.y) * k; if (Math.abs(dx) + Math.abs(dy) > 2) G.camFollow = null; CAM.x = drag.cx - dx; CAM.y = drag.cy - dy; clampCam();
+});
+const pup = e => { ptrs.delete(e.pointerId); if (ptrs.size < 2) pinch = null; if (ptrs.size === 1) { const q = [...ptrs.values()][0]; drag = { x: q.x, y: q.y, cx: CAM.x, cy: CAM.y }; } else if (!ptrs.size) { drag = null; cv.classList.remove('drag'); } };
+cv.addEventListener('pointerup', pup); cv.addEventListener('pointercancel', pup);
 cv.addEventListener('wheel', e => { e.preventDefault(); const r = cv.getBoundingClientRect(), mx = (e.clientX - r.left) / r.width * W, my = (e.clientY - r.top) / r.height * H, z0 = CAM.z, wx = CAM.x + (mx - W / 2) / z0, wy = CAM.y + (my - H / 2) / z0; CAM.z = clamp(z0 * (e.deltaY < 0 ? 1.15 : 1 / 1.15), ZMIN, ZMAX); CAM.x = wx - (mx - W / 2) / CAM.z; CAM.y = wy - (my - H / 2) / CAM.z; G.camFollow = null; clampCam(); }, { passive: false });
 const miniGo = e => { const r = mini.getBoundingClientRect(); CAM.x = (e.clientX - r.left) / r.width * WW; CAM.y = (e.clientY - r.top) / r.height * WH; G.camFollow = null; clampCam(); };
 let mdrag = false; mini.addEventListener('pointerdown', e => { mdrag = true; mini.setPointerCapture(e.pointerId); miniGo(e); }); mini.addEventListener('pointermove', e => { if (mdrag) miniGo(e); }); mini.addEventListener('pointerup', () => mdrag = false);
 $('#bZin').onclick = () => { CAM.z *= 1.25; G.camFollow = G.camFollow; clampCam(); }; $('#bZout').onclick = () => { CAM.z /= 1.25; clampCam(); };
 $('#bCtr').onclick = () => { G.camFollow = G.acc ? 'acc' : G.phase === 'drive' || G.phase === 'crash' ? 'hero' : null; if (!G.camFollow) { const p = P(2300, 0); CAM.x = p.x; CAM.y = p.y; } };
 /* ===== Start ===== */
+window.addEventListener('pointerdown', () => { try { AC = AC || new (window.AudioContext || window.webkitAudioContext)(); if (AC.state === 'suspended') AC.resume(); } catch (_) { } }, { once: true });
+if (window.visualViewport) visualViewport.addEventListener('resize', fit); window.addEventListener('orientationchange', () => setTimeout(fit, 250));
 BG = buildBG(); fit(); genZones(); warm(150); CAM.x = P(1500, 120).x; CAM.y = P(1500, 120).y; CAM.z = .7; clampCam(); G.slowT = 30; G.phase = 'select'; renderPanel(true); showOverlay('intro'); requestAnimationFrame(frame);
 </script>
 </body>

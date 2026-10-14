@@ -1,0 +1,1507 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#FF7A00">
+<title>Truck Rescue – Autobahn-Demo</title>
+<style>
+:root{--or:#FF7A00;--or-d:#E26500;--or-l:#FFF1E3;--ink:#1D1D1B;--ink2:#2A2A27;--ink3:#383834;--mute:#9a9a93;--line:rgba(255,255,255,.1);--grn:#2FBF71;--red:#E5483F;--amb:#FFC247;--blu:#3B82F6}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0}
+body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:#12120f;color:#fff;font-size:14px;line-height:1.35}
+button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
+input{font:inherit}
+.ico{width:1.2em;height:1.2em;vertical-align:-.2em;flex:none}
+.top{background:var(--or);box-shadow:0 2px 0 rgba(0,0,0,.25);position:sticky;top:0;z-index:30}
+.top-in{max-width:1640px;margin:0 auto;padding:8px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.logo{display:flex;align-items:center;gap:10px;margin-right:auto;color:var(--ink)}
+.logo-mark{width:42px;height:42px;border-radius:11px;background:var(--ink);color:var(--or);display:grid;place-items:center}
+.logo-mark svg{width:32px;height:20px}
+.logo b{display:block;font-size:18px;font-weight:900;letter-spacing:.05em;text-transform:uppercase;line-height:1}
+.logo small{display:block;font-size:12px;font-weight:700;color:rgba(0,0,0,.65);margin-top:3px}
+.seg{display:flex;background:rgba(0,0,0,.14);border-radius:999px;padding:4px;gap:2px}
+.seg button{display:flex;align-items:center;gap:8px;padding:9px 16px;border-radius:999px;font-weight:800;color:var(--ink);position:relative;white-space:nowrap}
+.seg button.on{background:var(--ink);color:#fff}
+.seg .badge{position:absolute;top:-6px;right:-4px;background:var(--red);color:#fff;border-radius:999px;min-width:21px;height:21px;display:grid;place-items:center;font-size:12px;border:2px solid var(--or);padding:0 4px;animation:pop 1.2s infinite}
+@keyframes pop{50%{transform:scale(1.18)}}
+.toplink{background:rgba(0,0,0,.16);color:var(--ink);padding:9px 14px;border-radius:999px;font-weight:800;text-decoration:none;font-size:13px}
+.toplink:hover{background:var(--ink);color:#fff}
+.wrap{max-width:1640px;margin:0 auto;padding:14px;display:grid;gap:14px;grid-template-columns:minmax(0,1fr) 400px;align-items:start}
+@media(max-width:1060px){.wrap{grid-template-columns:1fr;padding:10px}}
+#stage{position:relative;aspect-ratio:16/9;border-radius:20px;overflow:hidden;background:#b9d596;box-shadow:0 0 0 3px #000,0 0 0 6px var(--ink3),0 24px 60px rgba(0,0,0,.55);user-select:none;-webkit-user-select:none}
+#cv{position:absolute;inset:0;width:100%;height:100%;display:block}
+#hud{position:absolute;left:0;right:0;top:0;padding:10px;display:flex;gap:8px;align-items:flex-start;pointer-events:none;flex-wrap:wrap}
+#hud>*{pointer-events:auto}
+.pill{background:rgba(29,29,27,.86);backdrop-filter:blur(6px);border-radius:14px;padding:7px 13px;display:flex;align-items:center;gap:9px;font-weight:900;font-size:16px;box-shadow:0 4px 14px rgba(0,0,0,.3);min-height:42px}
+.pill small{display:block;font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--mute);line-height:1}
+.pill .v{line-height:1.05;font-variant-numeric:tabular-nums}
+.pill.red .v{color:#ff8a80}
+.sp{flex:1}
+.hbtn{width:42px;height:42px;border-radius:14px;background:rgba(29,29,27,.86);display:grid;place-items:center;box-shadow:0 4px 14px rgba(0,0,0,.3);font-weight:900}
+.hbtn:hover,.hbtn.on{background:var(--or);color:var(--ink)}
+#mini{position:absolute;left:10px;bottom:10px;width:230px;border-radius:12px;border:2px solid rgba(255,255,255,.9);box-shadow:0 6px 18px rgba(0,0,0,.45);cursor:crosshair;z-index:2}
+#cv{cursor:grab}#cv.drag{cursor:grabbing}
+#toasts{position:absolute;left:50%;top:64px;transform:translateX(-50%);display:flex;flex-direction:column;gap:6px;align-items:center;pointer-events:none;width:min(560px,90%)}
+.toast{background:rgba(29,29,27,.93);border-left:5px solid var(--or);padding:8px 14px;border-radius:10px;font-weight:700;box-shadow:0 6px 20px rgba(0,0,0,.35);animation:tin .25s ease-out,tout .4s 3.6s forwards;max-width:100%}
+.toast.good{border-color:var(--grn)}.toast.bad{border-color:var(--red)}.toast.blu{border-color:var(--blu)}
+@keyframes tin{from{opacity:0;transform:translateY(-10px)}}
+@keyframes tout{to{opacity:0;transform:translateY(-8px)}}
+#side{background:var(--ink2);border-radius:20px;overflow:hidden;box-shadow:0 0 0 1px var(--line),0 20px 50px rgba(0,0,0,.4);max-height:calc(100vh - 100px);min-height:420px;display:flex;flex-direction:column}
+@media(max-width:1060px){#side{max-height:none}}
+#panel{overflow:auto;padding:12px;display:flex;flex-direction:column;gap:10px;flex:1}
+.h{font-size:11px;font-weight:900;letter-spacing:.09em;text-transform:uppercase;color:var(--mute);margin:6px 2px 0;display:flex;justify-content:space-between}
+.card{background:var(--ink3);border-radius:14px;padding:12px}
+.empty{padding:18px 12px;text-align:center;color:var(--mute);font-weight:700;border:2px dashed var(--line);border-radius:14px}
+.chip{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:900;background:rgba(255,255,255,.14);color:#fff;white-space:nowrap;text-transform:uppercase;letter-spacing:.03em}
+.chip.red{background:var(--red)}.chip.or{background:var(--or);color:var(--ink)}.chip.grn{background:var(--grn);color:#06361d}.chip.amb{background:var(--amb);color:#3b2a00}.chip.blu{background:var(--blu)}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:11px 16px;border-radius:12px;font-weight:900;background:var(--or);color:var(--ink);min-height:44px;width:100%}
+.btn:hover{background:#ff9230}.btn.ghost{background:var(--ink3);color:#fff}.btn.ghost:hover{background:#4a4a45}.btn.grn{background:var(--grn);color:#06361d}
+.btn[disabled]{opacity:.4;pointer-events:none}.btn.big{padding:16px 22px;font-size:17px;border-radius:14px}
+.ti{width:54px;height:36px;border-radius:10px;background:#fff;color:var(--ink);display:grid;place-items:center;flex:none}
+.ti.dk{background:var(--ink);color:#fff}.ti svg{width:44px;height:27px}
+.row{display:flex;gap:10px;align-items:center}
+.unit{display:flex;align-items:center;gap:10px;padding:9px 10px;background:var(--ink3);border-radius:12px}
+.unit .dot{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;font-weight:900;font-size:11px;flex:none}
+.unit .nm{font-weight:800}.unit small{display:block;color:var(--mute);font-weight:600}
+.unit .r{margin-left:auto;text-align:right;font-weight:900;font-variant-numeric:tabular-nums}
+.pk{display:flex;align-items:center;gap:10px;background:var(--ink3);border-radius:12px;padding:8px 10px;width:100%;text-align:left;border:2px solid transparent}
+.pk:hover{border-color:rgba(255,122,0,.6)}.pk.on{border-color:var(--or);background:#463722}.pk.off{opacity:.38;pointer-events:none}
+.pk .nm{font-weight:800}.pk small{display:block;color:var(--mute);font-weight:600}.pk .go{margin-left:auto;text-align:right;font-weight:900;white-space:nowrap}
+.qa{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;margin:0}.qa dt{color:var(--mute);font-weight:700}.qa dd{margin:0;font-weight:800}
+.gal{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.gal img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:10px;display:block}
+.tl{display:flex;flex-direction:column;gap:6px}.tl div{display:flex;gap:8px;color:var(--mute);font-weight:700}.tl b{color:#fff;font-variant-numeric:tabular-nums;min-width:44px}
+.tl div.d{color:#fff}
+.player{display:flex;align-items:center;gap:10px;background:rgba(0,0,0,.25);border-radius:12px;padding:8px 12px}
+.play{width:36px;height:36px;border-radius:50%;background:var(--or);color:var(--ink);display:grid;place-items:center;flex:none}
+.wave{display:flex;align-items:center;gap:2px;height:28px;flex:1}.wave i{width:3px;border-radius:2px;background:#77776f;height:var(--h)}.wave i.on{background:var(--or)}
+.stat4{display:grid;grid-template-columns:1fr 1fr;gap:8px}.stat4 div{background:var(--ink3);border-radius:12px;padding:10px}.stat4 b{font-size:20px;display:block;font-variant-numeric:tabular-nums}.stat4 small{color:var(--mute);font-weight:700}
+.spin{width:40px;height:40px;border-radius:50%;border:5px solid rgba(255,122,0,.25);border-top-color:var(--or);animation:sp 1s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.scn{display:flex;gap:12px;align-items:center;text-align:left;width:100%;padding:12px;background:var(--ink3);border-radius:14px;border:2px solid transparent}
+.scn:hover{border-color:rgba(255,122,0,.6)}.scn.on{border-color:var(--or);background:#463722}
+.scn .ti{width:60px;height:40px}.scn b{display:block;font-size:15px}.scn small{color:var(--mute);font-weight:600;display:block}
+
+/* Fahrer-Panel (hell, Handy-Look) */
+#panel.light{background:#F2F1ED;color:var(--ink)}
+.light .h{color:#8a8a85}
+.light .card{background:#fff}
+.light .empty{border-color:#ddd;color:#8a8a85}
+.light .chip{background:#ECEBE6;color:#4a4a47}.light .chip.red{background:var(--red);color:#fff}.light .chip.or{background:var(--or);color:var(--ink)}.light .chip.grn{background:var(--grn);color:#06361d}.light .chip.amb{background:var(--amb);color:#3b2a00}
+.light .btn.ghost{background:#fff;border:2px solid #e4e2dc;color:var(--ink)}
+.light .unit{background:#fff}.light .unit small{color:#8a8a85}
+.light .tl div{color:#8a8a85}.light .tl div.d{color:var(--ink)}.light .tl b{color:var(--ink)}
+.light .scn{background:#fff}.light .scn small{color:#6f6f6a}.light .scn.on{background:var(--or-l)}.light .scn .ti{background:var(--ink);color:#fff}
+.light .stat4 div{background:#fff}.light .stat4 small{color:#8a8a85}
+.steps{display:flex;gap:6px}.steps div{flex:1;text-align:center;font-size:11px;font-weight:800;color:#9a9a93}.steps i{display:block;height:6px;border-radius:3px;background:#dedcd5;margin-bottom:5px}
+.steps .done i{background:var(--ink)}.steps .cur i{background:var(--or)}.steps .cur{color:var(--ink)}
+.h2{font-size:22px;font-weight:900;line-height:1.1;letter-spacing:-.01em}.sub{color:#5a5a56;margin-top:5px}
+.q{background:#fff;border-radius:14px;padding:12px}.q h3{margin:0;font-size:15px;font-weight:800}
+.q .n{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--ink);color:#fff;font-size:12px;margin-right:6px}
+.opts{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}.opt-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.opt{flex:1 1 auto;background:#fff;border:2px solid #e4e2dc;border-radius:12px;padding:10px;font-weight:700;text-align:left;display:flex;align-items:center;gap:8px;min-height:46px;line-height:1.2}
+.opt::before{content:"";width:18px;height:18px;border-radius:50%;border:2px solid #C9C7C0;flex:none}.opt.multi::before{border-radius:5px}
+.opt.on{border-color:var(--or);background:var(--or-l)}.opt.on::before{border-color:var(--or);background:var(--or) radial-gradient(#fff 0 35%,transparent 38%)}
+.opt.multi.on::before{background:var(--or);box-shadow:inset 0 0 0 3px var(--or-l)}
+.field{display:block}.field span{display:block;font-size:12px;font-weight:800;color:#8a8a85;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px}
+.field input{width:100%;padding:12px;border-radius:12px;border:2px solid #e4e2dc;background:#fff;font-weight:700;font-size:16px;color:var(--ink)}.field input:focus{outline:0;border-color:var(--or)}
+.plate{font-family:ui-monospace,Menlo,Consolas,monospace;letter-spacing:.12em;text-transform:uppercase}
+.err{background:#FDECEB;color:var(--red);padding:10px 12px;border-radius:10px;font-weight:700}
+.drop{border:2.5px dashed var(--or);background:var(--or-l);border-radius:16px;padding:18px;text-align:center;font-weight:800;display:block;cursor:pointer}
+.drop .ico{width:34px;height:34px;color:var(--or-d);display:block;margin:0 auto 4px}.drop input{display:none}
+.thumbs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.thumb{position:relative;aspect-ratio:1;border-radius:12px;overflow:hidden;background:#ddd}.thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.thumb button{position:absolute;top:5px;right:5px;width:26px;height:26px;border-radius:50%;background:rgba(0,0,0,.65);color:#fff;display:grid;place-items:center}
+.rec{text-align:center;padding:16px}.mic{width:96px;height:96px;border-radius:50%;background:var(--or);color:var(--ink);display:grid;place-items:center;margin:4px auto 10px}.mic .ico{width:42px;height:42px}
+.mic.on{background:var(--red);color:#fff;animation:rec 1.2s infinite}@keyframes rec{0%{box-shadow:0 0 0 0 rgba(229,72,63,.5)}100%{box-shadow:0 0 0 24px rgba(229,72,63,0)}}
+.timer{font-size:30px;font-weight:900;font-variant-numeric:tabular-nums}
+.light .player{background:#fff}.light .wave i{background:#cfcdc6}.light .wave i.on{background:var(--or)}
+.sum dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:6px 12px}.sum dt{color:#8a8a85;font-weight:700}.sum dd{margin:0;font-weight:700;text-align:right}
+.eta{font-size:40px;font-weight:900;line-height:1;color:var(--or)}
+
+#ov{position:fixed;inset:0;z-index:50;display:none;place-items:center;padding:16px;background:radial-gradient(circle at 50% 30%,rgba(60,38,10,.88),rgba(10,10,8,.94))}
+#ov.on{display:grid}
+.modal{width:100%;max-width:620px;background:var(--ink2);border-radius:26px;overflow:hidden;box-shadow:0 30px 90px rgba(0,0,0,.6),0 0 0 1px var(--line);animation:mup .4s cubic-bezier(.2,1.2,.4,1);max-height:94vh;overflow-y:auto}
+@keyframes mup{from{transform:translateY(30px) scale(.95);opacity:0}}
+.m-h{background:var(--or);color:var(--ink);padding:20px 24px;display:flex;gap:14px;align-items:center}
+.m-h h1{margin:0;font-size:28px;font-weight:900;letter-spacing:-.02em;line-height:1}.m-h p{margin:5px 0 0;font-weight:700;color:rgba(0,0,0,.7)}
+.m-h .bell{width:52px;height:52px;border-radius:50%;background:var(--ink);color:var(--or);display:grid;place-items:center;flex:none;animation:ringb .9s infinite}.m-h .bell .ico{width:26px;height:26px}
+@keyframes ringb{0%,100%{transform:rotate(0)}15%{transform:rotate(16deg)}30%{transform:rotate(-14deg)}45%{transform:rotate(9deg)}60%{transform:rotate(-6deg)}}
+.m-b{padding:20px 24px;display:flex;flex-direction:column;gap:12px}
+.how{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}@media(max-width:560px){.how{grid-template-columns:1fr}}
+.how div{background:var(--ink3);border-radius:14px;padding:12px}.how b{display:block;margin-bottom:3px}.how span{color:#c9c9c2;font-size:13px}
+.stars{display:flex;gap:4px}.stars svg{width:30px;height:30px;color:#4a4a45}.stars svg.on{color:var(--or)}
+
+#cv{touch-action:none}
+@media(max-width:760px),(pointer:coarse) and (max-width:1060px){
+ body{font-size:14px;overscroll-behavior-y:none}
+ .top-in{padding:6px 10px;gap:8px;flex-wrap:nowrap}
+ .logo{gap:8px;min-width:0}.logo-mark{width:34px;height:34px;border-radius:9px}.logo b{font-size:14px;letter-spacing:.03em}.logo small{display:none}
+ .toplink{display:none}
+ .seg{padding:3px}.seg button{padding:8px 11px;font-size:13px;gap:6px}
+ .wrap{padding:0;gap:0;display:block}
+ #stage{position:sticky;top:50px;z-index:20;aspect-ratio:auto;height:52vh;height:52dvh;min-height:300px;border-radius:0 0 18px 18px;box-shadow:0 6px 20px rgba(0,0,0,.5)}
+ #hud{padding:6px;gap:6px}
+ .pill{padding:4px 9px;min-height:34px;font-size:13px;border-radius:11px}.pill small{font-size:8.5px}
+ .hbtn{width:36px;height:36px;border-radius:11px}
+ #bZin,#bZout{display:none}
+ #mini{width:116px;left:6px;bottom:6px;border-width:1.5px;border-radius:9px}
+ #toasts{top:96px;width:94%}.toast{font-size:12.5px;padding:6px 10px}
+ #side{border-radius:0;min-height:0;max-height:none;box-shadow:none;overflow:visible}
+ #panel{padding:10px;overflow:visible}
+ .btn{min-height:48px}
+ #ov{padding:8px}.modal{max-height:94vh;max-height:94dvh;border-radius:20px}
+}
+@media(max-width:380px){.pill:nth-child(3){display:none}}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <symbol id="i-tow" viewBox="0 0 80 48"><path d="M13 24 L37 5" stroke="currentColor" stroke-width="5.5" stroke-linecap="round"/><path d="M37 5 V19" stroke="currentColor" stroke-width="2"/><path d="M37 19 v4 a3 3 0 1 1 -3 -3" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round"/><path d="M22 26 L30 14" stroke="currentColor" stroke-width="2.4"/><rect x="4" y="22" width="44" height="8" rx="2" fill="currentColor"/><path d="M50 12h12c2 0 3 1 4 3l8 12v7H50z" fill="currentColor"/><path d="M54.5 16h7l5.5 9H54.5z" fill="#fff" opacity=".92"/><rect x="53" y="7" width="9" height="4" rx="1.5" fill="#FFB300"/><rect x="2" y="29" width="76" height="6" rx="2" fill="currentColor"/><g fill="#2b2b29" stroke="#fff" stroke-width="1.6"><circle cx="17" cy="38" r="6.2"/><circle cx="31" cy="38" r="6.2"/><circle cx="62" cy="38" r="6.2"/></g><g fill="#bdbdb8"><circle cx="17" cy="38" r="2"/><circle cx="31" cy="38" r="2"/><circle cx="62" cy="38" r="2"/></g></symbol>
+  <symbol id="i-flat" viewBox="0 0 80 48"><path d="M2 21 L46 27 V31 L2 31 Z" fill="currentColor"/><rect x="9" y="12" width="26" height="10" rx="2.5" fill="currentColor" opacity=".55" transform="rotate(7 22 17)"/><circle cx="14" cy="22" r="2.6" fill="#2b2b29" transform="rotate(7 22 17)"/><circle cx="30" cy="22.5" r="2.6" fill="#2b2b29" transform="rotate(7 22 17)"/><path d="M50 12h12c2 0 3 1 4 3l8 12v7H50z" fill="currentColor"/><path d="M54.5 16h7l5.5 9H54.5z" fill="#fff" opacity=".92"/><rect x="53" y="7" width="9" height="4" rx="1.5" fill="#FFB300"/><rect x="2" y="29" width="76" height="6" rx="2" fill="currentColor"/><g fill="#2b2b29" stroke="#fff" stroke-width="1.6"><circle cx="16" cy="38" r="6.2"/><circle cx="30" cy="38" r="6.2"/><circle cx="62" cy="38" r="6.2"/></g><g fill="#bdbdb8"><circle cx="16" cy="38" r="2"/><circle cx="30" cy="38" r="2"/><circle cx="62" cy="38" r="2"/></g></symbol>
+  <symbol id="i-heavy" viewBox="0 0 80 48"><path d="M10 25 L30 3 L40 3" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="none"/><path d="M40 3 V17" stroke="currentColor" stroke-width="2"/><path d="M40 17 v4 a3 3 0 1 1 -3 -3" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round"/><path d="M20 26 L27 15" stroke="currentColor" stroke-width="3"/><rect x="3" y="21" width="45" height="9" rx="2" fill="currentColor"/><rect x="10" y="26" width="6" height="8" fill="currentColor"/><rect x="32" y="26" width="6" height="8" fill="currentColor"/><path d="M50 11h12c2 0 3 1 4 3l8 12v8H50z" fill="currentColor"/><path d="M54.5 15h7l5.5 9H54.5z" fill="#fff" opacity=".92"/><rect x="53" y="6" width="9" height="4" rx="1.5" fill="#FFB300"/><rect x="2" y="29" width="76" height="6" rx="2" fill="currentColor"/><g fill="#2b2b29" stroke="#fff" stroke-width="1.6"><circle cx="12" cy="38" r="6.2"/><circle cx="25" cy="38" r="6.2"/><circle cx="38" cy="38" r="6.2"/><circle cx="63" cy="38" r="6.2"/></g><g fill="#bdbdb8"><circle cx="12" cy="38" r="2"/><circle cx="25" cy="38" r="2"/><circle cx="38" cy="38" r="2"/><circle cx="63" cy="38" r="2"/></g></symbol>
+</defs></svg>
+<header class="top"><div class="top-in">
+  <div class="logo"><div class="logo-mark"><svg viewBox="0 0 80 48"><use href="#i-tow"/></svg></div><div><b>Truck Rescue</b><small>Autobahn-Demo · Unfall, Brand, Stau &amp; Bergung</small></div></div>
+  <nav class="seg" aria-label="Profil wechseln"><button id="vDrv" class="on" data-act="view" data-v="driver"></button><button id="vDis" data-act="view" data-v="dispatch"></button></nav>
+  <a class="toplink" href="index.html">Zur Disposition-App</a>
+</div></header>
+<div class="wrap">
+  <section><div id="stage"><canvas id="cv"></canvas>
+    <div id="hud">
+      <div class="pill"><div><small>Zeit seit Unfall</small><div class="v" id="hClock">–</div></div></div>
+      <div class="pill" id="hJamP"><div><small>Stau</small><div class="v" id="hJam">0 m</div></div></div>
+      <div class="pill"><div><small>Rettungsgasse</small><div class="v" id="hGasse">–</div></div></div>
+      <div class="sp"></div>
+      <button class="hbtn" id="bPause" title="Pause (Leertaste)" aria-label="Pause"></button>
+      <button class="hbtn" id="bSpeed" title="Tempo" aria-label="Tempo">1×</button>
+      <button class="hbtn" id="bSound" title="Ton" aria-label="Ton"></button>
+      <button class="hbtn" id="bZin" title="Hineinzoomen" aria-label="Zoom +">+</button><button class="hbtn" id="bZout" title="Herauszoomen" aria-label="Zoom −">−</button><button class="hbtn" id="bCtr" title="Auf Unfallstelle zentrieren" aria-label="Zentrieren">⌖</button>
+    </div><div id="toasts"></div><canvas id="mini" title="Übersichtskarte – klicken zum Springen"></canvas></div></section>
+  <aside id="side"><div id="panel"></div></aside>
+</div>
+<div id="ov"></div>
+<script>
+'use strict';
+/* ===== Hilfen ===== */
+const $ = s => document.querySelector(s);
+const MOBF = /*MOBF*/true, MOB = MOBF || (window.matchMedia && matchMedia('(pointer:coarse)').matches) || Math.min(screen.width || 9999, innerWidth) < 760;
+let W = MOB ? (innerWidth < 760 ? 560 : 900) : 1280, H = 720; const WW = 6000, WH = 3400, TZ = 10;   // W/H = Ansichtsfenster, WW/WH = Welt                         // TZ: Zeitraffer (1 Sim-Sekunde = 10 s Echtzeit)
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v)), lerp = (a, b, t) => a + (b - a) * t, rnd = (a, b) => a + Math.random() * (b - a);
+const ss = t => { t = clamp(t, 0, 1); return t * t * (3 - 2 * t); };
+const pad2 = n => String(n).padStart(2, '0'), mmss = s => pad2(Math.floor(s / 60)) + ':' + pad2(Math.floor(s % 60));
+const rt = s => mmss(s * TZ), minTx = s => { const m = Math.round(s * TZ / 60); return m < 1 ? '< 1 min' : m + ' min'; };
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+function rr(g, x, y, w, h, r) { r = Math.min(r, Math.abs(w) / 2, Math.abs(h) / 2); g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
+function rng(s) { return () => { s |= 0; s = s + 0x6D2B79F5 | 0; let t = Math.imul(s ^ s >>> 15, 1 | s); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const IC = {
+  pause: '<path d="M8 5v14M16 5v14" stroke-width="3.5"/>', play: '<path d="M7 4l13 8-13 8z" fill="currentColor"/>',
+  snd: '<path d="M4 9v6h4l5 4V5L8 9z" fill="currentColor"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a9 9 0 0 1 0 12"/>', mute: '<path d="M4 9v6h4l5 4V5L8 9z" fill="currentColor"/><path d="M17 9l5 6M22 9l-5 6"/>',
+  star: '<path d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4 6.1 20.5l1.2-6.5L2.5 9.4l6.6-.9z" fill="currentColor" stroke="none"/>',
+  bell: '<path d="M6 17V11a6 6 0 0 1 12 0v6l2 2H4z"/><path d="M10 21a2 2 0 0 0 4 0"/>', driver: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>', desk: '<rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/>',
+  cam: '<path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/>', mic: '<rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v4"/>', stop: '<rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor"/>',
+  x: '<path d="M6 6l12 12M18 6L6 18"/>', chk: '<path d="M4 12.5l5 5L20 6.5"/>', arrow: '<path d="M5 12h14M13 6l6 6-6 6"/>', back: '<path d="M19 12H5M11 6l-6 6 6 6"/>', send: '<path d="M3 11l18-8-8 18-2-8z"/>', plus: '<path d="M12 5v14M5 12h14"/>',
+};
+const ic = (n, c = '') => `<svg class="ico ${c}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">${IC[n]}</svg>`;
+const tIc = (t, w = 44, h = 27) => `<svg viewBox="0 0 80 48" width="${w}" height="${h}"><use href="#i-${['tow', 'flat', 'heavy'][t]}"/></svg>`;
+
+/* ===== Autobahn-Geometrie: Mittellinie als Kurve, Position = (s, lat) ===== */
+
+/* ===== Autobahn-Geometrie: Mittellinie als Kurve, Position = (s, lat) ===== */
+const C = []; let Lh = 0;
+(function () {
+  const raw = [], M = 9000;
+  for (let i = 0; i <= M; i++) { const t = i / M; raw.push({ x: -140 + 6280 * t, y: 1700 + 520 * Math.sin(t * 3.4 + .6) + 170 * Math.sin(t * 9.5 + 1.7) }); }
+  const cum = [0]; for (let i = 1; i < raw.length; i++) cum.push(cum[i - 1] + Math.hypot(raw[i].x - raw[i - 1].x, raw[i].y - raw[i - 1].y));
+  const total = cum[cum.length - 1]; let j = 0;
+  for (let s = 0; s <= total; s += 2) { while (cum[j + 1] < s) j++; const k = (s - cum[j]) / (cum[j + 1] - cum[j] || 1); C.push({ x: lerp(raw[j].x, raw[j + 1].x, k), y: lerp(raw[j].y, raw[j + 1].y, k) }); }
+  for (let i = 0; i < C.length; i++) { const a = C[Math.max(0, i - 2)], b = C[Math.min(C.length - 1, i + 2)], d = Math.hypot(b.x - a.x, b.y - a.y) || 1; C[i].tx = (b.x - a.x) / d; C[i].ty = (b.y - a.y) / d; }
+  Lh = (C.length - 1) * 2;
+})();
+function at(s) { s = clamp(s, 0, Lh); const f = s / 2, i = Math.min(C.length - 2, f | 0), k = f - i, a = C[i], b = C[i + 1]; return { x: lerp(a.x, b.x, k), y: lerp(a.y, b.y, k), tx: lerp(a.tx, b.tx, k), ty: lerp(a.ty, b.ty, k) }; }
+function P(s, lat) { const c = at(s); return { x: c.x - c.ty * lat, y: c.y + c.tx * lat, a: Math.atan2(c.ty, c.tx) }; }
+const MED = 7, LAT = [49.5, 32.5, 15.5], SH = 66, STRIP = 84, STRIP2 = 100, STRIP3 = 116, CORR = 24.8, CORR2 = 24.8, SHIFT = [3, 7, -5.5], SHIFTN = [3, 7, -5.5], GC1 = 24.8, GS = 5.5, LATL = 190;   // Spur 0 = rechts, 2 = links; Gasse innen (CORR) Blaulicht, außen (CORR2) Abschleppdienst
+const kmOf = s => (140 + s / 500).toFixed(1).replace('.', ',');
+const RN = ['AS Nord', 'AS Wald', 'AS Mitte', 'AS Süd', 'AS Hafen', 'AS Ost', 'AS Berg', 'AS Tal', 'AS Feld', 'AS Dorf', 'AS Stadt', 'AS See', 'AS Park', 'AS Mühle'];
+const RAMPS = []; for (let s = 320, i = 0; s < Lh - 900; s += 500, i++) RAMPS.push({ id: i, name: RN[i % RN.length], s });
+const OFFS = RAMPS.map((r, i) => ({ id: i, s: r.s - 260 }));
+const EXIT = { s: Math.round(Lh - 260), name: 'AS Ende' };
+const BASES = { depot: { u: 1150, name: 'TRUCK RESCUE · HOF & WERKSTATT', roof: '#FF7A00' }, fw: { u: 2700, name: 'FEUERWEHR', roof: '#d9453b' }, pol: { u: 4100, name: 'AUTOBAHNPOLIZEI', roof: '#3f6fb5' }, rd: { u: 5500, name: 'RETTUNGSWACHE', roof: '#f2f2f2' } };
+const CN = ['B27', 'K12', 'L35', 'B3', 'K41', 'L8', 'B14'];
+const CROSS = [650, 1950, 3300, 4800, 6000].map((s, i) => ({ s, name: CN[i % CN.length] }));
+/* Hof & Werkstatt (im (s,lat)-Koordinatensystem der Landstraße) */
+const DU = BASES.depot.u;
+const YD = { s0: DU - 215, s1: DU + 330, l0: 214, l1: 376, gateS: DU - 200, aisle: 254 };
+YD.bays = []; for (let i = 0; i < 9; i++) YD.bays.push(i < 5 ? { s: DU - 170 + 52 * i, lat: 234 } : { s: DU - 170 + 52 * (i - 5), lat: 274 });
+YD.ws = [0, 1, 2].map(i => ({ s: DU + 110 + 72 * i, lat: 328, spot: 274 }));
+YD.wsBox = { s0: DU + 80, s1: DU + 290, l0: 296, l1: 372 };
+function bez(a, b, c, d, n) { const o = []; for (let i = 0; i <= n; i++) { const t = i / n, u = 1 - t; o.push({ x: u * u * u * a.x + 3 * u * u * t * b.x + 3 * u * t * t * c.x + t * t * t * d.x, y: u * u * u * a.y + 3 * u * u * t * b.y + 3 * u * t * t * c.y + t * t * t * d.y }); } return o; }
+const Lpt = u => P(clamp(u, 0, Lh), LATL);
+const rampConn = i => { const s = RAMPS[i].s; return bez(P(s - 90, LATL), P(s - 20, LATL), P(s - 30, 100), P(s + 70, STRIP), 14); };
+const offConn = s => bez(P(s - 70, STRIP), P(s, 100), P(s + 10, LATL), P(s + 90, LATL), 14);
+const exitConn = () => offConn(EXIT.s);
+function mkPath(pts) { const cum = [0]; for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y)); return { pts, cum, len: cum[cum.length - 1] }; }
+const gateU = base => base === 'depot' ? YD.gateS : BASES[base].u;
+function Lseg(u0, u1) { const st = u0 < u1 ? 10 : -10, pts = []; for (let u = u0; st > 0 ? u < u1 : u > u1; u += st) pts.push(Lpt(u)); return pts; }
+function localPath(baseU, i) { const u0 = RAMPS[i].s - 90; return mkPath(Lseg(baseU, u0).concat(rampConn(i))); }
+function backPath(baseU, exitS) { exitS = exitS || EXIT.s; return mkPath(offConn(exitS).concat(Lseg(exitS + 90, baseU))); }
+/* Hof-Wege */
+const yp = (s, lat) => { const p = P(s, lat); return { x: p.x, y: p.y }; };
+function yardOutPts(i) {   // Stellplatz → Gasse → Tor → Landstraße
+  const b = YD.bays[i], pts = bez(yp(b.s, b.lat), yp(b.s - 24, b.lat), yp(b.s - 18, YD.aisle), yp(b.s - 44, YD.aisle), 10);
+  for (let s = b.s - 64; s > YD.gateS + 20; s -= 20) pts.push(yp(s, YD.aisle));
+  return pts.concat(bez(yp(YD.gateS + 20, YD.aisle), yp(YD.gateS, YD.aisle), yp(YD.gateS, 232), yp(YD.gateS, LATL), 8));
+}
+const wsStop = slot => YD.ws[slot].s + 40;
+function yardToSpot(slot) {   // Tor → Werkstattvorplatz
+  const w = YD.ws[slot], st = wsStop(slot), pts = bez(yp(YD.gateS, LATL), yp(YD.gateS, 232), yp(YD.gateS + 4, YD.aisle), yp(YD.gateS + 30, YD.aisle), 8);
+  for (let s = YD.gateS + 50; s < st - 60; s += 20) pts.push(yp(s, YD.aisle));
+  return pts.concat(bez(yp(st - 60, YD.aisle), yp(st - 30, YD.aisle), yp(st - 28, w.spot), yp(st, w.spot), 8));
+}
+function spotToBay(slot, i) {  // Vorplatz → Wendeschleife → Gasse → Stellplatz
+  const w = YD.ws[slot], b = YD.bays[i], st = wsStop(slot), pts = bez(yp(st, w.spot), yp(st + 26, w.spot), yp(st + 26, YD.aisle), yp(st, YD.aisle), 8);
+  for (let s = st - 20; s > b.s + 56; s -= 20) pts.push(yp(s, YD.aisle));
+  return pts.concat(bez(yp(b.s + 56, YD.aisle), yp(b.s + 26, YD.aisle), yp(b.s + 28, b.lat), yp(b.s, b.lat), 10));
+}
+function yardToBay(i) {       // Tor → Stellplatz (ohne Ladung)
+  const b = YD.bays[i], pts = bez(yp(YD.gateS, LATL), yp(YD.gateS, 232), yp(YD.gateS + 4, YD.aisle), yp(YD.gateS + 30, YD.aisle), 8);
+  for (let s = YD.gateS + 50; s < b.s + 56; s += 20) pts.push(yp(s, YD.aisle));
+  return pts.concat(bez(yp(b.s + 56, YD.aisle), yp(b.s + 26, YD.aisle), yp(b.s + 28, b.lat), yp(b.s, b.lat), 10));
+}
+function wsOutPts(slot) {     // fertig repariertes Fahrzeug: Werkstatt → Gasse → Tor → Landstraße
+  const w = YD.ws[slot], pts = [yp(w.s, w.lat), yp(w.s, w.spot + 8)].concat(bez(yp(w.s, w.spot), yp(w.s, YD.aisle + 8), yp(w.s - 6, YD.aisle), yp(w.s - 34, YD.aisle), 8));
+  for (let s = w.s - 54; s > YD.gateS + 20; s -= 20) pts.push(yp(s, YD.aisle));
+  return pts.concat(bez(yp(YD.gateS + 20, YD.aisle), yp(YD.gateS, YD.aisle), yp(YD.gateS, 232), yp(YD.gateS, LATL), 8));
+}
+const bayPose = i => { const b = YD.bays[i], p = P(b.s, b.lat); return { x: p.x, y: p.y, a: p.a + Math.PI }; };
+const wsPose = slot => { const w = YD.ws[slot], p = P(w.s, w.lat); return { x: p.x, y: p.y, a: p.a - Math.PI / 2 }; };
+const spotPose = slot => { const w = YD.ws[slot], p = P(w.s, w.spot); return { x: p.x, y: p.y, a: p.a }; };
+function follow(p, d) {
+  d = clamp(d, 0, p.len); let i = 1; while (i < p.cum.length - 1 && p.cum[i] < d) i++;
+  const a = p.pts[i - 1], b = p.pts[i], l = p.cum[i] - p.cum[i - 1] || 1, k = (d - p.cum[i - 1]) / l;
+  return { x: lerp(a.x, b.x, k), y: lerp(a.y, b.y, k), a: Math.atan2(b.y - a.y, b.x - a.x) };
+}
+/* Querstraßen (Brücken über die Autobahn) als Polylinie */
+function crossPts(i) { const s = CROSS[i].s, pts = []; for (let l = -1500; l <= 1500; l += 40) { const p = P(s + 70 * Math.sin(l / 260), l); pts.push({ x: p.x, y: p.y, l }); } return pts.filter(p => p.x > -40 && p.x < WW + 40 && p.y > -40 && p.y < WH + 40); }
+const CROSSP = CROSS.map((c, i) => crossPts(i));
+
+/* ===== Statischer Hintergrund: Kacheln (grob komplett + fein bei Bedarf) ===== */
+let BG = null;                       // grobe Gesamtkarte
+const SLO = .5, TS = 600, SHI = MOB ? 1.1 : 1.5, TILES = new Map(); let tileN = 0;
+const RIV = [
+  (t) => ({ x: 1500 + 260 * Math.sin(t * 4.6) + 200 * t, y: -40 + 3480 * t }),
+  (t) => ({ x: 4400 + 240 * Math.sin(t * 3.9 + 1) - 160 * t, y: -40 + 3480 * t })];
+const LAKES = [[4300, 560, 330, 190, .3], [1100, 3000, 300, 150, -.2], [5200, 2950, 260, 150, .4], [2900, 420, 150, 80, 0]];
+function sRange(T) {
+  if (!T.cull) return [-40, Lh + 40];
+  let a = Infinity, b = -Infinity; for (let s = 0; s <= Lh; s += 40) { const p = at(s); if (p.x > T.x0 - 520 && p.x < T.x1 + 520 && p.y > T.y0 - 520 && p.y < T.y1 + 520) { a = Math.min(a, s); b = Math.max(b, s); } }
+  return a > b ? [0, -1] : [Math.max(-40, a - 80), Math.min(Lh + 40, b + 80)];
+}
+function paintBG(g, T) {
+  const R = rng(5), V = (x, y, r) => !T.cull || (x + r > T.x0 && x - r < T.x1 && y + r > T.y0 && y - r < T.y1);
+  const [SA, SB] = sRange(T);
+  let gr = g.createLinearGradient(0, 0, 0, WH); gr.addColorStop(0, '#bcd89c'); gr.addColorStop(1, '#a8cb86'); g.fillStyle = gr; g.fillRect(T.x0 - 2, T.y0 - 2, T.x1 - T.x0 + 4, T.y1 - T.y0 + 4);
+  for (let i = 0; i < 700; i++) { const c = R() < .5, x = R() * WW, y = R() * WH, r = 40 + R() * 120; if (!V(x, y, r)) continue; g.fillStyle = c ? 'rgba(255,255,255,.06)' : 'rgba(70,110,50,.07)'; g.beginPath(); g.arc(x, y, r, 0, 7); g.fill(); }
+  const ribbon = (l0, l1, col, s0 = SA, s1 = SB, st = 8) => { if (s1 < s0) return; g.beginPath(); for (let s = s0; s <= s1; s += st) { const p = P(s, l0); s === s0 ? g.moveTo(p.x, p.y) : g.lineTo(p.x, p.y); } for (let s = s1; s >= s0; s -= st) { const p = P(s, l1); g.lineTo(p.x, p.y); } g.closePath(); g.fillStyle = col; g.fill(); };
+  const line = (lat, col, w, dash, s0 = SA, s1 = SB) => { if (s1 < s0) return; g.beginPath(); for (let s = s0; s <= s1; s += 6) { const p = P(s, lat); s === s0 ? g.moveTo(p.x, p.y) : g.lineTo(p.x, p.y); } g.strokeStyle = col; g.lineWidth = w; g.setLineDash(dash || []); g.stroke(); g.setLineDash([]); };
+  const quad = (s0, s1, l0, l1, col) => { const a = P(s0, l0), b = P(s1, l0), d = P(s1, l1), e = P(s0, l1); g.fillStyle = col; g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(b.x, b.y); g.lineTo(d.x, d.y); g.lineTo(e.x, e.y); g.closePath(); g.fill(); };
+  const tree = (x, y, r) => { const ci = (R() * 4) | 0; if (!V(x, y, r * 2)) return; g.fillStyle = 'rgba(30,50,20,.26)'; g.beginPath(); g.ellipse(x + r * .5, y + r * .7, r, r * .85, 0, 0, 7); g.fill(); g.fillStyle = ['#4f9a4f', '#5aa857', '#3f8a49', '#68b25c'][ci]; g.beginPath(); g.arc(x, y, r, 0, 7); g.fill(); g.fillStyle = 'rgba(255,255,255,.18)'; g.beginPath(); g.arc(x - r * .3, y - r * .3, r * .55, 0, 7); g.fill(); };
+  const poly = (pts, w, col, cap = 'round') => { g.lineCap = cap; g.lineJoin = 'round'; g.beginPath(); pts.forEach((p, i) => i ? g.lineTo(p.x, p.y) : g.moveTo(p.x, p.y)); g.strokeStyle = col; g.lineWidth = w; g.stroke(); };
+  const road = (pts, w, dash) => { poly(pts, w + 5, '#d6d1c2'); poly(pts, w, '#4a4d53'); if (dash) { g.setLineDash([10, 10]); poly(pts, 1.6, 'rgba(240,238,225,.7)', 'butt'); g.setLineDash([]); } };
+  const house = (x, y, a, w, h) => { const c1 = (R() * 5) | 0, c2 = (R() * 4) | 0; if (!V(x, y, 30)) return; g.save(); g.translate(x, y); g.rotate(a); g.fillStyle = 'rgba(0,0,0,.22)'; rr(g, -w / 2 + 3, -h / 2 + 4, w, h, 2); g.fill(); g.fillStyle = ['#e9e2d2', '#d9c7ad', '#dfe6ec', '#efd5cb', '#cfd9e6'][c1]; rr(g, -w / 2, -h / 2, w, h, 2); g.fill(); g.fillStyle = ['#c0674b', '#8f5a45', '#6f7b8a', '#a35c44'][c2]; g.fillRect(-w / 2, -h / 2, w, h / 2); g.fillStyle = 'rgba(255,255,255,.25)'; g.fillRect(-w / 2, -h / 2, w, 2); g.restore(); };
+  // Felder, Solarparks, Wald
+  const fcol = ['#d9d98f', '#a9cd7d', '#c7bb73', '#b5d68b', '#9ec371', '#e0cf8a'];
+  for (const [l0, l1] of [[134, 172], [-134, -172], [-172, -300], [210, 330]]) for (let s = -40; s < Lh + 40; s += 80) { const k = R() * 6 | 0; if (s + 80 < SA || s > SB) continue; quad(s, s + 74, l0, l1, fcol[k]); quad(s, s + 74, l0, l0 + (l1 - l0) * .1, 'rgba(60,90,40,.18)'); }
+  for (let i = 0; i < 26; i++) { const s = 200 + R() * (Lh - 400), side = R() < .5 ? -1 : 1, p = P(s, side * (380 + R() * 200)); if (!V(p.x, p.y, 90)) continue; g.save(); g.translate(p.x, p.y); g.rotate(p.a); g.fillStyle = '#2f4d73'; g.fillRect(-60, -30, 120, 60); g.strokeStyle = 'rgba(255,255,255,.35)'; g.lineWidth = 1; for (let k = -60; k <= 60; k += 12) { g.beginPath(); g.moveTo(k, -30); g.lineTo(k, 30); g.stroke(); } for (let k = -30; k <= 30; k += 12) { g.beginPath(); g.moveTo(-60, k); g.lineTo(60, k); g.stroke(); } g.restore(); }
+  for (let i = 0; i < 1500; i++) { const s = R() * Lh, side = R() < .5 ? -1 : 1, lat = side * (110 + R() * 420), r = 5 + R() * 7; if (Math.abs(lat) < 132 || (lat > 170 && lat < 215)) continue; if (lat > 205 && s > YD.s0 - 40 && s < YD.s1 + 40 && lat < YD.l1 + 40) continue; const p = P(s, lat); if (p.x > 0 && p.x < WW && p.y > 0 && p.y < WH) tree(p.x, p.y, r); }
+  for (let i = 0; i < 360; i++) { const x = R() * WW, y = R() < .5 ? R() * 150 : WH - R() * 150; tree(x, y, 7 + R() * 9); }
+  // Seen + Flüsse
+  for (const [x, y, rx, ry, a] of LAKES) { if (!V(x, y, rx + 40)) continue; g.fillStyle = '#e8e2bd'; g.beginPath(); g.ellipse(x, y, rx + 20, ry + 16, a, 0, 7); g.fill(); g.fillStyle = '#8cc8ea'; g.beginPath(); g.ellipse(x, y, rx, ry, a, 0, 7); g.fill(); g.fillStyle = 'rgba(255,255,255,.35)'; g.beginPath(); g.ellipse(x - rx * .3, y - ry * .3, rx * .35, ry * .25, a, 0, 7); g.fill(); }
+  for (const f of RIV) { const rvp = []; for (let i = 0; i <= 120; i++) rvp.push(f(i / 120)); poly(rvp, 74, '#e8e2bd'); poly(rvp, 54, '#8cc8ea'); poly(rvp, 34, '#a4d6f1'); g.setLineDash([22, 34]); poly(rvp, 2, 'rgba(255,255,255,.4)', 'butt'); g.setLineDash([]); }
+  // Dörfer mit Nebenstraßen
+  [[300, 1], [2300, 1], [3550, 1], [4300, 1], [5100, 1], [300, -1], [1300, -1], [2450, -1], [2900, -1], [4100, -1], [5100, -1]].forEach(([s, side]) => {
+    const a = P(s, side * 190), b = P(s, side * 400), c2 = P(s + 160, side * 400); road([a, b, c2], 12); road([P(s - 140, side * 300), P(s + 220, side * 300)], 10);
+    for (let k = 0; k < 16; k++) { const hs = s - 130 + k * 28, ho = side * (300 + (k % 2 ? 24 : -24)), p = P(hs, ho); house(p.x, p.y, p.a, 18 + R() * 8, 14 + R() * 5); }
+    for (let k = 0; k < 7; k++) { const p = P(s + 170, side * (330 + k * 20)); house(p.x, p.y, p.a + 1.57, 18, 14); }
+  });
+  // Landstraßen (Süd = Ausrücken, Nord = Kulisse), Auf-/Abfahrten
+  const Ls = [], Ln = []; for (let u = SA; u <= SB; u += 10) { Ls.push(P(u, LATL)); Ln.push(P(u, -LATL)); }
+  if (Ls.length > 1) { road(Ls, 20, true); road(Ln, 18, true); }
+  RAMPS.forEach((r, i) => { if (r.s + 200 > SA && r.s - 300 < SB) { road(rampConn(i), 14); const a = P(r.s + 60, -LATL), b = P(r.s + 140, -78); road([a, P(r.s + 100, -140), b], 12); } });
+  if (EXIT.s + 200 > SA && EXIT.s - 300 < SB) road(exitConn(), 14); OFFS.forEach(o => { if (o.s + 200 > SA && o.s - 300 < SB) road(offConn(o.s), 14); });
+  // Autobahn
+  ribbon(-130, 130, '#8d9a73'); ribbon(-91, -7, '#9a9a96'); ribbon(7, 91, '#9a9a96'); ribbon(91, 126, '#aaa59a'); ribbon(91, 93, '#8a867c'); ribbon(124.5, 126.5, '#8a867c'); ribbon(-126, -91, '#aaa59a'); ribbon(7, 58, '#43464c'); ribbon(-58, -7, '#43464c'); ribbon(58, 73, '#56595f'); ribbon(-73, -58, '#56595f'); ribbon(-7, 7, '#7da36a'); ribbon(-6, 6, '#8fb77a');
+  for (const sg of [1, -1]) { line(sg * 58, '#f4f2ea', 2.2); line(sg * 8.5, '#f4f2ea', 2.2); line(sg * 24, 'rgba(244,242,234,.85)', 1.8, [12, 14]); line(sg * 41, 'rgba(244,242,234,.85)', 1.8, [12, 14]); line(sg * 91, '#b8bcc2', 1.6); line(sg * 7, '#c9ccd1', 2.4); }
+  for (let s = Math.max(0, SA); s < SB; s += 18) for (const l of [7, -7, 91, -91]) { const p = P(s, l); g.fillStyle = '#7d8087'; g.fillRect(p.x - .8, p.y - .8, 1.6, 1.6); }
+  for (let s = 100; s < Lh; s += 250) { if (s < SA || s > SB) continue; const p = P(s, 96); g.fillStyle = '#2d6cc0'; g.fillRect(p.x - 3, p.y - 2, 6, 4); }
+  CROSSP.forEach(pts => { if (pts.length > 1) road(pts, 16, true); });
+  // Schilderbrücken + Schilder
+  [...RAMPS.map(r => r.s - 200), EXIT.s - 210].forEach(s => { if (s < SA - 60 || s > SB + 60) return; const a = P(s, -80), b = P(s, 80); g.beginPath(); g.moveTo(a.x + 3, a.y + 4); g.lineTo(b.x + 3, b.y + 4); g.lineWidth = 5; g.strokeStyle = 'rgba(0,0,0,.2)'; g.stroke(); g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(b.x, b.y); g.strokeStyle = '#6d727a'; g.lineWidth = 3; g.stroke(); for (const l of [32, -32]) { const q = P(s, l); g.save(); g.translate(q.x, q.y); g.rotate(q.a); g.fillStyle = '#1f7a4d'; rr(g, -5, -13, 10, 26, 2); g.fill(); g.fillStyle = '#fff'; g.fillRect(-2, -9, 4, 18); g.restore(); } });
+  const sign = (x, y, t, bg, fg) => { g.fillStyle = 'rgba(0,0,0,.25)'; rr(g, x - 19, y - 12, 44, 26, 5); g.fill(); g.fillStyle = bg; rr(g, x - 21, y - 14, 44, 26, 5); g.fill(); g.strokeStyle = '#fff'; g.lineWidth = 1.6; rr(g, x - 19, y - 12, 40, 22, 3); g.stroke(); g.fillStyle = fg; g.font = '900 15px Arial'; g.textAlign = 'center'; g.fillText(t, x + 1, y + 3); };
+  for (let s = 300; s < Lh; s += 600) { const p = P(s, 112); if (V(p.x, p.y, 40)) sign(p.x, p.y, 'A7', '#1f5fae', '#fff'); }
+  CROSS.forEach(cr => { const p = P(cr.s - 40, 120); if (V(p.x, p.y, 40)) sign(p.x, p.y, cr.name, '#f2c230', '#1d1d1b'); });
+  // Wachen (Feuerwehr, Polizei, Rettung)
+  g.font = '900 14px system-ui,Arial'; g.textAlign = 'center';
+  for (const [k, b] of Object.entries(BASES)) {
+    if (k === 'depot') continue;
+    const p = P(b.u, LATL + 48), w = 96, h = 48; if (!V(p.x, p.y, 120)) continue;
+    g.save(); g.translate(p.x, p.y); g.rotate(p.a); g.fillStyle = 'rgba(0,0,0,.25)'; rr(g, -w / 2 + 4, -h / 2 + 6, w, h, 5); g.fill(); g.fillStyle = '#cfc9bb'; rr(g, -w / 2 - 8, -h / 2 - 8, w + 16, h + 16, 6); g.fill();
+    g.fillStyle = b.roof; rr(g, -w / 2, -h / 2, w, h, 4); g.fill(); g.fillStyle = 'rgba(255,255,255,.28)'; g.fillRect(-w / 2 + 4, -h / 2 + 4, w - 8, 6); g.fillStyle = 'rgba(0,0,0,.22)'; for (let x = -w / 2 + 12; x < w / 2 - 14; x += 24) g.fillRect(x, 2, 15, h / 2 - 5);
+    if (k === 'rd') { g.fillStyle = '#d9453b'; g.fillRect(-4, -h / 2 + 12, 8, 20); g.fillRect(-10, -h / 2 + 18, 20, 8); } g.restore();
+    const lp = P(b.u, LATL + 112); const tw = g.measureText(b.name).width + 16; g.fillStyle = 'rgba(29,29,27,.88)'; rr(g, lp.x - tw / 2, lp.y - 10, tw, 21, 10); g.fill(); g.fillStyle = '#fff'; g.fillText(b.name, lp.x, lp.y + 5);
+  }
+  paintYard(g, T, V);
+  g.font = '900 12px system-ui,Arial'; g.textAlign = 'center'; [...RAMPS.map(r => [r.name, r.s]), [EXIT.name, EXIT.s]].forEach(([n, s]) => { const p = P(s, 140); if (!V(p.x, p.y, 80)) return; const tw = g.measureText(n).width + 14; g.fillStyle = '#1f7a4d'; rr(g, p.x - tw / 2, p.y - 9, tw, 18, 4); g.fill(); g.fillStyle = '#fff'; g.fillText(n, p.x, p.y + 4); });
+  { const p = P(120, -122); if (V(p.x, p.y, 200)) { g.font = '900 14px system-ui,Arial'; g.textAlign = 'left'; g.fillStyle = '#1f5fae'; rr(g, p.x - 4, p.y - 12, 190, 24, 5); g.fill(); g.fillStyle = '#fff'; g.fillText('A7  ·  Richtung Hamburg →', p.x + 4, p.y + 5); } }
+}
+/* Hof + Werkstatt */
+function paintYard(g, T, V) {
+  const c = P(DU, 295); if (!V(c.x, c.y, 320)) return;
+  const qd = (s0, s1, l0, l1) => { const a = P(s0, l0), b = P(s1, l0), d = P(s1, l1), e = P(s0, l1); g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(b.x, b.y); g.lineTo(d.x, d.y); g.lineTo(e.x, e.y); g.closePath(); };
+  const ln = (s0, l0, s1, l1, col, w, dash) => { const a = P(s0, l0), b = P(s1, l1); g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(b.x, b.y); g.strokeStyle = col; g.lineWidth = w; g.setLineDash(dash || []); g.stroke(); g.setLineDash([]); };
+  const y = YD;
+  // Schatten + Betonfläche + Zufahrt
+  g.save(); g.translate(4, 6); qd(y.s0, y.s1, y.l0, y.l1); g.fillStyle = 'rgba(0,0,0,.22)'; g.fill(); g.restore();
+  qd(y.s0 - 8, y.s1 + 8, y.l0 - 8, y.l1 + 8); g.fillStyle = '#7e8a62'; g.fill();
+  qd(y.s0, y.s1, y.l0, y.l1); g.fillStyle = '#b7b4aa'; g.fill();
+  qd(y.gateS - 18, y.gateS + 18, 196, y.l0 + 2); g.fillStyle = '#4a4d53'; g.fill();
+  // Fahrgasse (Asphalt) + Mittelmarkierung
+  qd(y.gateS - 6, y.s1 - 30, y.aisle - 12, y.aisle + 12); g.fillStyle = '#6a6d73'; g.fill(); ln(y.gateS, y.aisle, y.s1 - 30, y.aisle, 'rgba(255,255,255,.6)', 1.2, [10, 10]);
+  // Stellplätze
+  y.bays.forEach((b, i) => { qd(b.s - 24, b.s + 24, b.lat - 15, b.lat + 15); g.fillStyle = 'rgba(255,255,255,.17)'; g.fill(); for (const d of [-24, 24]) ln(b.s + d, b.lat - 15, b.s + d, b.lat + 15, 'rgba(255,255,255,.9)', 1.6); const q = P(b.s + 12, b.lat + (b.lat < y.aisle ? -9 : 9)); g.fillStyle = 'rgba(255,255,255,.45)'; g.font = '900 8px Arial'; g.textAlign = 'center'; g.fillText(i + 1, q.x, q.y + 3); });
+  // Zaun mit Tor
+  const fence = (s0, l0, s1, l1) => ln(s0, l0, s1, l1, '#4a4f58', 2.2); const gx = y.gateS;
+  fence(y.s0, y.l0, gx - 16, y.l0); fence(gx + 16, y.l0, y.s1, y.l0); fence(y.s1, y.l0, y.s1, y.l1); fence(y.s1, y.l1, y.s0, y.l1); fence(y.s0, y.l1, y.s0, y.l0);
+  for (const d of [-16, 16]) { const p = P(gx + d, y.l0); g.fillStyle = '#FF7A00'; g.fillRect(p.x - 3, p.y - 3, 6, 6); }
+  { const a = P(gx - 16, y.l0 - 2), b = P(gx + 16, y.l0 - 2); g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(b.x, b.y); g.strokeStyle = 'rgba(255,122,0,.9)'; g.lineWidth = 2; g.setLineDash([5, 4]); g.stroke(); g.setLineDash([]); }
+  // Bürogebäude
+  const office = (s0, s1, l0, l1, col, ttl) => { g.save(); g.translate(3, 5); qd(s0, s1, l0, l1); g.fillStyle = 'rgba(0,0,0,.25)'; g.fill(); g.restore(); qd(s0, s1, l0, l1); g.fillStyle = col; g.fill(); qd(s0 + 4, s1 - 4, l0 + 4, l0 + 10); g.fillStyle = 'rgba(255,255,255,.3)'; g.fill(); const p = P((s0 + s1) / 2, (l0 + l1) / 2 + 3); g.save(); g.translate(p.x, p.y); g.rotate(p.a); g.fillStyle = 'rgba(0,0,0,.3)'; for (let x = -34; x <= 34; x += 17) g.fillRect(x - 5, 7, 10, 7); g.fillStyle = '#fff'; g.font = '900 11px Arial'; g.textAlign = 'center'; g.fillText(ttl, 0, -4); g.restore(); };
+  office(y.s0 + 22, y.s0 + 130, 322, 366, '#FF7A00', 'DISPOSITION');
+  // Werkstatt: Halle mit offener Front, Hebebühnen pro Platz
+  const wb = y.wsBox; g.save(); g.translate(4, 6); qd(wb.s0, wb.s1, wb.l0, wb.l1); g.fillStyle = 'rgba(0,0,0,.28)'; g.fill(); g.restore();
+  qd(wb.s0, wb.s1, wb.l0, wb.l1); g.fillStyle = '#8a8f99'; g.fill();
+  qd(wb.s0, wb.s1, wb.l0 + 52, wb.l1); g.fillStyle = '#5d6370'; g.fill(); qd(wb.s0 + 3, wb.s1 - 3, wb.l0 + 54, wb.l0 + 60); g.fillStyle = 'rgba(255,255,255,.25)'; g.fill();
+  qd(wb.s0, wb.s1, wb.l0, wb.l1); g.strokeStyle = '#3b3f48'; g.lineWidth = 2.2; g.stroke();
+  y.ws.forEach((w, i) => { qd(w.s - 26, w.s + 26, w.lat - 24, w.lat + 24); g.fillStyle = '#9ba0a8'; g.fill(); g.strokeStyle = '#f2b705'; g.lineWidth = 1.4; g.setLineDash([5, 4]); g.stroke(); g.setLineDash([]); ln(w.s - 36, wb.l0, w.s - 36, wb.l1, '#3b3f48', 1.4); const q = P(w.s, wb.l0 + 9); g.save(); g.translate(q.x, q.y); g.rotate(q.a); g.fillStyle = 'rgba(255,255,255,.75)'; g.font = '900 8px Arial'; g.textAlign = 'center'; g.fillText('PLATZ ' + (i + 1), 0, 0); g.restore(); });
+  { const q = P((wb.s0 + wb.s1) / 2, wb.l1 - 12); g.save(); g.translate(q.x, q.y); g.rotate(q.a); const tw = 112; g.fillStyle = '#1d1d1b'; rr(g, -tw / 2, -10, tw, 20, 10); g.fill(); g.fillStyle = '#FF7A00'; g.font = '900 11px Arial'; g.textAlign = 'center'; g.fillText('🔧 WERKSTATT', 0, 4); g.restore(); }
+  { const q = P(DU, y.l1 + 22); g.save(); g.translate(q.x, q.y); g.rotate(q.a); const nm = BASES.depot.name, tw = nm.length * 7.2 + 20; g.fillStyle = 'rgba(29,29,27,.9)'; rr(g, -tw / 2, -11, tw, 22, 11); g.fill(); g.fillStyle = '#FF7A00'; g.font = '900 12px system-ui,Arial'; g.textAlign = 'center'; g.fillText(nm, 0, 4); g.restore(); }
+  // Hecke/Bäume am Zaun
+  for (let s = y.s0 + 10; s < y.s1; s += 34) for (const l of [y.l1 + 10]) { const p = P(s, l); g.fillStyle = '#4a8a46'; g.beginPath(); g.arc(p.x, p.y, 6, 0, 7); g.fill(); }
+}
+function makeTile(tx, ty, sc, T) {
+  const c = document.createElement('canvas'); c.width = Math.ceil((T.x1 - T.x0) * sc); c.height = Math.ceil((T.y1 - T.y0) * sc); const g = c.getContext('2d');
+  g.scale(sc, sc); g.translate(-T.x0, -T.y0); g.beginPath(); g.rect(T.x0, T.y0, T.x1 - T.x0, T.y1 - T.y0); g.clip(); paintBG(g, T); return c;
+}
+function buildBG() { return makeTile(0, 0, SLO, { x0: 0, y0: 0, x1: WW, y1: WH, cull: false }); }
+function hiTile(tx, ty) {
+  const key = tx + ',' + ty; let t = TILES.get(key);
+  if (t) { t.u = ++tileN; return t.c; }
+  const T = { x0: tx * TS, y0: ty * TS, x1: Math.min(WW, (tx + 1) * TS), y1: Math.min(WH, (ty + 1) * TS), cull: true };
+  const pad = 8; T.x0 -= pad; T.y0 -= pad; T.x1 += pad; T.y1 += pad;
+  const c = makeTile(tx, ty, SHI, T); TILES.set(key, { c, u: ++tileN, x0: T.x0, y0: T.y0 });
+  if (TILES.size > (MOB ? 10 : 28)) { let k0 = null, u0 = Infinity; TILES.forEach((v, k) => { if (v.u < u0) { u0 = v.u; k0 = k; } }); TILES.delete(k0); }
+  return c;
+}
+function drawBGWorld(g, vx, vy, vw, vh, z) {
+  if (z < .62) { g.drawImage(BG, vx * SLO, vy * SLO, vw * SLO, vh * SLO, vx, vy, vw, vh); return; }
+  g.drawImage(BG, vx * SLO, vy * SLO, vw * SLO, vh * SLO, vx, vy, vw, vh);   // Fallback unter fehlenden Kacheln
+  let built = 0;
+  for (let ty = Math.max(0, Math.floor(vy / TS)); ty <= Math.min(Math.floor((WH - 1) / TS), Math.floor((vy + vh) / TS)); ty++)
+    for (let tx = Math.max(0, Math.floor(vx / TS)); tx <= Math.min(Math.floor((WW - 1) / TS), Math.floor((vx + vw) / TS)); tx++) {
+      const key = tx + ',' + ty, t = TILES.get(key);
+      if (!t) { if (built >= 1) continue; built++; }
+      const c = hiTile(tx, ty), e = TILES.get(key); g.drawImage(c, e.x0, e.y0, c.width / SHI, c.height / SHI);
+    }
+}
+/* ===== Fahrzeug-Sprites (Draufsicht, Fahrtrichtung = +x) ===== */
+const CARCOL = ['#dcdcdc', '#2c3e50', '#c0392b', '#2980b9', '#7f8c8d', '#e0b92c', '#27ae60', '#f1f1f1', '#8e44ad'];
+const BOXCOL = ['#f2f2ee', '#dfe6ee', '#2f6fb0', '#c8453b', '#e8e0c8', '#4a8f5c'];
+function bodyCar(g, len, wid, col) {
+  g.fillStyle = col; rr(g, -len / 2, -wid / 2, len, wid, wid * .34); g.fill();
+  g.fillStyle = 'rgba(255,255,255,.28)'; rr(g, -len * .1, -wid * .5 + 1, len * .5, wid * .28, 2.5); g.fill();
+  g.fillStyle = '#25384a'; rr(g, len * .12, -wid / 2 + 1.6, len * .2, wid - 3.2, 2); g.fill(); rr(g, -len * .36, -wid / 2 + 2, len * .13, wid - 4, 2); g.fill();
+  g.fillStyle = 'rgba(0,0,0,.18)'; rr(g, -len * .2, -wid / 2 + 1.8, len * .3, wid - 3.6, 3); g.fill();
+}
+function drawVeh(g, v, now) {
+  const L = v.len, Wd = v.wid, k = v.kind;
+  g.fillStyle = 'rgba(0,0,0,.22)'; rr(g, -L / 2 + 2, -Wd / 2 + 3, L, Wd, 3); g.fill();
+  if (k === 'car' || k === 'van') bodyCar(g, L, Wd, v.col);
+  else if (k === 'truck') { g.fillStyle = v.col2; rr(g, -L / 2, -Wd / 2, L - 13, Wd, 2); g.fill(); g.fillStyle = 'rgba(0,0,0,.12)'; g.fillRect(-L / 2 + 4, -Wd / 2, 1.5, Wd); g.fillStyle = v.col; rr(g, L / 2 - 13, -Wd / 2 + .5, 13, Wd - 1, 3); g.fill(); g.fillStyle = '#25384a'; g.fillRect(L / 2 - 4, -Wd / 2 + 2, 2.5, Wd - 4); }
+  else if (k === 'semi') {   // Gelenkzug: Zugmaschine + Auflieger, Auflieger schwenkt um den Sattelpunkt
+    const tl = L - 24, hx = L / 2 - 23, tr = v.tr || 0;
+    g.save(); g.translate(hx, 0); g.rotate(tr);
+    g.fillStyle = v.col2; rr(g, -tl, -Wd / 2, tl, Wd, 2); g.fill(); g.fillStyle = 'rgba(0,0,0,.1)'; for (let x = -tl + 6; x < -2; x += 8) g.fillRect(x, -Wd / 2, 1, Wd);
+    g.fillStyle = 'rgba(255,255,255,.22)'; g.fillRect(-tl + 1, -Wd / 2 + 1, tl - 4, 1.4);
+    g.fillStyle = '#2b2d31'; g.fillRect(-tl + 5, -Wd / 2 - .6, 6, 1.6); g.fillRect(-tl + 5, Wd / 2 - 1, 6, 1.6); g.fillRect(-tl + 12, -Wd / 2 - .6, 6, 1.6); g.fillRect(-tl + 12, Wd / 2 - 1, 6, 1.6);
+    if (v.braking) { g.fillStyle = '#ff2a1f'; g.fillRect(-tl - .3, -Wd / 2 + .6, 1.8, 2.6); g.fillRect(-tl - .3, Wd / 2 - 3.2, 1.8, 2.6); }
+    g.restore();
+    g.fillStyle = '#3a3d44'; rr(g, hx - 9, -Wd / 2 + 1.5, 11, Wd - 3, 2); g.fill();
+    g.fillStyle = v.col; rr(g, L / 2 - 22, -Wd / 2 + .5, 22, Wd - 1, 3); g.fill(); g.fillStyle = 'rgba(255,255,255,.25)'; rr(g, L / 2 - 20, -Wd / 2 + 1.5, 10, 2.4, 1); g.fill();
+    g.fillStyle = '#25384a'; g.fillRect(L / 2 - 4, -Wd / 2 + 2, 2.5, Wd - 4); g.fillStyle = '#222'; g.fillRect(L / 2 - 24, -1, 4, 2); }
+  else if (k === 'bus') { g.fillStyle = v.col; rr(g, -L / 2, -Wd / 2, L, Wd, 4); g.fill(); g.fillStyle = 'rgba(255,255,255,.5)'; rr(g, -L / 2 + 3, -Wd / 2 + 1.5, L - 6, Wd - 3, 3); g.fill(); g.fillStyle = '#25384a'; g.fillRect(L / 2 - 5, -Wd / 2 + 1.5, 3, Wd - 3); }
+  if (v.braking && k !== 'semi') { g.fillStyle = '#ff2a1f'; g.fillRect(-L / 2 - .3, -Wd / 2 + .6, 1.8, 2.6); g.fillRect(-L / 2 - .3, Wd / 2 - 3.2, 1.8, 2.6); }
+  if (v.ly && Math.abs(v.ly) > 3 && Math.floor(now * 3) % 2) { const sd = v.ly > 0 ? 1 : -1; g.fillStyle = '#ffb020'; g.beginPath(); g.arc(L / 2 - 1, sd * (Wd / 2 - .6), 1.4, 0, 7); g.arc(-L / 2 + 1, sd * (Wd / 2 - .6), 1.4, 0, 7); g.fill(); }
+  if (v.wreck) { g.fillStyle = 'rgba(15,12,10,.42)'; rr(g, -L / 2, -Wd / 2, L, Wd, 3); g.fill(); }
+  if (v.hz && Math.floor(now * 2.6) % 2) { g.fillStyle = '#ffb020'; for (const [x, y] of [[-L / 2 + 1, -Wd / 2 + 1], [-L / 2 + 1, Wd / 2 - 1], [L / 2 - 1, -Wd / 2 + 1], [L / 2 - 1, Wd / 2 - 1]]) { g.beginPath(); g.arc(x, y, 1.5, 0, 7); g.fill(); } }
+}
+function glow(g, x, y, r, col) { g.save(); g.globalCompositeOperation = 'lighter'; const rg = g.createRadialGradient(x, y, 0, x, y, r); rg.addColorStop(0, col); rg.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = rg; g.beginPath(); g.arc(x, y, r, 0, 7); g.fill(); g.restore(); }
+function drawEm(g, u, now) {
+  const t = u.type, L = u.len, Wd = u.wid, on = Math.floor(now * 6) % 2;
+  g.fillStyle = 'rgba(0,0,0,.25)'; rr(g, -L / 2 + 2, -Wd / 2 + 3, L, Wd, 3); g.fill();
+  if (t === 'pol') { g.fillStyle = '#f2f5f8'; rr(g, -L / 2, -Wd / 2, L, Wd, 4); g.fill(); g.fillStyle = '#2d6cc0'; g.fillRect(-L / 2 + 3, -Wd / 2, L - 14, 2.4); g.fillRect(-L / 2 + 3, Wd / 2 - 2.4, L - 14, 2.4); g.fillStyle = '#25384a'; g.fillRect(L / 2 - 9, -Wd / 2 + 1.6, 4, Wd - 3.2); g.fillRect(-L / 2 + 4, -Wd / 2 + 2, 3, Wd - 4); }
+  else if (t === 'fw') { g.fillStyle = '#d9322b'; rr(g, -L / 2, -Wd / 2, L, Wd, 3); g.fill(); g.fillStyle = '#fff'; g.fillRect(-L / 2 + 2, -1, L - 14, 2); g.fillStyle = '#9d9ea3'; g.fillRect(-L / 2 + 3, -Wd / 2 + 2, L - 18, 2.4); g.fillRect(-L / 2 + 3, Wd / 2 - 4.4, L - 18, 2.4); g.fillStyle = '#25384a'; g.fillRect(L / 2 - 8, -Wd / 2 + 1.6, 4, Wd - 3.2); }
+  else if (t === 'rd') { g.fillStyle = '#f7f7f4'; rr(g, -L / 2, -Wd / 2, L, Wd, 4); g.fill(); g.fillStyle = '#ff8a00'; g.fillRect(-L / 2 + 2, -Wd / 2, L - 12, 2.2); g.fillRect(-L / 2 + 2, Wd / 2 - 2.2, L - 12, 2.2); g.fillStyle = '#d9322b'; g.fillRect(-L / 2 + 8, -1.2, 8, 2.4); g.fillRect(-L / 2 + 11, -4, 2.4, 8); g.fillStyle = '#25384a'; g.fillRect(L / 2 - 8, -Wd / 2 + 1.6, 4, Wd - 3.2); }
+  if (t === 'tow') {
+    g.save(); g.scale(.56, .56); const TT = TOWSP[u.tt];
+    if (u.rel && u.wreck && u.wreck.clear > .02 && u.wreck.clear < .93) { const ex = 3 * Math.min(1, u.wreck.clear / .06); g.fillStyle = '#44464c'; for (const sg of [-1, 1]) { g.fillRect(-TT.L * .16, sg * (TT.W / 2 + ex * .4) - 2.5, 11, 5); g.fillStyle = '#ffd24a'; g.fillRect(-TT.L * .16 + 8, sg * (TT.W / 2 + ex * .4) - 2.5, 3, 5); g.fillStyle = '#44464c'; } }
+    drawTow(g, u.tt, { beacon: false, load: null }); g.restore();
+  }
+  if (u.siren) {
+    const bx = t === 'tow' ? L / 2 - 8 : L / 2 - 10, col = t === 'tow' ? ['#ffb020', '#ffb020'] : ['#3b82f6', '#3b82f6'];
+    for (const [s, k] of [[-1, on], [1, 1 - on]]) { g.fillStyle = k ? (t === 'tow' ? '#ffe27a' : '#8fc0ff') : (t === 'tow' ? '#7a4a00' : '#1d3f7a'); g.beginPath(); g.arc(bx, s * (Wd / 2 - 3), 1.9, 0, 7); g.fill(); if (k) { const m = g.getTransform(); glow(g, bx, s * (Wd / 2 - 3), 15, t === 'tow' ? 'rgba(255,170,40,.7)' : 'rgba(70,140,255,.8)'); } }
+  }
+}
+const TOWSP = [{ L: 46, W: 17, cab: 15, axl: [-15, 14] }, { L: 64, W: 20, cab: 17, axl: [-23, -11, 23] }, { L: 86, W: 24, cab: 21, axl: [-34, -22, -10, 33] }];
+function drawTow(g, type, o = {}) {
+  const T = TOWSP[type], L = T.L, Wd = T.W, cl = T.cab, hw = Wd / 2, x0 = -L / 2, bedL = L - cl;
+  g.fillStyle = '#121214'; T.axl.forEach(a => { rr(g, a - 4.5, -hw - 1.6, 9, 3.8, 1.3); g.fill(); rr(g, a - 4.5, hw - 2.2, 9, 3.8, 1.3); g.fill(); });
+  g.fillStyle = '#2a2b2f'; rr(g, x0, -hw + 1.5, L - 1, Wd - 3, 3); g.fill();
+  const dg = g.createLinearGradient(0, -hw, 0, hw); dg.addColorStop(0, '#ffa04a'); dg.addColorStop(1, '#e56a00'); g.fillStyle = dg; rr(g, x0 + 1, -hw + 1, bedL - .5, Wd - 2, 3); g.fill();
+  g.strokeStyle = 'rgba(255,255,255,.38)'; g.lineWidth = 1; rr(g, x0 + 2.6, -hw + 2.6, bedL - 3.6, Wd - 5.2, 2); g.stroke();
+  if (type === 0) { g.fillStyle = '#303036'; rr(g, x0 + 4, -2.2, 15, 4.4, 1.6); g.fill(); g.fillStyle = '#ffd24a'; g.beginPath(); g.arc(x0 + 19.5, 0, 2.5, 0, 7); g.fill(); }
+  else if (type === 1) { g.strokeStyle = 'rgba(0,0,0,.28)'; for (let k = 1; k < 6; k++) { g.beginPath(); g.moveTo(x0 + 3 + k * 7.4, -hw + 2.5); g.lineTo(x0 + 3 + k * 7.4, hw - 2.5); g.stroke(); } g.fillStyle = '#303036'; g.beginPath(); g.arc(L / 2 - cl - 4, 0, 3.2, 0, 7); g.fill(); }
+  else { g.fillStyle = '#2c2c32'; rr(g, x0 + 5, -3.4, bedL - 11, 6.8, 2); g.fill(); g.fillStyle = '#ffd24a'; for (let k = 0; k < 6; k++) g.fillRect(x0 + 9 + k * 9, -3.4, 4, 6.8); g.fillStyle = '#2c2c32'; g.beginPath(); g.arc(x0 + 10, 0, 5.4, 0, 7); g.fill(); g.fillStyle = '#303036'; g.fillRect(x0 + bedL * .45, -hw - 3.6, 6, 3.6); g.fillRect(x0 + bedL * .45, hw, 6, 3.6); }
+  if (o.load != null) { g.save(); g.translate(-cl / 2 - 1, 0); g.rotate(-.05); if (o.load === 0) bodyCar(g, 27, 12, '#6f87a8'); else if (o.load === 1) { g.fillStyle = '#eceae4'; rr(g, -20, -7, 38, 14, 2); g.fill(); g.fillStyle = '#b53b33'; rr(g, 18, -6, 9, 12, 2); g.fill(); } else { g.fillStyle = '#9d3a32'; rr(g, -26, -8, 52, 16, 3); g.fill(); g.fillStyle = '#d8d4cc'; rr(g, -26, -8, 30, 16, 3); g.fill(); } g.restore(); }
+  g.fillStyle = '#f7f5ef'; rr(g, L / 2 - cl, -hw, cl, Wd, 4); g.fill(); g.fillStyle = '#FF7A00'; rr(g, L / 2 - cl + 2, -hw + 3, cl - 9, Wd - 6, 2); g.fill();
+  g.fillStyle = '#2d4257'; rr(g, L / 2 - 6.4, -hw + 2, 4.8, Wd - 4, 1.6); g.fill(); g.fillStyle = '#fffbe0'; g.fillRect(L / 2 - 1.6, -hw + 1.4, 2, 3.2); g.fillRect(L / 2 - 1.6, hw - 4.6, 2, 3.2);
+}
+/* ===== Unfall-Rig: skriptete Animation von Fahrzeug, Anhänger, Auffahrer ===== */
+function rigParts(k, t) {
+  const out = [];
+  if (k === 'A') {
+    const tt = Math.min(t, 3), tds = 24 + 48 * tt - 8 * tt * tt, e = ss((t - .3) / 2.2), lat = lerp(32.5, 17, e), phi = -.5 * e, th = -.95 * ss((t - .5) / 2.3);
+    const hx = tds - 12 * Math.cos(phi), hy = lat - 12 * Math.sin(phi), pr = phi + th;
+    out.push({ k: 'trailer', ds: hx - 24 * Math.cos(pr), lat: hy - 24 * Math.sin(pr), phi: pr, len: 48, wid: 13, tipped: t > 2.5, col: '#e8e8e4' });
+    out.push({ k: 'tractor', ds: tds, lat, phi, len: 22, wid: 13, col: '#c8453b' });
+  } else if (k === 'B') {
+    const tt = Math.min(t, 2), e = ss(t / 2);
+    out.push({ k: 'box', ds: 48 * tt - 12 * tt * tt, lat: lerp(32.5, 26, e), phi: -.25 * e, len: 42, wid: 13, col: '#c8453b', col2: '#eceae4' });
+  } else {
+    const tt = Math.min(t, 3.2), e = ss(t / 3);
+    out.push({ k: 'van', ds: 48 * tt - 7.5 * tt * tt, lat: lerp(32.5, 59, e), phi: .1 * e, len: 28, wid: 12, col: '#f1f1f1', hazard: true });
+  }
+  return out;
+}
+const CRASH = { A: { dur: 4.0 }, B: { dur: 2.6 }, C: { dur: 3.6 } };
+/* Umgebendes Rechteck (s, lat) aller Rig-Teile zum Zeitpunkt t – dient den anderen Fahrzeugen als Hindernis */
+function rigBox(k, t, pad = 3) {
+  const b = { s0: 1e9, s1: -1e9, l0: 1e9, l1: -1e9 };
+  for (const p of rigParts(k, t)) { const c = Math.abs(Math.cos(p.phi)), s = Math.abs(Math.sin(p.phi)), hx = c * p.len / 2 + s * (p.wid + (p.tipped ? 4 : 0)) / 2, hy = s * p.len / 2 + c * (p.wid + (p.tipped ? 4 : 0)) / 2; b.s0 = Math.min(b.s0, p.ds - hx); b.s1 = Math.max(b.s1, p.ds + hx); b.l0 = Math.min(b.l0, p.lat - hy); b.l1 = Math.max(b.l1, p.lat + hy); }
+  b.s0 -= pad; b.s1 += pad; b.l0 -= pad; b.l1 += pad; return b;
+}
+function drawRig(g, st, now, clear, an) {
+  const c = st.crash, base = P(c.s0, 0), parts = rigParts(c.k, Math.min(c.t, CRASH[c.k].dur));
+  g.save(); g.translate(base.x, base.y); g.rotate(base.a);
+  if (c.k === 'A' && c.t > 2.4 && !an) { const f = Math.min(1, (c.t - 2.4) / 4); g.fillStyle = 'rgba(40,30,20,.45)'; g.beginPath(); g.ellipse(86, 38, 14 + 22 * f, 8 + 14 * f, .3, 0, 7); g.fill(); }
+  if (an) {   // Wrack am Kran: Mittelpunkt des Wracks folgt der Animation
+    const w = st.wrecks[0], pc = P((w.box.s0 + w.box.s1) / 2, Math.min(60, (w.box.l0 + w.box.l1) / 2)), ca = Math.cos(-base.a), sa = Math.sin(-base.a), cxl = (pc.x - base.x) * ca - (pc.y - base.y) * sa, cyl = (pc.x - base.x) * sa + (pc.y - base.y) * ca;
+    const dx = an.pos.x - pc.x, dy = an.pos.y - pc.y, lx = dx * ca - dy * sa, ly = dx * sa + dy * ca;
+    if (an.lift > 0) { g.fillStyle = `rgba(0,0,0,${.28 * an.lift})`; g.beginPath(); g.ellipse(cxl + lx + 6, cyl + ly + 9, 34 * an.sc, 14 * an.sc, 0, 0, 7); g.fill(); }
+    g.translate(cxl + lx, cyl + ly); g.rotate(an.a - base.a); g.scale(an.sc, an.sc); g.translate(-cxl, -cyl);
+  }
+  for (const p of parts) {
+    g.save(); g.translate(p.ds, p.lat); g.rotate(p.phi);
+    if (p.k === 'tractor') { g.fillStyle = 'rgba(0,0,0,.25)'; rr(g, -9, -5, 22, 13, 3); g.fill(); g.fillStyle = p.col; rr(g, -11, -6.5, 22, 13, 3); g.fill(); g.fillStyle = '#e8e8e4'; rr(g, 0, -6, 11, 12, 3); g.fill(); g.fillStyle = '#25384a'; g.fillRect(7, -4.5, 2.5, 9); }
+    else if (p.k === 'trailer') { g.fillStyle = 'rgba(0,0,0,.25)'; rr(g, -22, -5, 48, 13, 2); g.fill(); g.fillStyle = p.tipped ? '#cfd2d6' : p.col; rr(g, -24, -6.5 - (p.tipped ? 2 : 0), 48, 13 + (p.tipped ? 4 : 0), 2); g.fill(); g.fillStyle = 'rgba(0,0,0,.12)'; for (let x = -18; x < 22; x += 8) g.fillRect(x, -6.5, 1, 13); if (p.tipped) { g.fillStyle = '#b53b33'; g.fillRect(-24, -2, 48, 3); } }
+    else if (p.k === 'box') { g.fillStyle = 'rgba(0,0,0,.25)'; rr(g, -19, -5, 42, 13, 2); g.fill(); g.fillStyle = p.col2; rr(g, -21, -6.5, 29, 13, 2); g.fill(); g.fillStyle = p.col; rr(g, 8, -6, 13, 12, 3); g.fill(); g.fillStyle = '#25384a'; g.fillRect(17, -4, 2.5, 8); }
+    else if (p.k === 'van') { g.fillStyle = 'rgba(0,0,0,.25)'; rr(g, -12, -4, 28, 12, 3); g.fill(); bodyCar(g, 28, 12, p.col); if (Math.floor(now * 2.6) % 2) { g.fillStyle = '#ffb020'; for (const [x, y] of [[-13, -5], [-13, 5], [13, -5], [13, 5]]) { g.beginPath(); g.arc(x, y, 1.6, 0, 7); g.fill(); } } }
+    if (st.fire && (st.fire.burnt || st.fire.int > .1)) { g.fillStyle = `rgba(10,8,6,${st.fire.burnt ? .5 : .45 * st.fire.int})`; rr(g, -p.len / 2, -p.wid / 2, p.len, p.wid, 3); g.fill(); }
+    g.restore();
+  }
+  g.restore();
+}
+/* ===== Partikel ===== */
+function part(st, x, y, k, o = {}) {
+  if (MOB && st.parts.length > 260) return;
+  const p = { k, x, y, vx: o.vx ?? rnd(-8, 8), vy: o.vy ?? rnd(-8, 8), l: o.l ?? 2, m: o.l ?? 2, r: o.r ?? rnd(3, 6), rot: rnd(0, 6), col: o.col };
+  if (k === 'spark') { p.l = p.m = .5; p.vx = rnd(-70, 70); p.vy = rnd(-70, 70); } if (k === 'box') { p.l = p.m = 6; p.vx = rnd(-30, 30); p.vy = rnd(-30, 30); p.r = rnd(3, 5); p.col = ['#c98b4a', '#a96b2b', '#e1b36a'][(Math.random() * 3) | 0]; }
+  if (k === 'fire') { p.l = p.m = rnd(.6, 1.1); p.vy = rnd(-40, -16); p.vx = rnd(-8, 8); p.r = rnd(4.5, 9); }
+  if (k === 'glass') { p.l = p.m = 1.2; p.vx = rnd(-50, 50); p.vy = rnd(-50, 50); }
+  st.parts.push(p);
+}
+function burst(st, x, y, k, n) { for (let i = 0; i < n; i++) part(st, x + rnd(-6, 6), y + rnd(-6, 6), k); }
+function drawParts(g, st) {
+  st.parts.forEach(p => {
+    const a = clamp(p.l / p.m, 0, 1);
+    if (p.k === 'smoke') { g.fillStyle = `rgba(55,55,60,${.42 * a})`; g.beginPath(); g.arc(p.x, p.y, p.r * (1.6 - a * .7) + 1, 0, 7); g.fill(); }
+    else if (p.k === 'spark') { g.fillStyle = `rgba(255,${170 + a * 80 | 0},60,${a})`; g.fillRect(p.x, p.y, 2, 2); }
+    else if (p.k === 'fire') { g.save(); g.globalCompositeOperation = 'lighter'; const r = p.r * (.5 + a * .9); const rg = g.createRadialGradient(p.x, p.y, 0, p.x, p.y, r * 1.8); rg.addColorStop(0, `rgba(255,${150 + a * 90 | 0},40,${.85 * a})`); rg.addColorStop(1, 'rgba(255,60,0,0)'); g.fillStyle = rg; g.beginPath(); g.arc(p.x, p.y, r * 1.8, 0, 7); g.fill(); g.restore(); }
+    else if (p.k === 'glass') { g.fillStyle = `rgba(200,230,255,${a})`; g.fillRect(p.x, p.y, 1.6, 1.6); }
+    else if (p.k === 'foam') { g.fillStyle = `rgba(255,255,255,${.7 * a})`; g.beginPath(); g.arc(p.x, p.y, p.r * (1.4 - a * .5), 0, 7); g.fill(); }
+    else if (p.k === 'box') { g.save(); g.translate(p.x, p.y); g.rotate(p.rot); g.fillStyle = p.col; g.fillRect(-p.r, -p.r, p.r * 2, p.r * 2); g.restore(); }
+  });
+}
+/* ===== Szenarien & Zustand ===== */
+const NEED = { 'Sattelzug': 2, 'Bus': 2, 'Lkw > 7,5 t': 1, 'Kipper': 1, 'Transporter': 0 };
+const VTYPES = Object.keys(NEED);
+const SCEN = {
+  A: { title: 'Sattelzug umgekippt', desc: 'Vollsperrung · Diesel läuft aus, Brandgefahr · 2 Bergungen', vtype: 'Sattelzug', need: 2, hero: 'semi', rig: 'A', crashers: 1, fire: 1, rigLabel: 'Sattelzug (quer, umgekippt)', auto: [['pol', 4], ['rd', 6], ['fw', 7]], pre: { type: 'kipp', drive: 'nein', block: 'komplett', hurt: 'unklar', cargo: ['leck'] } },
+  B: { title: 'Auffahrunfall Lkw + Pkw', desc: 'Zwei Spuren blockiert · Pkw-Fahrer verletzt · 2 Bergungen', vtype: 'Lkw > 7,5 t', need: 1, hero: 'truck', rig: 'B', crashers: 1, fire: 0, rigLabel: 'Lkw (schräg stehend)', auto: [['pol', 4], ['rd', 6]], pre: { type: 'auffahr', drive: 'nein', block: 'teil', hurt: 'ja', cargo: [] } },
+  C: { title: 'Motorschaden auf der rechten Spur', desc: 'Rechte Spur teils blockiert · keine Verletzten · 1 Bergung', vtype: 'Transporter', need: 0, hero: 'van', rig: 'C', crashers: 0, fire: 0, rigLabel: 'Transporter (Motorschaden)', auto: [['pol', 5]], pre: { type: 'tech', drive: 'nein', block: 'teil', hurt: 'nein', cargo: [] } },
+  D: { title: 'Massenkarambolage mit Brand', desc: 'Alle Spuren blockiert · Feuer · mehrere Verletzte · 4–6 Bergungen', vtype: 'Sattelzug', need: 2, hero: 'semi', rig: 'A', crashers: 4, fire: 1, rigLabel: 'Sattelzug (brennend, quer)', auto: [['pol', 4, 2], ['rd', 6, 2], ['fw', 6, 2]], pre: { type: 'kipp', drive: 'nein', block: 'komplett', hurt: 'ja', cargo: ['leck', 'gefahr'] } },
+};
+const KLAB = { car: 'Pkw', van: 'Transporter', truck: 'Lkw', semi: 'Sattelzug', bus: 'Bus' }, KNEED = { car: 0, van: 0, truck: 1, semi: 2, bus: 2 };
+const QS = [
+  { k: 'type', q: 'Was ist passiert?', grid: true, o: [['auffahr', 'Auffahrunfall'], ['seite', 'Seitenkollision'], ['kipp', 'Fahrzeug umgekippt'], ['abk', 'Von Fahrbahn abgekommen'], ['tech', 'Technischer Defekt'], ['reifen', 'Reifenschaden']] },
+  { k: 'drive', q: 'Ist das Fahrzeug noch fahrbereit?', o: [['ja', 'Ja'], ['einge', 'Eingeschränkt'], ['nein', 'Nein']] },
+  { k: 'block', q: 'Wird die Fahrbahn blockiert?', o: [['nein', 'Nein'], ['teil', 'Teilweise'], ['komplett', 'Komplett']] },
+  { k: 'hurt', q: 'Sind Personen verletzt?', o: [['nein', 'Nein'], ['unklar', 'Unklar'], ['ja', 'Ja – 112 informiert']] },
+];
+const CARGO = [['gefahr', 'Gefahrgut'], ['leck', 'Kraftstoff läuft aus'], ['lad', 'Ladung verloren'], ['kuehl', 'Kühlware']];
+const LAB = {}; QS.forEach(q => q.o.forEach(([v, l]) => LAB[q.k + ':' + v] = l)); CARGO.forEach(([v, l]) => LAB['cargo:' + v] = l);
+const TOWT = [
+  { name: 'Abschlepper', size: 'Klein', desc: 'Pkw & Transporter', vFree: 76, vJam: 46, work: 5 },
+  { name: 'Plateau', size: 'Mittel', desc: 'Lkw bis 7,5 t', vFree: 70, vJam: 42, work: 8 },
+  { name: 'Schwerlast', size: 'Groß', desc: 'Sattelzüge & Busse', vFree: 64, vJam: 38, work: 12 },
+];
+const G = {
+  view: 'driver', speed: 1, paused: false, mute: false, t: 0, phase: 'select', scen: 'A', uid: 0,
+  traf: [], west: [], amb: [], det: [], zones: [], zobs: [], slowT: 40, units: [], parts: [], obs: [], acc: null, crash: null, sched: [], alarmed: {}, ev: {}, log: [],
+  spawn: [0, 0, 0], wspawn: [0, 0, 0], jam: { active: false, tail: 0, len: 0, count: 0, gasse: 0, growth: 0, hist: [] }, jamT: 0,
+  form: null, step: 1, report: null, towSel: null, routeSel: null, routeManual: false, alertSeen: true, results: null, rec: null, play: null, clearAt: 0, idleT: 0,
+  fleet: [[0, 'Abschlepper 1'], [0, 'Abschlepper 2'], [0, 'Abschlepper 3'], [1, 'Plateau 1'], [1, 'Plateau 2'], [1, 'Plateau 3'], [2, 'Schwerlast 1'], [2, 'Schwerlast 2'], [2, 'Schwerlast 3']].map(([t, n], i) => ({ id: 'T' + (i + 1), type: t, name: n, state: 'depot', bay: i })),
+  ws: [0, 1, 2].map(() => ({ cur: null, q: [] })), reps: [], fixed: 0, wrecks: [], jobs: [], returns: [], fire: null, skids: [], cones: 0, shake: 0, selWreck: null, camFollow: null,
+};
+const toast = (m, c = '') => { const d = document.createElement('div'); d.className = 'toast ' + c; d.textContent = m; const b = $('#toasts'); b.appendChild(d); while (b.children.length > 4) b.firstChild.remove(); setTimeout(() => d.remove(), 4200); };
+const addLog = (k, txt) => { G.ev[k] = G.t; G.log.push({ t: G.t, txt, k }); };
+
+/* ===== Sound ===== */
+let AC = null;
+function tone(f, d = .15, type = 'sine', v = .1, delay = 0) { if (G.mute) return; try { AC = AC || new (window.AudioContext || window.webkitAudioContext)(); const t = AC.currentTime + delay, o = AC.createOscillator(), g = AC.createGain(); o.type = type; o.frequency.setValueAtTime(f, t); g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(v, t + .01); g.gain.exponentialRampToValueAtTime(.0001, t + d); o.connect(g).connect(AC.destination); o.start(t); o.stop(t + d + .02); } catch (e) {} }
+const sfx = {
+  alert: () => { tone(880, .12, 'square', .06); tone(660, .16, 'square', .06, .13); tone(880, .12, 'square', .06, .3); tone(660, .16, 'square', .06, .43); },
+  crash: () => { if (G.mute) return; try { AC = AC || new (window.AudioContext || window.webkitAudioContext)(); const n = AC.sampleRate * .5, b = AC.createBuffer(1, n, AC.sampleRate), d = b.getChannelData(0); for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, 3); const s = AC.createBufferSource(), g = AC.createGain(); g.gain.value = .35; s.buffer = b; s.connect(g).connect(AC.destination); s.start(); } catch (e) {} },
+  go: () => { tone(420, .08, 'triangle', .12); tone(630, .1, 'triangle', .12, .07); },
+  ok: () => { tone(523, .1, 'triangle', .12); tone(659, .1, 'triangle', .12, .09); tone(784, .2, 'triangle', .12, .18); },
+};
+let sirenT = 0, sirenHi = false;
+function siren(dt) { if (G.mute || !G.units.some(u => u.siren && ['local', 'hw', 'depart'].includes(u.mode))) return; sirenT -= dt; if (sirenT <= 0) { sirenT = .55; sirenHi = !sirenHi; tone(sirenHi ? 760 : 560, .5, 'sine', .018); } }
+
+/* ===== Verkehr ===== */
+const KIND = { car: { len: 24, wid: 11, v: [54, 64] }, van: { len: 28, wid: 12, v: [48, 56] }, truck: { len: 42, wid: 13, v: [41, 47] }, semi: { len: 70, wid: 13, v: [41, 45] }, bus: { len: 46, wid: 13, v: [47, 52] } };
+function newVeh(lane, s, kind) {
+  const r = Math.random();
+  kind = kind || (lane === 0 ? (r < .45 ? 'semi' : r < .8 ? 'truck' : r < .9 ? 'van' : 'car') : lane === 1 ? (r < .14 ? 'semi' : r < .3 ? 'truck' : r < .4 ? 'van' : r < .44 ? 'bus' : 'car') : (r < .1 ? 'van' : 'car'));
+  const K = KIND[kind];
+  return { id: ++G.uid, s, lat: LAT[lane], lane, v: rnd(30, K.v[0]), vd: rnd(...K.v), vd0: 0, len: K.len, wid: K.wid, kind, col: kind === 'car' || kind === 'van' ? CARCOL[(Math.random() * CARCOL.length) | 0] : kind === 'bus' ? '#e9b32c' : ['#3a6ea5', '#c8453b', '#555a62', '#e8e8e4', '#3f8f5c'][(Math.random() * 5) | 0], col2: BOXCOL[(Math.random() * BOXCOL.length) | 0], stopT: 0, shT: 0, lcT: rnd(0, 1), ly: 0, braking: false, hz: false, rotFix: 0 };
+}
+const latOv = (a, b) => Math.abs(a.lat - b.lat) < (a.wid + b.wid) / 2 + .05;
+const allObs = () => G.obs.length ? (G.zobs.length ? G.obs.concat(G.zobs) : G.obs) : G.zobs;
+const ovl = (lat, wid, o) => lat + wid / 2 > o.l0 + .5 && lat - wid / 2 < o.l1 - .5;
+function obstacleAhead(v, lane, range) { const lat = LAT[lane]; for (const o of allObs()) if (o.s1 > v.s && o.s0 - v.s < range + (o.zone ? 120 : 0) && ovl(lat, v.wid, o)) return true; return false; }
+function laneFree(v, l) {
+  const lat = LAT[l];
+  const chk = o => o !== v && (Math.abs(o.lat - lat) < (o.wid + v.wid) / 2 + 1.5 || o.lane === l) && o.s > v.s - v.len / 2 - o.len / 2 - 18 && o.s < v.s + v.len / 2 + o.len / 2 + 28 + Math.max(0, v.v - o.v) * .9;
+  if (G.traf.some(chk) || G.units.some(u => (u.mode === 'hw' || u.mode === 'depart') && !(u.crossing && !v.type) && chk(u))) return false;
+  for (const o of allObs()) if (ovl(lat, v.wid, o) && o.s1 > v.s - 10 && o.s0 - v.s < 60) return false;
+  return true;
+}
+/* Seitwärtsbewegung nur, wenn sie keine Überlappung mit einem Nachbarn erzeugt (kein „Durchgleiten“) */
+function latBlocked(v, nl) {
+  const chk = o => { if (o === v) return false; if (Math.abs(o.s - v.s) >= (v.len + o.len) / 2 - .6) return false; const n = Math.abs(o.lat - nl), old = Math.abs(o.lat - v.lat); return n < (v.wid + o.wid) / 2 + .2 && n < old + .01; };
+  if (G.traf.some(chk) || G.units.some(u => (u.mode === 'hw' || u.mode === 'depart') && chk(u))) return true;
+  for (const o of (v.type ? G.obs : allObs())) if (v.s + v.len / 2 > o.s0 && v.s - v.len / 2 < o.s1 && ovl(nl, v.wid, o) && !ovl(v.lat, v.wid, o)) return true; return false;
+}
+/* Nachbarspur: nächster Vordermann (Abstand) */
+function leadGap(v, lane) {
+  const lat = LAT[lane]; let gap = 1e9, lead = null;
+  for (const o of G.traf) if (o !== v && o.s > v.s && (o.lane === lane || Math.abs(o.lat - lat) < (o.wid + v.wid) / 2)) { const g = o.s - o.len / 2 - (v.s + v.len / 2); if (g < gap) { gap = g; lead = o; } }
+  for (const o of allObs()) if (o.s0 > v.s && ovl(lat, v.wid, o)) { const g = o.s0 - (v.s + v.len / 2); if (g < gap) { gap = g; lead = null; } }
+  return { gap, lead };
+}
+/* Reißverschluss: kleinere Lücken genügen */
+function laneFreeZip(v, l) {
+  const lat = LAT[l];
+  for (const o of G.traf) if (o !== v && (o.lane === l || Math.abs(o.lat - lat) < (o.wid + v.wid) / 2)) { const ds = o.s - v.s, need = (v.len + o.len) / 2 + 4 + Math.max(0, (ds > 0 ? v.v - o.v : o.v - v.v)) * .3; if (Math.abs(ds) < need) return false; }
+  for (const u of G.units) if ((u.mode === 'hw' || u.mode === 'depart') && Math.abs(u.lat - lat) < (u.wid + v.wid) / 2 && Math.abs(u.s - v.s) < (u.len + v.len) / 2 + 10) return false;
+  return true;
+}
+function seekGap(v) {
+  const L1 = G.traf.filter(o => o.lane === 1 && !o.wreck && Math.abs(o.s - v.s) < 160).sort((a, b) => a.s - b.s); if (!L1.length) return null; const need = v.len + 10; let best = null;
+  for (let i = 0; i <= L1.length; i++) { const r = L1[i - 1], f = L1[i], s0 = r ? r.s + r.len / 2 : -1e9, s1 = f ? f.s - f.len / 2 : 1e9; if (s1 - s0 >= need) { const gc = r && f ? (s0 + s1) / 2 : r ? s0 + need / 2 + 2 : s1 - need / 2 - 2, d = Math.abs(gc - v.s); if (!best || d < best.d) best = { gc, d, u: (f || r).v }; } }
+  return best ? clamp(best.u + .8 * (best.gc - v.s), 6, 60) : null;
+}
+const zoneAhead = v => G.zones.find(z => v.s > z.s0 - 260 - v.len * 3 && v.s < z.s0 + 6);
+function artic(v, hd, dt) {   // Auflieger folgt der Zugmaschine kinematisch (Deichsel ≈ 36 px)
+  if (v.kind !== 'semi') return; if (v.th == null) v.th = hd;
+  let d = hd - v.th; d = Math.atan2(Math.sin(d), Math.cos(d)); v.th += clamp((Math.max(v.v, 0) / 36) * Math.sin(d) * dt, -.2, .2);
+  let r = v.th - hd; r = Math.atan2(Math.sin(r), Math.cos(r)); v.tr = clamp(r, -.75, .75);
+}
+function stepTraffic(dt) {
+  const T = G.traf, hwU = G.units.filter(u => u.mode === 'hw' || u.mode === 'depart'), sirens = hwU.filter(u => u.siren), AO = allObs();
+  const lam = [.3, .48, .38], alertOn = G.units.some(u => u.mode !== 'gone' && u.mode !== 'return' && !u.site && u.siren && G.acc);
+  for (let l = 0; l < 3; l++) { G.spawn[l] -= dt; if (G.spawn[l] <= 0) { G.spawn[l] = rnd(.6, 1.4) / lam[l]; if (!T.some(v => v.lane === l && v.s < 70 + v.len)) T.push(newVeh(l, -30)); } }
+  const yielders = new Map(); for (const z of T) if (z.zwait && z.zip) { let y = null; for (const o of T) if (o.lane === 1 && !o.wreck && o.s < z.s - z.len / 2 - 2 && z.s - o.s < 150 && (!y || o.s > y.s)) y = o; if (y) yielders.set(y, z); }
+  // Ausweich-Ausfahrt für diesen Moment: letzte Ausfahrt vor dem Stauende, Wiedereinfahrt hinter der Unfallstelle
+  let dv = null; if (G.acc && !G.acc.cleared && G.jam.active) { const ex = OFFS.filter(o => o.s < G.jam.tail - 60).pop(), rk = RAMPS.findIndex(r => r.s > G.acc.s1 + 90); if (ex && rk >= 0) dv = { ex, rk }; }
+  const mpts = []; for (const d of G.det) if (d.pd >= d.path.len - 60) mpts.push(RAMPS[d.k].s + 70); for (const u of G.units) if (u.mode === 'hw' && u.lat > 62 && !u.crossing) mpts.push(u.s);
+  const dvz = G.zones.map(z => { const ex = OFFS.filter(o => o.s < z.s0 - 320 && o.s > z.s0 - 1300).pop(), rk = RAMPS.findIndex(r => r.s > z.s1 + 140); return ex && rk >= 0 ? { ex, rk, z } : null; });
+  for (const v of T) {
+    if (v.wreck) { v.v = 0; v.braking = false; v.stopT += dt; v.shT = SHIFT[v.lane]; const tl = LAT[v.lane] + v.shT, nl = v.lat + clamp(tl - v.lat, -26 * dt, 26 * dt); if (nl !== v.lat && !latBlocked(v, nl)) v.lat = nl; continue; }
+    let gap = 1e9, rear = 1e9, lead = null;
+    for (const o of T) if (o !== v && o.s > v.s && (latOv(v, o) || o.lane === v.lane)) { const g = o.s - o.len / 2 - (v.s + v.len / 2); if (g < gap) { gap = g; rear = o.s - o.len / 2; lead = o; } }
+    for (const o of hwU) if (o.s > v.s && latOv(v, o)) { const g = o.s - o.len / 2 - (v.s + v.len / 2); if (g < gap) { gap = g; rear = o.s - o.len / 2; lead = o; } }
+    for (const o of AO) if (o.s1 > v.s && o.s0 > v.s && ovl(v.lat, v.wid, o)) { const g = o.s0 - (v.s + v.len / 2); if (g < gap) { gap = g; rear = o.s0; lead = o; } }
+    let vt = v.vd;
+    if (gap < 1e8 && !v.noBrake) vt = Math.min(vt, Math.max(0, (gap - 5) / .85));
+    const zin = G.zones.find(z => v.s > z.s0 - 70 && v.s < z.s1); if (zin) vt = Math.min(vt, zin.vmax);
+    // Reißverschlussverfahren: vor der Verengung nicht stehen bleiben, Lücke suchen, Nachrücker lassen abwechselnd hinein
+    const zc = v.lane === 0 && !v.noBrake ? zoneAhead(v) : null; v.zip = !!zc;
+    if (zc) { vt = Math.min(vt, zc.vmax * 1.05); const sk = seekGap(v); if (sk != null) vt = Math.min(vt, sk); v.zwait = v.v < 6 && zc.s0 - v.s < 70; }
+    else if (v.lane > 0) { v.zwait = false; const y = yielders.get(v); if (y && gap < 1e8) vt = Math.min(vt, Math.max(0, (gap - (y.len + 16) - 5) / .85)); }
+    if (G.acc && !G.acc.cleared) { if (v.s > G.acc.front - 130 && v.s < G.acc.s1 + 20) vt = Math.min(vt, 26); } else if (G.obs.length) { const o = G.obs[0]; if (v.s > o.s0 - 130 && v.s < o.s1 + 20) vt = Math.min(vt, 26); }
+    if (v.lane === 0 && !v.noBrake && mpts.length) for (const m of mpts) if (v.s < m && m - v.s < 140) vt = Math.min(vt, Math.max(0, (m - v.s - 60) / .9));   // auf die Autobahn einfädelnde Fahrzeuge hereinlassen
+    if (v.slow && G.t > v.slow) { v.slow = 0; v.vd = v.vd0 || v.vd; }
+    v.braking = vt < v.v - 4;
+    v.v = clamp(vt, v.v - 260 * dt, v.v + 42 * dt);
+    let ns = v.s + v.v * dt; if (gap < 1e8) ns = Math.min(ns, rear - v.len / 2 - 1.5);
+    if (v.noBrake && gap < 4 && v.v > 8 && lead) { v.wreck = true; v.noBrake = false; v.rotFix = (Math.random() < .5 ? -1 : 1) * rnd(.25, .55); v.v = 0; const p = P(v.s + v.len / 2, v.lat); burst(G, p.x, p.y, 'spark', 14); burst(G, p.x, p.y, 'glass', 12); burst(G, p.x, p.y, 'smoke', 6); sfx.crash(); if (G.crash) G.crash.fx.imp = 1; G.shake = Math.max(G.shake, .6); if (G.acc) registerWreck(v); continue; }
+    v.s = Math.max(v.s, ns);
+    if (v.v < 12) v.stopT += dt; else v.stopT = Math.max(0, v.stopT - dt * 2);
+    v.hz = v.stopT > 3;
+    let near = false, want = v.stopT > (alertOn ? .25 : 1 + (v.id % 5) * .25);
+    for (const u of sirens) if (u.s < v.s && v.s - u.s < 300) { near = true; if (v.s - u.s < 260) want = true; }
+    if (near && v.v > 12) v.v = Math.min(v.v, Math.max(14, v.vd * .6));
+    v.near = near; const emerg = (G.acc && !G.acc.cleared) || near || alertOn;
+    v.shT = want && emerg ? (G.acc && v.s > G.acc.front - (v.lane === 0 ? 400 : 300) ? SHIFT : SHIFTN)[v.lane] : 0;
+    if (v.shT > 0) { for (const o of AO) if (o.zone && o.s1 > v.s - 5 && o.s0 - v.s < 160 && (v.v > 3 || v.s + v.len / 2 > o.s0 - 3)) while (v.shT > 0 && ovl(LAT[v.lane] + v.shT, v.wid, o)) v.shT -= .5; if (v.shT < 0) v.shT = 0; }
+    // Ausweichen vor dem Stau: Entscheidung einmalig vor der Ausfahrt
+    if (v.divert == null && !v.hero && !v.noBrake && !dv) for (const q of dvz) if (q && v.s > q.ex.s - 650 && v.s < q.ex.s - 80) { if (Math.random() < .1) { v.divert = q.ex.id; v.zd = q; } else v.divert = -1; break; }
+    if (dv && v.divert == null && !v.hero && !v.noBrake && v.s > dv.ex.s - 700 && v.s < dv.ex.s - 60) v.divert = Math.random() < .7 ? dv.ex.id : -1;
+    v.lcT -= dt;
+    const urgentZip = zc && v.lane === 0;
+    if ((v.lcT <= 0 || urgentZip) && !v.hero && !v.noBrake && !v.near) {
+      if (!urgentZip) v.lcT = rnd(.3, .6); const cur = v.lane, moving = v.v > 6; let pick = -1;
+      if (urgentZip) { if (laneFreeZip(v, 1)) { pick = 1; v.lcT = 1.2; } }
+      else if (v.divert >= 0 && v.divert != null && cur > 0 && laneFree(v, cur - 1) && !obstacleAhead(v, cur - 1, 360)) pick = cur - 1;
+      else if ((moving || v.stopT > 1.5) && obstacleAhead(v, cur, 360)) { const c = [cur - 1, cur + 1].filter(l => l >= 0 && l <= 2 && !obstacleAhead(v, l, 360) && laneFree(v, l)); if (c.length) pick = c[(Math.random() * c.length) | 0]; }
+      else if (v.v > 12 && lead && lead.v !== undefined && gap < 90 && lead.v < v.vd - 5 && cur < 2 && laneFree(v, cur + 1) && !obstacleAhead(v, cur + 1, 360)) pick = cur + 1;       // Überholen
+      else if ((v.v > 6 || v.stopT > 2) && gap < 140 && lead && lead.v !== undefined && lead.v < 24) {                                                                                                   // Stau umfahren: freiere Spur wählen
+        let best = -1, bg = gap + 45; for (const l of [cur - 1, cur + 1]) if (l >= 0 && l <= 2 && !obstacleAhead(v, l, 360)) { const lg = leadGap(v, l).gap; if (lg > bg && laneFree(v, l)) { bg = lg; best = l; } } pick = best;
+      }
+      else if (moving && gap > 130 && cur > 0 && Math.random() < (v.kind === 'car' ? .12 : .5) && laneFree(v, cur - 1) && !obstacleAhead(v, cur - 1, 360)) pick = cur - 1;
+      if (pick >= 0) { v.lane = pick; if (!urgentZip) v.lcT = 2.2; }
+    }
+    const tl = Math.min(LAT[v.lane] + v.shT, 61 - v.wid / 2), old = v.lat, nl = v.lat + clamp(tl - v.lat, -26 * dt, 26 * dt);
+    if (nl !== v.lat && !latBlocked(v, nl)) v.lat = nl; v.ly = (v.lat - old) / dt;
+    const yt = clamp(Math.atan2(v.ly, Math.max(v.v, 16)), -.3, .3) * (v.len > 40 ? .6 : 1); v.yaw = (v.yaw || 0) + (yt - (v.yaw || 0)) * Math.min(1, dt * 4); artic(v, v.yaw, dt);
+  }
+  // Ausfahrt nehmen
+  for (const v of T.slice()) if (v.zd && v.divert === v.zd.ex.id && v.lane === 0 && v.s >= v.zd.ex.s && v.s < v.zd.ex.s + 40 && !v.wreck && Math.abs(v.lat - LAT[0]) < 3) {
+    G.traf = G.traf.filter(x => x !== v); T.splice(T.indexOf(v), 1);
+    G.det.push({ id: v.id, path: detPath(v.zd.ex.id, v.zd.rk), pd: 0, v: Math.min(v.v, 40), vd: rnd(42, 56), len: v.len, wid: v.wid, kind: v.kind, col: v.col, col2: v.col2, k: v.zd.rk });
+  }
+  if (dv) for (const v of T.slice()) if (v.divert === dv.ex.id && v.lane === 0 && v.s >= dv.ex.s && v.s < dv.ex.s + 40 && !v.wreck && Math.abs(v.lat - LAT[0]) < 3) {
+    G.traf = G.traf.filter(x => x !== v); T.splice(T.indexOf(v), 1);
+    G.det.push({ id: v.id, path: detPath(dv.ex.id, dv.rk), pd: 0, v: Math.min(v.v, 40), vd: rnd(42, 56), len: v.len, wid: v.wid, kind: v.kind, col: v.col, col2: v.col2, k: dv.rk });
+  }
+  G.traf = T.filter(v => v.s < Lh + 60);
+  // Gegenverkehr (Kulisse, „Gaffer“ am Unfall)
+  const Wv = G.west, wl = [.2, .26, .18];
+  for (let l = 0; l < 3; l++) { G.wspawn[l] -= dt; if (G.wspawn[l] <= 0) { G.wspawn[l] = rnd(.7, 1.5) / wl[l]; if (!Wv.some(v => v.lane === l && v.s > Lh - 90)) Wv.push(newVeh(l, Lh + 40)); } }
+  for (const v of Wv) {
+    let gap = 1e9; for (const o of Wv) if (o !== v && o.lane === v.lane && o.s < v.s) gap = Math.min(gap, v.s - o.s - (v.len + o.len) / 2);
+    let vt = v.vd; if (gap < 1e8) vt = Math.min(vt, Math.max(0, (gap - 5) / .8)); if (G.acc && Math.abs(v.s - G.acc.front) < 150) vt = Math.min(vt, 30);
+    v.v = clamp(vt, v.v - 200 * dt, v.v + 40 * dt); v.s = Math.min(v.s - v.v * dt, v.s); v.lat = -LAT[v.lane]; v.braking = vt < v.v - 4;
+  }
+  G.west = Wv.filter(v => v.s > -60);
+}
+/* ===== Umleiter: Ausfahrt → Landstraße → Wiedereinfahrt hinter der Unfallstelle ===== */
+const _dp = {}; function detPath(xi, rk) { const key = xi + '_' + rk; if (_dp[key]) return _dp[key]; const pts = offConn(OFFS[xi].s); for (let u = OFFS[xi].s + 100; u < RAMPS[rk].s - 90; u += 10) pts.push(Lpt(u)); return _dp[key] = mkPath(pts.concat(rampConn(rk))); }
+const lanePos = (p, o = 4.5) => ({ x: p.x - Math.sin(p.a) * o, y: p.y + Math.cos(p.a) * o, a: p.a });
+function pathVehAhead(x, y, a, len, self) {
+  const test = (ox, oy, ol, oa) => { if (Math.cos(oa - a) < .3) return false; const dx = ox - x, dy = oy - y, d = Math.hypot(dx, dy); if (d > 60 || d < .01) return false; const fw = (dx * Math.cos(a) + dy * Math.sin(a)); return fw > 0 && fw < (len + ol) / 2 + 8 && Math.abs(-dx * Math.sin(a) + dy * Math.cos(a)) < 6; };
+  if (!self.type) for (const d of G.det) if (d !== self) { const p = lanePos(follow(d.path, d.pd), d.lo ?? 4.5); if (test(p.x, p.y, d.len, p.a)) return true; }
+  for (const u of G.units) if (u !== self && (u.mode === 'local' || u.mode === 'return') && u.x) { if (test(u.x, u.y, u.len, u.a)) return true; }
+  for (const am of G.amb) { const p = follow(CPATH[am.i], am.pd); if (test(p.x - Math.sin(p.a) * 5 * am.dir * -1, p.y + Math.cos(p.a) * 5 * am.dir, am.len, p.a + (am.dir < 0 ? Math.PI : 0))) return true; }
+  return false;
+}
+function stepDet(dt) {
+  for (const d of G.det.slice()) {
+    const p = lanePos(follow(d.path, d.pd), d.lo ?? 4.5), blocked = pathVehAhead(p.x, p.y, p.a, d.len, d);
+    // Blaulicht-Fahrzeug (Polizei/RD/FW) von hinten: sofort rechts ranfahren und stehen bleiben
+    const yld = G.units.some(u => u.siren && u.type !== 'tow' && (u.mode === 'local' || u.mode === 'return') && u.x && Math.cos(u.a - p.a) > .3 && (() => { const dx = p.x - u.x, dy = p.y - u.y, fw = dx * Math.cos(u.a) + dy * Math.sin(u.a), lt = -dx * Math.sin(u.a) + dy * Math.cos(u.a); return fw > -6 && fw < 280 && Math.abs(lt) < 16; })());
+    d.lo = (d.lo ?? 4.5) + clamp((yld ? 8.5 : 4.5) - (d.lo ?? 4.5), -14 * dt, 14 * dt);
+    d.v = clamp((blocked && d.pd < d.path.len - 40) || yld ? 0 : d.vd, d.v - 240 * dt, d.v + 40 * dt); artic(d, p.a, dt);
+    if (d.pd >= d.path.len - 10) {                       // Wiedereinfahrt auf die Autobahn
+      const nv = newVeh(0, RAMPS[d.k].s + 70, d.kind); nv.col = d.col; nv.col2 = d.col2; nv.v = 24; nv.lat = STRIP; nv.vd = d.vd; nv.divert = -1;
+      d.wait = (d.wait || 0) + dt;
+      if ((laneFreeZip(nv, 0) || d.wait > 6 && !G.traf.some(o => o.lane === 0 && Math.abs(o.s - nv.s) < (o.len + nv.len) / 2 + 8)) && !G.units.some(u => (u.mode === 'hw' || u.mode === 'depart') && Math.abs(u.s - nv.s) < 40 && Math.abs(u.lat - STRIP) < 14)) { G.traf.push(nv); G.det = G.det.filter(x => x !== d); }
+      continue;
+    }
+    d.pd = Math.min(d.path.len, d.pd + d.v * dt);
+  }
+}
+/* ===== Baustellen, Schleicher, Querstraßen-Verkehr ===== */
+function genZones(avoid) {
+  G.zones = []; const n = 3 + (Math.random() * 2 | 0);
+  for (let k = 0; k < 60 && G.zones.length < n; k++) {
+    const len = rnd(130, 250), s0 = rnd(500, Lh - 800), s1 = s0 + len;
+    if (!RAMPS.every(r => s1 < r.s - 100 || s0 > r.s + 110) || s1 + 200 > EXIT.s - 100) continue;
+    if (CROSS.some(c => c.s > s0 - 40 && c.s < s1 + 40)) continue;
+    if (G.zones.some(z => s0 < z.s1 + 350 && s1 > z.s0 - 350)) continue;
+    if (avoid != null && s0 < avoid + 250 && s1 > avoid - 700) continue;
+    G.zones.push({ id: G.zones.length + 1, s0, s1, vmax: rnd(34, 42), seed: (Math.random() * 9999) | 0 });
+  }
+  G.zobs = G.zones.map(z => ({ s0: z.s0, s1: z.s1, l0: 46.8, l1: 58, zone: true }));
+}
+function slowEvent() {
+  const c = G.traf.filter(v => !v.hero && !v.wreck && v.lane < 2 && (v.kind === 'truck' || v.kind === 'semi') && v.s > 500 && v.s < Lh - 700 && !(G.acc && v.s > G.acc.front - 600));
+  if (!c.length) return; const v = c[(Math.random() * c.length) | 0]; v.vd0 = v.vd; v.vd = 17; v.slow = G.t + rnd(22, 36);
+  toast('Verkehrsmeldung: Schleicher auf der A7 bei km ' + kmOf(v.s) + ' – zähfließender Verkehr', 'blu');
+}
+const CPATH = CROSSP.map(p => mkPath(p));
+function stepAmb(dt) {
+  G.ambT = (G.ambT || 0) - dt; if (G.ambT <= 0) { G.ambT = rnd(.8, 1.8); const i = (Math.random() * CPATH.length) | 0, dir = Math.random() < .5 ? 1 : -1, P0 = CPATH[i], pd = dir > 0 ? 0 : P0.len; if (!G.amb.some(a => a.i === i && a.dir === dir && Math.abs(a.pd - pd) < 60)) G.amb.push({ i, dir, pd, v: 0, vd: rnd(40, 60), len: 24, wid: 11, col: CARCOL[(Math.random() * CARCOL.length) | 0], kind: Math.random() < .2 ? 'van' : 'car' }); }
+  for (const a of G.amb) {
+    let gap = 1e9; for (const o of G.amb) if (o !== a && o.i === a.i && o.dir === a.dir && (o.pd - a.pd) * a.dir > 0) gap = Math.min(gap, Math.abs(o.pd - a.pd) - 24);
+    const vt = Math.min(a.vd, Math.max(0, (gap - 6) / .8)); a.v = clamp(vt, a.v - 200 * dt, a.v + 40 * dt); a.pd += a.dir * a.v * dt;
+  }
+  G.amb = G.amb.filter(a => a.pd > -30 && a.pd < CPATH[a.i].len + 30);
+}
+/* ===== Stau-Auswertung ===== */
+function updateJam() {
+  const j = G.jam; if (!G.acc || G.acc.cleared && !G.traf.some(v => v.v < 10 && v.s < G.acc.front + 40 && v.s > G.acc.front - 600)) { j.active = false; j.len = 0; j.count = 0; j.gasse = 0; j.growth = 0; return; }
+  const front = G.acc.front, st = G.traf.filter(v => v.v < 10 && v.s < front + 30).sort((a, b) => b.s - a.s);
+  let prev = front, tail = null, n = 0, sh = 0;
+  for (const v of st) { if (prev - v.s > 80) break; tail = v.s - v.len / 2; prev = v.s - v.len / 2; n++; if (Math.abs(v.lat - LAT[v.lane]) > 2.5) sh++; }
+  j.active = tail !== null && n >= 2; if (!j.active) { j.len = 0; j.count = 0; j.gasse = 0; return; }
+  j.tail = tail; j.len = front - tail; j.count = n; j.gasse = sh / n;
+  j.hist.push([G.t, tail]); while (j.hist.length && j.hist[0][0] < G.t - 4) j.hist.shift();
+  if (j.hist.length > 4) j.growth = Math.max(0, (j.hist[0][1] - tail) / (G.t - j.hist[0][0]));
+  j.max = Math.max(j.max || 0, j.len);
+}
+/* ===== Szenario starten, Unfall abspielen ===== */
+function startScenario(k) {
+  G.scen = k; G.phase = 'drive'; G.sched = []; G.units = []; G.parts = []; G.obs = []; G.acc = null; G.alarmed = {}; G.ev = {}; G.log = []; G.report = null; G.jobs = []; G.returns = []; G.wrecks = []; G.fire = null; G.skids = []; G.cones = 0; G.selWreck = null; G.results = null; G.jam = { active: false, tail: 0, len: 0, count: 0, gasse: 0, growth: 0, hist: [] };
+  G.fleet.forEach(f => f.state = 'depot'); G.ws = [0, 1, 2].map(() => ({ cur: null, q: [] })); G.reps = []; G.fixed = 0; G.step = 1; G.towSel = null; G.routeSel = null; G.routeManual = false; G.alertSeen = true; G.t = 0;
+  // Unfallort: weit stromabwärts, nicht in/an Baustellen oder Auffahrten
+  let sAcc = 2500;
+  for (let i = 0; i < 120; i++) { const c = rnd(760, Lh - 640); if (G.zones.every(z => c < z.s0 - 120 || c > z.s1 + 80) && RAMPS.every(r => c < r.s - 110 || c > r.s + 180) && CROSS.every(x => Math.abs(x.s - c) > 120)) { sAcc = c; break; } }
+  const sc = SCEN[k], hero = newVeh(1, sAcc - 190, sc.hero); hero.hero = true; hero.vd = 48; hero.v = 48; hero.col = hero.kind === 'van' ? '#f1f1f1' : '#c8453b'; hero.col2 = '#eceae4';
+  // Platz für den Hauptdarsteller schaffen: überlappende Fahrzeuge in Spur 1 aus dem Weg räumen
+  G.traf = G.traf.filter(v => v.lane !== 1 || Math.abs(v.s - hero.s) > (v.len + hero.len) / 2 + 30);
+  G.traf.push(hero); G.crash = { k: sc.rig, scen: k, s0: sAcc, t: -1, fx: {} };
+  G.form = { plate: 'H-TR 4410', vtype: sc.vtype, name: 'Max Mustermann', phone: '+49 170 1234567', a: JSON.parse(JSON.stringify(sc.pre)), photos: [], memo: null };
+  toast('Fahrt auf der A7 – gleich passiert es …'); G.camFollow = 'hero';
+}
+const cpos = (ds, lat) => { const b = P(G.crash.s0, 0); return { x: b.x + Math.cos(b.a) * ds - Math.sin(b.a) * lat, y: b.y + Math.sin(b.a) * ds + Math.cos(b.a) * lat }; };
+function beginCrash(h) {
+  const c = G.crash, k = c.k; c.s0 = h.s; c.t = 0; G.traf = G.traf.filter(v => v !== h); G.phase = 'crash'; G.ev.crash = G.t;
+  // Überstrichener Bereich des Unfalls: dort stehende Fahrzeuge sind (unfreiwillig) beteiligt und werden zu Wracks
+  const sw = { s0: 1e9, s1: -1e9, l0: 1e9, l1: -1e9 }; for (let t = 0; t <= CRASH[k].dur; t += .2) { const b = rigBox(k, t, 3); sw.s0 = Math.min(sw.s0, b.s0); sw.s1 = Math.max(sw.s1, b.s1); sw.l0 = Math.min(sw.l0, b.l0); sw.l1 = Math.max(sw.l1, b.l1); }
+  c.sw = sw; const sc = SCEN[c.scen], cand = G.traf.filter(v => v !== h && !v.hero && v.s < c.s0 - 18 && v.s > c.s0 - 210 && (c.k === 'A' ? true : v.lane === 1)).sort((a2, b2) => b2.s - a2.s);
+  const crs = []; for (const v of cand) { if (crs.length >= sc.crashers) break; if (c.k === 'A' && sc.crashers === 1 && v.lane !== 2) continue; crs.push(v); }
+  G.traf.forEach(v => { if (!crs.includes(v) && v.s + v.len / 2 > c.s0 + sw.s0 && v.s - v.len / 2 < c.s0 + sw.s1 && v.lat + v.wid / 2 > sw.l0 && v.lat - v.wid / 2 < sw.l1) { v.wreck = true; v.v = 0; v.hz = true; v.rotFix = (Math.random() < .5 ? -1 : 1) * rnd(.1, .4); } });
+  crs.forEach(v => { v.noBrake = true; v.vd = 82; v.v = Math.max(v.v, 55); v.crasher = true; }); G.shake = .5; G.skids = [{ pts: [] }];
+  if (sc.fire) { const tr = rigParts(k, CRASH[k].dur).find(p => p.k === 'tractor' || p.k === 'box' || p.k === 'van'); G.fire = { on: true, int: 0, t0: G.t + 2.6, ds: tr.ds, lat: tr.lat, burnt: false }; }
+  sfx.crash(); toast('UNFALL auf der A7!', 'bad');
+}
+function updateCrash(dt) {
+  const c = G.crash; if (!c) return;
+  if (G.phase === 'drive') { const h = G.traf.find(v => v.hero); if (h && h.s >= c.s0) beginCrash(h); return; }
+  if (G.phase !== 'crash') return;
+  c.t += dt; const D = CRASH[c.k], f = c.fx, t = Math.min(c.t, D.dur), b = rigBox(c.k, t);
+  G.obs = [{ s0: c.s0 + b.s0, s1: c.s0 + b.s1, l0: Math.max(0, b.l0), l1: b.l1, rig: true }];
+  if (G.skids[0] && c.t < 3 && c.t > .3) { const hp = rigParts(c.k, t).find(p => p.k === 'tractor' || p.k === 'box' || p.k === 'van'); if (hp) { const q = cpos(hp.ds, hp.lat); G.skids[0].pts.push([q.x, q.y, Math.cos(P(c.s0, 0).a), Math.sin(P(c.s0, 0).a)]); } }
+  if (c.k === 'A' && !f.box && c.t >= 2.4) { f.box = 1; const p = cpos(80, 40); for (let i = 0; i < 9; i++) part(G, p.x, p.y, 'box'); }
+  if (c.k === 'C' && Math.random() < dt * 5) { const p = cpos(60, 55); part(G, p.x + rnd(-6, 6), p.y + rnd(-6, 6), 'smoke', { l: 2.6, vy: -14 }); }
+  if (c.t >= D.dur) {
+    G.phase = 'accident'; const fb = rigBox(c.k, D.dur, 4), s0 = c.s0;
+    G.acc = { front: s0 + fb.s0, s1: s0 + fb.s1, l0: Math.max(0, fb.l0), l1: fb.l1, mid: s0 + (fb.s0 + fb.s1) / 2, k: c.k, cleared: false, clear: 0 };
+    G.obs = [{ s0: G.acc.front, s1: G.acc.s1, l0: G.acc.l0, l1: G.acc.l1 }];
+    G.ev.accident = G.t; addLog('crash', 'Unfall ' + SCEN[c.scen].title); buildWrecks();
+    SCEN[c.k].auto.forEach(([t2, d, n]) => G.sched.push({ t: G.t + d, fn: () => alarm(t2, 'auto', n) }));
+    toast('Unfall erkannt – automatische Alarmierung läuft', 'blu'); G.camFollow = 'acc';
+  }
+}
+/* ===== Einsatzkräfte ===== */
+const USP = {
+  pol: { label: 'Polizei', abbr: 'POL', len: 28, wid: 12, vFree: 128, vJam: 58, vLoc: 100, delay: 3, base: 'pol', tlat: CORR, off: 14, work: null, col: '#3b82f6' },
+  fw: { label: 'Feuerwehr', abbr: 'FW', len: 40, wid: 12.6, vFree: 115, vJam: 52, vLoc: 92, delay: 6, base: 'fw', tlat: CORR, off: 14, work: 14, col: '#d9322b' },
+  rd: { label: 'Rettungsdienst', abbr: 'RD', len: 32, wid: 13, vFree: 125, vJam: 56, vLoc: 100, delay: 4, base: 'rd', tlat: CORR, off: 12, work: 12, col: '#ff8a00' },
+};
+function towSpec(tt) { const T = TOWSP[tt], B = TOWT[tt]; return { label: 'Abschleppdienst', abbr: 'TOW', len: T.L * .56, wid: Math.min(T.W * .56, 11.4), vFree: B.vFree, vJam: B.vJam, vLoc: 80, delay: 3, base: 'depot', tlat: CORR, off: 9, work: B.work, col: '#FF7A00' }; }
+const _lp = {};
+function lpath(b, i, bay) {
+  if (b === 'depot') { const bb = bay == null ? 4 : bay, k = 'd' + bb + '_' + i; return _lp[k] || (_lp[k] = mkPath(yardOutPts(bb).concat(Lseg(YD.gateS, RAMPS[i].s - 90), rampConn(i)))); }
+  return _lp[b + i] || (_lp[b + i] = localPath(BASES[b].u, i));
+}
+function hwTime(sFrom, sTo, vF, vJ) {
+  const r = { t: 0, free: 0, jam: 0, jamNo: 0 }; if (!G.acc || sTo <= sFrom) return r;
+  const j = G.jam, tail = j.active ? Math.max(0, j.tail - j.growth * 22) : 1e9;
+  for (let s = sFrom; s < sTo; s += 20) {
+    const d = Math.min(20, sTo - s), mid = s + d / 2; let v = vF, k = 'free';
+    for (const z of G.zones) if (mid > z.s0 - 60 && mid < z.s1) v = Math.min(v, z.vmax * 1.7);
+    if (mid >= tail) { const now = j.active && mid >= j.tail && j.gasse < .5; v = now ? Math.min(vJ, 20) : Math.min(v, vJ); k = now ? 'jamNo' : 'jam'; }
+    const dt = d / v; r.t += dt; r[k] += dt;
+  }
+  return r;
+}
+/* Ziel (vordere Stoßstange) eines Fahrzeugs an der Unfallstelle */
+function stageFrontFor(sp, w) {
+  if (w && !w.done) { if (w.kind === 'veh') return w.veh.s + sp.len / 2; return w.box.s0 - (sp.off || 9); }
+  return G.acc.front - (sp.off || 14);
+}
+const stageS = (sp, w) => stageFrontFor(sp, w) - sp.len / 2;
+function routeEst(sp, i, w) {
+  if (!G.acc) return null; const sIn = RAMPS[i].s + 70, sOut = stageS(sp, w);
+  if (sIn > sOut - 10) return { ok: false, i };
+  const loc = lpath(sp.base, i).len / sp.vLoc, h = hwTime(sIn, sOut, sp.vFree, sp.vJam), pen = (G.jam.active && sIn >= G.jam.tail - G.jam.growth * (sp.delay + loc) - 150 ? 120 : 0) + (sIn > G.acc.front - 420 ? 200 : 0);
+  return { ok: true, i, total: sp.delay + loc + h.t + pen, loc, free: h.free, jam: h.jam, jamNo: h.jamNo, pen };
+}
+const bestRoute = (sp, w) => { let b = null; for (let i = 0; i < RAMPS.length; i++) { const r = routeEst(sp, i, w); if (r && r.ok && (!b || r.total < b.total)) b = r; } return b; };
+function unitEta(u) {
+  if (!G.acc) return null; if (u.site) return 0; const sp = u.sp, w = u.wreck;
+  if (u.mode === 'alarm') { const b = u.fixed != null ? routeEst(sp, u.fixed, w) : bestRoute(sp, w); return b && b.ok ? Math.max(0, b.total - (G.t - u.t0)) + (u.waiting ? 8 : 0) : null; }
+  if (u.mode === 'local') { const sIn = RAMPS[u.ramp].s + 70; return (u.path.len - u.pd) / sp.vLoc + hwTime(sIn, stageS(sp, w), sp.vFree, sp.vJam).t; }
+  if (u.mode === 'hw') return hwTime(u.s, stageS(sp, w), sp.vFree, sp.vJam).t + (u.v < 1 ? 1 : 0);
+  return 0;
+}
+const stripLane = u => u.type === 'tow' ? STRIP : u.type === 'pol' ? STRIP3 : STRIP2;   // Rettungsweg: Abschlepper innen (nah am Wrack), RD/FW mittig, Polizei außen
+function newUnit(type, tt) {
+  const sp = type === 'tow' ? towSpec(tt) : USP[type];
+  return { id: ++G.uid, type, sp, tt, mode: 'alarm', t0: G.t, delay: sp.delay, siren: true, s: 0, lat: SH, v: 0, tlat: sp.tlat, len: sp.len, wid: sp.wid, x: 0, y: 0, a: 0, ly: 0, fade: 1, wt: 0, load: null, site: false };
+}
+const unitsOf = t => G.units.filter(u => u.type === t);
+function alarm(type, why, n) {
+  if (!G.acc) return; n = n || 1; let made = 0;
+  for (let i = 0; i < n; i++) { const key = type + '#' + i; if (G.alarmed[key]) continue; G.alarmed[key] = G.t; if (!G.alarmed[type]) G.alarmed[type] = G.t; const u = newUnit(type); u.delay += i * 3; G.units.push(u); made++; }
+  if (!made) return; addLog('alarm_' + type, USP[type].label + (n > 1 ? ' ×' + n : '') + ' alarmiert' + (why === 'report' ? ' (nach Fahrer-Meldung)' : ' (automatisch)'));
+  toast(USP[type].label + (n > 1 ? ' ×' + n : '') + ' alarmiert' + (why === 'report' ? ' – nach Meldung' : ' – automatisch'), 'blu'); tone(740, .12, 'triangle', .06);
+}
+/* ===== Wracks (Bergungsaufträge) ===== */
+function vbox(v) { return { s0: v.s - v.len / 2, s1: v.s + v.len / 2, l0: v.lat - v.wid / 2, l1: v.lat + v.wid / 2 }; }
+function buildWrecks() {
+  const c = G.crash, sc = SCEN[c.scen], rb = rigBox(c.k, CRASH[c.k].dur, 2); G.wrecks = [];
+  G.wrecks.push({ id: 1, kind: 'rig', label: sc.rigLabel, need: sc.need, box: { s0: c.s0 + rb.s0, s1: c.s0 + rb.s1, l0: rb.l0, l1: rb.l1 }, clear: 0, done: false, tow: null, rigKind: c.k === 'A' ? 'semi' : c.k === 'B' ? 'truck' : 'van' });
+  G.traf.filter(v => v.wreck).sort((a, b) => a.s - b.s).forEach(v => G.wrecks.push({ id: G.wrecks.length + 1, kind: 'veh', veh: v, label: KLAB[v.kind] + ' (beteiligt)', need: KNEED[v.kind], box: vbox(v), clear: 0, done: false, tow: null }));
+  G.selWreck = 1; updateObs();
+}
+function registerWreck(v) { if (G.wrecks.some(w => w.veh === v)) return; G.wrecks.push({ id: G.wrecks.length + 1, kind: 'veh', veh: v, label: KLAB[v.kind] + ' (beteiligt)', need: KNEED[v.kind], box: vbox(v), clear: 0, done: false, tow: null }); updateObs(); toast('Weiterer Auffahrunfall: ' + KLAB[v.kind] + ' – neues Wrack', 'bad'); }
+/* Hindernisse: nur das Hauptwrack (Fahrbahn komplett/teilweise gesperrt) – beteiligte Fahrzeuge sind normale stehende Fahrzeuge */
+function updateObs() {
+  const open = G.wrecks.filter(w => !w.done); G.wrecks.forEach(w => { if (w.veh) w.box = vbox(w.veh); });
+  const rig = open.find(w => w.kind === 'rig'); G.obs = rig ? [{ s0: rig.box.s0, s1: rig.box.s1, l0: Math.max(0, rig.box.l0), l1: rig.box.l1 }] : [];
+  if (!open.length) return; G.acc.front = Math.min(...open.map(w => w.box.s0)); G.acc.s1 = Math.max(...open.map(w => w.box.s1)); G.acc.mid = (G.acc.front + G.acc.s1) / 2;
+}
+const rigOpen = () => G.wrecks.find(w => w.kind === 'rig' && !w.done);
+function dispatchTow(fid, ri, wid) {
+  const f = G.fleet.find(x => x.id === fid), w = G.wrecks.find(x => x.id === wid); if (!f || !w || w.tow || w.done || f.state !== 'depot' || f.type < w.need || !G.acc) return false;
+  const rig = rigOpen(); if (w.kind !== 'rig' && rig && !rig.tow) { toast('Zuerst das Hauptwrack disponieren – es blockiert die Fahrbahn', 'bad'); return false; }
+  const u = newUnit('tow', f.type); u.fixed = ri; u.fleet = f; u.wreck = w; u.delay += G.jobs.length * 1.5; G.units.push(u); w.tow = u; f.state = 'out'; G.jobs.push({ w, f, u });
+  if (!G.alarmed.tow) G.alarmed.tow = G.t; if (G.ev.dispatch == null) G.ev.dispatch = G.t;
+  addLog('dispatch', f.name + ' → ' + w.label); toast(f.name + ' fährt los – ' + w.label, 'good'); sfx.go();
+  G.selWreck = (G.wrecks.find(x => !x.tow && !x.done) || {}).id ?? w.id; return true;
+}
+function onReport() {
+  const r = G.report, a = r.a; G.ev.report = G.t; addLog('report', 'Fahrer-Meldung eingegangen'); G.alertSeen = false;
+  const before = Object.keys(G.alarmed).length;
+  if (a.hurt === 'ja' || a.hurt === 'unklar') alarm('rd', 'report');
+  if (a.hurt === 'ja' || a.cargo.includes('gefahr') || a.cargo.includes('leck') || a.type === 'kipp') alarm('fw', 'report');
+  alarm('pol', 'report'); if (Object.keys(G.alarmed).length > before) toast('Meldung ausgewertet – weitere Kräfte alarmiert', 'blu');
+}
+function startUnitRoute(u) {
+  const b = u.fixed != null ? routeEst(u.sp, u.fixed, u.wreck) : bestRoute(u.sp, u.wreck), i = b && b.ok ? b.i : RAMPS.length - 1;
+  u.ramp = i; u.path = lpath(u.sp.base, i, u.fleet ? u.fleet.bay : null); u.pd = 0; u.mode = 'local'; u.alarmEta = b && b.ok ? b.total : null;
+  if (!G.ev['out_' + u.type]) addLog('out_' + u.type, (USP[u.type] ? USP[u.type].label : 'Abschleppdienst') + ' rückt aus über ' + RAMPS[i].name);
+}
+function mergeFree(u, s) { return !G.units.some(o => o !== u && (o.mode === 'hw' || o.mode === 'depart') && Math.abs(o.s - s) < (o.len + u.len) / 2 + 8 && Math.abs(o.lat - STRIP) < 14) && !G.traf.some(v => Math.abs(v.s - s) < (v.len + u.len) / 2 + 4 && Math.abs(v.lat - STRIP) < (v.wid + u.wid) / 2 + 1); }
+function stepHW(u, dt) {
+  const sp = u.sp;
+  // In die Rettungsgasse wechseln nur bei freier Querung und weit vor dem Stauende – sonst bleibt das Fahrzeug auf dem Rettungsweg
+  const gl = G.acc && u.s + 260 > G.acc.front ? (u.type === 'tow' ? CORR2 : CORR) : GC1;   // Einsatzraum zweispurig, sonst genau eine Gasse
+  if (u.mode === 'hw') {
+    if (u.lat > 62 && !u.crossing) {                 // noch auf der Auffahrt: warten, bis eine Lücke zum Einfädeln in die Rettungsgasse frei ist
+      const corr = G.traf.some(o => Math.abs(o.lat - gl) < (o.wid + u.wid) / 2 + .5 && Math.abs(o.s - u.s) < (o.len + u.len) / 2 + 14) || G.units.some(o => o !== u && o.mode === 'hw' && o.lat <= 62 && Math.abs(o.lat - gl) < (o.wid + u.wid) / 2 + .5 && Math.abs(o.s - u.s) < (o.len + u.len) / 2 + 10);
+      const busy = corr || G.traf.some(o => o.lat > 28 && o.lat < 80 && Math.abs(o.s - u.s) < (o.len + u.len) / 2 + 12) || G.units.some(o => o !== u && o.mode === 'hw' && o.lat > 30 && o.lat < 80 && Math.abs(o.s - u.s) < (o.len + u.len) / 2 + 8);
+      u.entW = busy ? (u.entW || 0) + dt : 0;
+      if (!busy) { u.crossing = true; u.blockT = 0; }
+      else if (u.entW > 3 && !corr) { u.lat = gl; u.entW = 0; u.fade = .15; u.crossing = false; }
+      else u.tlat = STRIP;
+    }
+    if (u.crossing) { u.tlat = gl; if (u.lat <= gl + 9) u.crossing = false; }
+    else if (u.lat <= 62) u.tlat = gl;
+  }
+  if (u.mode === 'hw' && !u.site && u.lat <= 62 && !u.crossing && Math.abs(u.lat - gl) > 4 && u.v < 1) {   // zwischen den Spuren eingeklemmt
+    u.wedgeT = (u.wedgeT || 0) + dt;
+    if (u.wedgeT > 5 && !G.traf.some(o => Math.abs(o.lat - gl) < (o.wid + u.wid) / 2 + .5 && Math.abs(o.s - u.s) < (o.len + u.len) / 2 + 4)) { u.lat = gl; u.fade = .15; u.wedgeT = 0; }
+  } else u.wedgeT = 0;
+  const old = u.lat, nl = u.lat + clamp(u.tlat - u.lat, -36 * dt, 36 * dt); if (nl !== u.lat && !latBlocked(u, nl)) u.lat = nl;
+  // Querung blockiert → zurück auf die Auffahrt und neu versuchen (nie auf Standstreifen weiterfahren)
+  if (u.crossing && u.lat > gl + 9 && u.lat < 70) { u.blockT = (u.blockT || 0) + (u.v < 3 && latBlocked(u, u.lat - 1) ? dt : 0); if (u.blockT > 5) { u.crossing = false; u.tlat = STRIP; u.blockT = 0; u.entW = 0; } } else u.blockT = 0;
+  let gap = 1e9, rear = 1e9;
+  const nb = (o, r) => { if (o !== u && o.s > u.s && latOv(u, o)) { const g = r - (u.s + u.len / 2); if (g < gap) { gap = g; rear = r; } } };
+  G.traf.forEach(o => nb(o, o.s - o.len / 2)); G.units.forEach(o => { if (o.mode === 'hw' || o.mode === 'depart') nb(o, o.s - o.len / 2); });
+  for (const o of G.obs) if (o.s0 > u.s && ovl(u.lat, u.wid, o)) { const g = o.s0 - (u.s + u.len / 2); if (g < gap) { gap = g; rear = o.s0; } }
+  let vt = sp.vFree; const j = G.jam;
+  for (const z of G.zones) if (u.s > z.s0 - 60 && u.s < z.s1) vt = Math.min(vt, z.vmax * 1.7);
+  if (j.active && u.s > j.tail - 40 && u.s < G.acc.front + 5) vt = Math.min(vt, sp.vJam);
+  if (u.mode === 'hw') { const gT = stageFrontFor(sp, u.wreck) - (u.s + u.len / 2); vt = Math.min(vt, Math.max(0, gT / .5)); if (u.lat > 62 && !u.crossing) vt = 0; }
+  if (gap < 1e8) vt = Math.min(vt, Math.max(0, (gap - 4) / .7));
+  u.v = clamp(vt, u.v - 320 * dt, u.v + 70 * dt); let ns = u.s + u.v * dt; if (gap < 1e8) ns = Math.min(ns, rear - u.len / 2 - 1.5); u.s = Math.max(u.s, ns); u.ly = (u.lat - old) / dt;
+  u.stillT = u.v < 2.5 ? (u.stillT || 0) + dt : 0;
+  if (u.mode === 'hw' && !u.site) {
+    const tgt = stageFrontFor(sp, u.wreck), dFront = G.acc.front - u.s, exact = Math.abs(tgt - (u.s + u.len / 2)) < 7 && u.v < 1.5, fallback = u.stillT > 1.8 && (u.type === 'tow' ? Math.abs(tgt - (u.s + u.len / 2)) < (u.stillT > 6 ? 330 : 150) : dFront < 280);
+    if ((exact || fallback) && u.lat <= 62) { u.site = true; u.wt = 0; const nm = USP[u.type] ? USP[u.type].label : 'Abschleppdienst'; if (!G.ev['arr_' + u.type]) { G.ev['arr_' + u.type] = G.t; addLog('arr_' + u.type, nm + ' vor Ort'); } toast(nm + ' ist vor Ort', 'good'); }
+  }
+  if (u.mode === 'depart') { if (!u.exitS) { const nx = OFFS.find(o => o.s - 70 > u.s + 220); u.exitS = nx && nx.s < EXIT.s ? nx.s : EXIT.s; } if (u.s > G.acc.s1 + 40 && u.s >= u.exitS - 420) u.tlat = STRIP; if (u.s >= u.exitS - 70) { u.mode = 'return'; const cp = { x: P(u.s, u.lat).x, y: P(u.s, u.lat).y }, bp = backPath(gateU(u.sp.base), u.exitS); let rp = [cp].concat(bp.pts); if (u.type === 'tow') { if (u.load) { u.slot = wsPick(u); rp = rp.concat(yardToSpot(u.slot)); } else rp = rp.concat(yardToBay(u.fleet.bay)); } u.path = mkPath(rp); u.pd = 0; u.x = cp.x; u.y = cp.y; u.a = P(u.s, u.lat).a; } }
+}
+/* ===== Hof & Werkstatt ===== */
+function canRecall(u) { return u.type === 'tow' && !u.load && !u.rel && !u.homing && ['alarm', 'local', 'hw'].includes(u.mode); }
+function recallUnit(id) {
+  const u = G.units.find(x => x.id === id); if (!u || !canRecall(u)) return false;
+  const f = u.fleet, w = u.wreck; if (w) { w.tow = null; w.clear = 0; } G.jobs = G.jobs.filter(j => j.u !== u); u.wreck = null;
+  if (u.mode === 'alarm') { G.units = G.units.filter(x => x !== u); f.state = 'depot'; }
+  else if (u.mode === 'local') { let k = 1; while (k < u.path.cum.length && u.path.cum[k] < u.pd) k++; const here = { x: u.x, y: u.y }; u.path = mkPath([here].concat(u.path.pts.slice(0, k).reverse())); u.pd = 0; u.mode = 'return'; u.homing = true; }
+  else { u.mode = 'depart'; u.site = false; u.exitS = 0; u.want = null; }
+  addLog('recall_' + u.id + '_' + Math.round(G.t), f.name + ' zurückgerufen'); toast(f.name + ' wurde zurückgerufen', 'bad'); G.selWreck = (w || {}).id ?? G.selWreck; return true;
+}
+function wsPick(u) { let best = 0, bs = 1e9; G.ws.forEach((w, i) => { const sc = (w.cur ? 1 : 0) + w.q.length; if (sc < bs) { bs = sc; best = i; } }); G.ws[best].q.push(u); return best; }
+function startUnload(u) {
+  const w = G.ws[u.slot], L = u.load, ys = YD.ws[u.slot], bed = towBedPos(u), d = { x: Math.cos(u.a), y: Math.sin(u.a) };
+  const b1 = { x: bed.x - d.x * 34, y: bed.y - d.y * 34 }, c1 = { x: b1.x - d.x * 30, y: b1.y - d.y * 30 }, tgt = yp(ys.s, ys.lat), c2 = yp(ys.s, ys.lat - 52);
+  const r = { slot: u.slot, load: L, path: mkPath([{ x: bed.x, y: bed.y }, b1].concat(bez(b1, c1, c2, tgt, 16))), pd: 0, st: 'in', prog: 0, t: 0, dur: 9 + L.len * .22 + (L.rig ? 10 : 0), tow: u, sc: Math.min(1, 44 / Math.max(L.len, 1)) };
+  w.cur = r; w.q.shift(); G.reps.push(r); u.load = null; u.mode = 'unload'; addLog('unload_' + u.id, u.fleet.name + ' lädt in der Werkstatt ab'); toast(u.fleet.name + ' liefert das Fahrzeug in der Werkstatt ab', 'good');
+}
+function stepRepairs(dt) {
+  for (const r of G.reps.slice()) {
+    if (r.st === 'in') {
+      r.pd = Math.min(r.path.len, r.pd + 30 * dt); const p = follow(r.path, r.pd); r.x = p.x; r.y = p.y; r.a = p.a + Math.PI;
+      if (r.tow && r.pd > r.path.len * .72) { const u = r.tow; r.tow = null; u.mode = 'return'; u.homing = true; u.path = mkPath(spotToBay(r.slot, u.fleet.bay)); u.pd = 0; }
+      if (r.pd >= r.path.len) { r.st = 'fix'; if (r.tow) { const u = r.tow; r.tow = null; u.mode = 'return'; u.homing = true; u.path = mkPath(spotToBay(r.slot, u.fleet.bay)); u.pd = 0; } addLog('repair_' + r.slot + '_' + Math.round(G.t), 'Werkstatt: Reparatur beginnt (Platz ' + (r.slot + 1) + ')'); }
+    } else if (r.st === 'fix') {
+      r.t += dt; r.prog = clamp(r.t / r.dur, 0, 1);
+      if (Math.random() < dt * 9) { const p = yp(YD.ws[r.slot].s + rnd(-8, 8), YD.ws[r.slot].lat + rnd(-10, 10)); part(G, p.x, p.y, 'spark'); }
+      if (r.prog >= 1) {
+        r.st = 'out'; G.ws[r.slot].cur = null; const k = RAMPS.findIndex(q => q.s - 90 > YD.gateS + 60), L = r.load, kd = L.rig ? L.kind : L.kind;
+        G.det.push({ id: ++G.uid, path: mkPath(wsOutPts(r.slot).concat(Lseg(YD.gateS, RAMPS[k].s - 90), rampConn(k))), pd: 0, v: 0, vd: rnd(46, 56), len: L.len, wid: L.wid, kind: kd, col: L.col, col2: L.col2, k });
+        G.fixed = (G.fixed || 0) + 1; toast('Werkstatt: ' + (L.rig ? 'Lkw' : 'Fahrzeug') + ' repariert und zurück auf der Autobahn', 'good'); G.reps = G.reps.filter(x => x !== r);
+      }
+    }
+  }
+}
+const fireOn = () => G.fire && G.fire.on && G.t >= G.fire.t0;
+function towLoadInfo(w) { if (w.kind === 'veh') { const v = w.veh; return { kind: v.kind, col: v.col, col2: v.col2, len: v.len, wid: v.wid, need: w.need }; } return { kind: w.rigKind, col: '#c8453b', col2: '#e8e8e4', len: w.rigKind === 'semi' ? 70 : w.rigKind === 'truck' ? 42 : 28, wid: 13, need: w.need, rig: true }; }
+function stepUnits(dt) {
+  const A = G.acc;
+  for (const u of G.units.slice()) {
+    if (u.fade < 1) u.fade = Math.min(1, u.fade + dt * 1.6);
+    if (u.mode === 'alarm') {
+      if (G.t - u.t0 >= u.delay) { const rig = rigOpen(); if (u.type === 'tow' && u.wreck && u.wreck.kind !== 'rig' && rig && !(rig.tow && (rig.tow.site || rig.tow.mode === 'hw'))) { u.waiting = true; } else { u.waiting = false; startUnitRoute(u); } }
+      continue;
+    }
+    if (u.mode === 'local' || u.mode === 'return') {
+      const ms = u.mode === 'local' ? RAMPS[u.ramp].s + 70 : 0; if (u.mode === 'local' && u.pd + u.sp.vLoc * dt >= u.path.len && !mergeFree(u, ms)) { u.pd = Math.min(u.pd, u.path.len - .5); continue; }
+      { const fp = follow(u.path, u.pd);
+      const nearDet = G.det.some(d => { const q = lanePos(follow(d.path, d.pd), 4.5), dx = q.x - fp.x, dy = q.y - fp.y, fw = dx * Math.cos(fp.a) + dy * Math.sin(fp.a), lt = -dx * Math.sin(fp.a) + dy * Math.cos(fp.a); return Math.cos(q.a - fp.a) > .3 && fw > -(u.len + d.len) / 2 - 8 && fw < 90 && Math.abs(lt) < 14; });
+      u.lo = (u.lo ?? 4.5) + clamp((nearDet ? -4.5 : 4.5) - (u.lo ?? 4.5), -14 * dt, 14 * dt);
+      }
+      if (u.x && pathVehAhead(u.x, u.y, u.a, u.len, u)) continue;
+      u.pd += u.sp.vLoc * dt; const fp = follow(u.path, u.pd);
+      const p = lanePos(fp, u.lo); u.x = p.x; u.y = p.y; u.a = p.a;
+      if (u.pd >= u.path.len) {
+        if (u.mode === 'local') { u.mode = 'hw'; u.s = ms; u.lat = STRIP; u.v = u.sp.vLoc * .5; u.tlat = STRIP; u.crossing = false; u.entW = 0; }
+        else if (u.type === 'tow' && u.load && !u.homing) { u.mode = 'wsWait'; }
+        else { G.units = G.units.filter(x => x !== u); if (u.type === 'tow') { u.fleet.state = 'depot'; const j = G.jobs.find(x => x.u === u); if (j) j.done = true; addLog('towBack_' + u.fleet.id, u.fleet.name + ' zurück im Depot'); toast(u.fleet.name + ' ist zurück im Depot', 'good'); } }
+      }
+      continue;
+    }
+    if (u.mode === 'wsWait') { const w = G.ws[u.slot]; if (w.q[0] === u && !w.cur) startUnload(u); continue; }
+    if (u.mode === 'unload') continue;
+    if (u.mode === 'hw' || u.mode === 'depart') stepHW(u, dt);
+    if (u.mode === 'hw' && u.site) {
+      u.wt += dt;
+      if (u.type === 'rd') { if (!u.done && u.wt > u.sp.work + 3) { u.done = true; G.ev.done_rd = G.t; addLog('done_rd', 'Rettungsdienst: Patienten versorgt'); toast('Rettungsdienst: Patienten versorgt – wartet auf Freigabe zur Abfahrt', 'good'); } }
+      else if (u.type === 'fw') {
+        if (fireOn()) G.fire.int = Math.max(0, G.fire.int - dt / 7);
+        if (fireOn() && G.fire.int <= 0) { G.fire.on = false; G.fire.burnt = true; addLog('fire_out', 'Brand gelöscht'); toast('Feuerwehr: Brand gelöscht', 'good'); }
+        if (!u.done && !fireOn() && u.wt > u.sp.work + 3) { u.done = true; G.ev.done_fw = G.t; addLog('done_fw', 'Feuerwehr: Einsatz beendet'); toast('Feuerwehr: Gefahr beseitigt – wartet auf Freigabe zur Abfahrt', 'good'); }
+      } else if (u.type === 'tow') {
+        const w = u.wreck, pol = unitsOf('pol').find(x => x.site);
+        if (!u.rel) { if (pol && !fireOn()) { u.rel = true; u.wt = 0; if (G.ev.release == null) { G.ev.release = G.t; addLog('release', 'Freigabe zur Bergung erteilt'); } toast('Freigabe – ' + u.fleet.name + ' beginnt die Bergung', 'good'); } else u.wt = 0; }
+        else { const dur = TOWT[u.tt].work * (u.tt > w.need ? .85 : 1) * (w.kind === 'rig' ? 1.5 : 1.15); w.clear = clamp(u.wt / dur, 0, 1); if (u.wt >= dur) finishWreck(u, w); }
+      }
+    }
+    if (A && A.cleared && (u.mode === 'hw') && u.type !== 'tow' && !u.dep) { u.dep = G.t + 1 + (u.depRank || 0) * 1.4; }
+    if (u.dep && G.t >= u.dep && u.mode === 'hw') { u.mode = 'depart'; u.site = false; addLog('dep_' + u.type + u.id, (USP[u.type] ? USP[u.type].label : 'Fahrzeug') + ' fährt zurück zur Wache'); }
+  }
+}
+function finishWreck(tow, w) {
+  w.done = true; w.clear = 1; tow.load = towLoadInfo(w); if (w.veh) G.traf = G.traf.filter(v => v !== w.veh); tow.site = false; tow.wreck = null; tow.mode = 'depart'; tow.tlat = CORR2;
+  addLog('wreck_' + w.id, w.label + ' geborgen'); updateObs();
+  const left = G.wrecks.filter(x => !x.done).length; toast(w.label + ' geborgen' + (left ? ' – noch ' + left + ' Wrack/Wracks' : ''), 'good'); sfx.ok();
+  if (!left) {
+    const A = G.acc; A.cleared = true; A.clear = 1; G.ev.cleared = G.t; G.clearAt = G.t; addLog('cleared', 'Unfallstelle geräumt – Fahrbahn frei'); toast('Fahrbahn frei – der Stau löst sich auf', 'good');
+    G.units.filter(u => u.type !== 'tow' && u.mode === 'hw').sort((a, b) => b.s - a.s).forEach((u, i) => { u.depRank = i; u.done = true; });
+  }
+}
+const cposAcc = () => G.acc ? P(G.acc.mid, 40) : { x: 0, y: 0 };
+/* ===== Simulationsschritt ===== */
+function step(dt) {
+  G.t += dt; G.shake = Math.max(0, G.shake - dt * .9);
+  for (const s of G.sched.slice()) if (G.t >= s.t) { G.sched = G.sched.filter(x => x !== s); s.fn(); }
+  updateCrash(dt); stepTraffic(dt); stepDet(dt); stepUnits(dt); stepRepairs(dt); stepAmb(dt);
+  G.jamT -= dt; if (G.jamT <= 0) { G.jamT = .25; updateJam(); }
+  G.slowT -= dt; if (G.slowT <= 0 && G.phase !== 'select') { G.slowT = rnd(35, 80); slowEvent(); }
+  if (G.fire && G.fire.on && G.t >= G.fire.t0) G.fire.int = Math.min(1, G.fire.int + dt / (G.units.some(u => u.type === 'fw' && u.site) ? 1e9 : 9));
+  G.parts = G.parts.filter(p => { p.l -= dt; p.x += (p.vx || 0) * dt; p.y += (p.vy || 0) * dt; if (p.k === 'smoke') p.vy -= 2 * dt; if (p.k === 'fire') p.vy -= 30 * dt; return p.l > 0; });
+  if (G.acc && !G.acc.cleared && Math.random() < dt * 4 && !fireOn()) { const w = cposAcc(); part(G, w.x + rnd(-10, 10), w.y + rnd(-6, 6), 'smoke', { l: 2.6, vy: -12 }); }
+  if (G.acc && G.acc.cleared && !G.results && (G.t - G.clearAt > 4 && !G.jam.active && !G.units.length && !G.reps.length || G.t - G.clearAt > 200)) buildResults();
+}
+function buildResults() {
+  const e = G.ev, j = G.jam, jobs = G.jobs;
+  const d = (a, b) => (e[a] != null && e[b] != null) ? e[a] - e[b] : null;
+  const fit = jobs.length && jobs.every(x => x.f.type >= x.w.need && x.f.type <= x.w.need + 1);
+  const stars = [d('dispatch', 'report') != null && d('dispatch', 'report') <= 25, fit, d('cleared', 'accident') != null && d('cleared', 'accident') <= 60 + 35 * G.wrecks.length].filter(Boolean).length;
+  G.results = { stars, jamMax: j.max || 0, dur: d('cleared', 'accident'), toPol: d('arr_pol', 'accident'), toRd: d('arr_rd', 'accident'), toFw: d('arr_fw', 'accident'), toTow: d('arr_tow', 'accident'), disp: d('dispatch', 'report'), rep: d('report', 'accident'), wrecks: G.wrecks.length, tows: jobs.length };
+  G.phase = 'done'; showOverlay('results');
+}
+/* ===== Kamera, Zeichnen, Minimap ===== */
+const cv = $('#cv'), ctx = cv.getContext('2d'), mini = $('#mini'), mctx = mini.getContext('2d'); let K = 1;
+const CAM = { x: 3000, y: 1700, z: .62 }; let ZMIN = Math.max(W / WW, H / WH) + .001, ZMAX = 2.2;
+function fit() { const r = cv.getBoundingClientRect(), d = Math.min(MOB ? 1.5 : 2, window.devicePixelRatio || 1); H = clamp(Math.round(W * r.height / Math.max(1, r.width)), 360, 1600); cv.width = Math.max(2, Math.round(r.width * d)); cv.height = Math.max(2, Math.round(r.height * d)); K = cv.width / W; ZMIN = Math.max(W / WW, H / WH) + .001; mini.width = 240 * 2; mini.height = Math.round(240 * WH / WW) * 2; clampCam(); }
+function clampCam() { CAM.z = clamp(CAM.z, ZMIN, ZMAX); CAM.x = clamp(CAM.x, W / 2 / CAM.z, WW - W / 2 / CAM.z); CAM.y = clamp(CAM.y, H / 2 / CAM.z, WH - H / 2 / CAM.z); }
+function camTarget() {
+  if (G.camFollow === 'hero') { const h = G.traf.find(v => v.hero), r = G.crash && G.crash.s0; if (h) { const p = P(h.s + 40, 20); return { x: p.x, y: p.y, z: 1.15 }; } if (r) { const p = P(r + 60, 20); return { x: p.x, y: p.y, z: 1.15 }; } }
+  if (G.camFollow === 'acc' && G.acc) { const p = P(G.acc.mid - 120, 10); return { x: p.x, y: p.y, z: Math.max(.9, CAM.z) }; }
+  return null;
+}
+function camStep(dt) { const t = camTarget(); if (t) { const k = Math.min(1, dt * 2.6); CAM.x += (t.x - CAM.x) * k; CAM.y += (t.y - CAM.y) * k; CAM.z += (t.z - CAM.z) * k * .6; } clampCam(); }
+const LBL = [];
+function chipAt(g, x, y, txt, bg, fg = '#fff', size = 9) { LBL.push({ x, y, txt, bg, fg, size }); }
+function glow(g, x, y, r, col) { g.save(); g.globalCompositeOperation = 'lighter'; const rg = g.createRadialGradient(x, y, 0, x, y, r); rg.addColorStop(0, col); rg.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = rg; g.beginPath(); g.arc(x, y, r, 0, 7); g.fill(); g.restore(); }
+const wreckOf = v => G.wrecks.find(w => w.veh === v);
+const bedLenOf = u => (TOWSP[u.tt].L - TOWSP[u.tt].cab) * .56;
+function towBedPos(u) { const off = -(TOWSP[u.tt].cab * .56) / 2 - .56, c = Math.cos(u.a), s = Math.sin(u.a); return { x: (u.dx ?? u.x) + c * off, y: (u.dy ?? u.y) + s * off }; }
+const lerpA = (a, b, t) => { let d = ((b - a + Math.PI) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2) - Math.PI; return a + d * t; };
+/* Kran-Animation: Haken anschlagen → anheben → herüberschwenken → absetzen → sichern */
+function craneAnim(w) {
+  const T = w.tow; if (!T || T.dx == null || !(w.clear > 0) || w.done) return null; const c = w.clear;
+  let p0, a0, len;
+  if (w.kind === 'veh') { const v = w.veh, pp = P(v.s, v.lat); p0 = { x: pp.x, y: pp.y }; a0 = pp.a + (v.rotFix || 0); len = v.len; }
+  else { const pp = P((w.box.s0 + w.box.s1) / 2, Math.min(60, (w.box.l0 + w.box.l1) / 2)); p0 = { x: pp.x, y: pp.y }; a0 = pp.a; len = w.rigKind === 'semi' ? 70 : w.rigKind === 'truck' ? 42 : 28; }
+  const bed = towBedPos(T), scF = Math.min(1, bedLenOf(T) * .95 / len), piv = { x: T.dx + Math.cos(T.a) * -2, y: T.dy + Math.sin(T.a) * -2 };
+  let pos = { x: p0.x, y: p0.y }, a = a0, sc = 1, lift = 0, tip = { x: p0.x, y: p0.y }, ph = 'hook';
+  if (c < .15) { const k = ss(c / .15); tip = { x: lerp(piv.x, p0.x, k), y: lerp(piv.y, p0.y, k) }; ph = 'hook'; }
+  else if (c < .32) { lift = ss((c - .15) / .17); sc = 1 + .16 * lift; ph = 'lift'; tip = { x: p0.x, y: p0.y - 7 * lift }; }
+  else if (c < .7) { const k = ss((c - .32) / .38); pos = { x: lerp(p0.x, bed.x, k), y: lerp(p0.y, bed.y, k) - 9 * Math.sin(Math.PI * k) }; a = lerpA(a0, T.a, k); lift = 1; sc = lerp(1.16, 1.16 * scF, k); ph = 'swing'; tip = { x: pos.x, y: pos.y - 7 }; }
+  else if (c < .88) { const k = ss((c - .7) / .18); lift = 1 - k; pos = { x: bed.x, y: bed.y }; a = T.a; sc = lerp(1.16 * scF, scF, k); ph = 'lower'; tip = { x: pos.x, y: pos.y - 7 * lift }; }
+  else { pos = { x: bed.x, y: bed.y }; a = T.a; sc = scF; ph = 'strap'; tip = { x: bed.x, y: bed.y }; }
+  return { c, piv, tip, pos, a, sc, lift, ph, p0, bed, scF };
+}
+function drawCrane(g, w, an, now) {
+  const { piv, tip, lift, ph } = an;
+  if (ph === 'strap') { g.save(); g.translate(an.bed.x, an.bed.y); g.rotate(an.a); g.strokeStyle = '#ffb020'; g.lineWidth = 1.1; for (const k of [-.28, .28]) { g.beginPath(); g.moveTo(k * bedLenOf(w.tow), -5.5); g.lineTo(k * bedLenOf(w.tow), 5.5); g.stroke(); } g.restore(); return; }
+  g.lineCap = 'round'; g.strokeStyle = 'rgba(0,0,0,.35)'; g.lineWidth = 3.4; g.beginPath(); g.moveTo(piv.x + 1.5, piv.y + 2); g.lineTo(tip.x + 1.5, tip.y + 2); g.stroke();
+  g.strokeStyle = '#2b2b2f'; g.lineWidth = 3; g.beginPath(); g.moveTo(piv.x, piv.y); g.lineTo(tip.x, tip.y); g.stroke(); g.strokeStyle = '#FF9A33'; g.lineWidth = 1.7; g.beginPath(); g.moveTo(piv.x, piv.y); g.lineTo(tip.x, tip.y); g.stroke();
+  g.fillStyle = '#1d1d1b'; g.beginPath(); g.arc(piv.x, piv.y, 2.6, 0, 7); g.fill();
+  if (ph !== 'hook') { g.strokeStyle = 'rgba(20,20,20,.85)'; g.lineWidth = .9; g.beginPath(); g.moveTo(tip.x, tip.y); g.lineTo(an.pos.x, an.pos.y); g.stroke(); }
+  g.fillStyle = '#ffd24a'; g.beginPath(); g.arc(tip.x, tip.y, 1.9, 0, 7); g.fill(); g.strokeStyle = '#1d1d1b'; g.lineWidth = .6; g.stroke();
+}
+function drawTrafficVeh(g, v, dir, now, vw) {
+  const p = P(v.s, dir > 0 ? v.lat : -LAT[v.lane]); if (p.x < vw.x0 - 90 || p.x > vw.x1 + 90 || p.y < vw.y0 - 90 || p.y > vw.y1 + 90) return;
+  let x = p.x, y = p.y, a = p.a + (dir > 0 ? (v.yaw || 0) + (v.rotFix || 0) : Math.PI), sc = 1, lift = 0, an = null;
+  if (v.wreck) { const w = wreckOf(v); an = w && craneAnim(w); if (an) { x = an.pos.x; y = an.pos.y; a = an.a; sc = an.sc; lift = an.lift; } }
+  if (lift > 0) { g.fillStyle = `rgba(0,0,0,${.28 * lift})`; g.beginPath(); g.ellipse(x + 3 + 5 * lift, y + 5 + 7 * lift, v.len * .5 * sc, v.wid * .5 * sc, a, 0, 7); g.fill(); }
+  g.save(); g.translate(x, y); g.rotate(a); g.scale(sc, sc); drawVeh(g, v, now); g.restore();
+  if (an && (an.ph === 'lift' || an.ph === 'swing') && Math.random() < .3) part(G, x, y, 'spark');
+  if (v.wreck && Math.random() < .02 && !(fireOn() && G.fire)) part(G, x, y, 'smoke', { l: 2, vy: -10 });
+}
+function drawZone(g, z, now, vw) {
+  const a = P(z.s0, 0); if (a.x < vw.x0 - 700 || a.x > vw.x1 + 700 || a.y < vw.y0 - 700 || a.y > vw.y1 + 700) return;
+  const R = rng(z.seed);
+  // gesperrte Spur: aufgerissener Asphalt mit Absperrung
+  g.beginPath(); for (let s = z.s0; s <= z.s1; s += 8) { const p = P(s, 41); s === z.s0 ? g.moveTo(p.x, p.y) : g.lineTo(p.x, p.y); } for (let s = z.s1; s >= z.s0; s -= 8) { const p = P(s, 58); g.lineTo(p.x, p.y); } g.closePath(); g.fillStyle = 'rgba(120,90,50,.5)'; g.fill();
+  g.strokeStyle = '#f0c24b'; g.lineWidth = 1.8; for (const l of [41, 58]) { g.beginPath(); for (let s = z.s0 - 90; s <= z.s1; s += 8) { const lt = s < z.s0 ? 58 - (58 - 41) * 0 : l; const p = P(s, s < z.s0 ? lerp(58, 41, 0) + (l === 41 ? 0 : 0) : l); s === z.s0 - 90 ? g.moveTo(p.x, p.y) : g.lineTo(p.x, p.y); } g.stroke(); }
+  // Leitkegel: Verschwenk (Taper) + beidseitig
+  const cone = (s, l) => { const p = P(s, l); g.fillStyle = 'rgba(0,0,0,.25)'; g.beginPath(); g.arc(p.x + 1, p.y + 1.5, 2.6, 0, 7); g.fill(); g.fillStyle = '#ff6a1a'; g.beginPath(); g.arc(p.x, p.y, 2.5, 0, 7); g.fill(); g.fillStyle = '#fff'; g.beginPath(); g.arc(p.x, p.y, 1.2, 0, 7); g.fill(); };
+  for (let i = 0; i <= 8; i++) cone(z.s0 - 90 + i * 11, lerp(33, 41, i / 8));
+  for (let s = z.s0; s <= z.s1; s += 18) { cone(s, 40); cone(s, 59.5); }
+  // Absperrtafeln
+  for (const s of [z.s0, z.s1]) { const p = P(s, 49.5); g.save(); g.translate(p.x, p.y); g.rotate(p.a + 1.5708); g.fillStyle = '#fff'; g.fillRect(-9, -2, 18, 4); g.fillStyle = '#e5483f'; for (let k = -9; k < 9; k += 6) g.fillRect(k, -2, 3, 4); g.restore(); }
+  // Baumaschinen + Arbeiter (animiert)
+  const ex = P(z.s0 + (z.s1 - z.s0) * .35, 50), sw = Math.sin(now * 1.4 + z.id) * .5; g.save(); g.translate(ex.x, ex.y); g.rotate(ex.a); g.fillStyle = 'rgba(0,0,0,.25)'; rr(g, -11, -5, 24, 12, 3); g.fill(); g.fillStyle = '#2b2b2e'; rr(g, -12, -6, 24, 12, 3); g.fill(); g.fillStyle = '#f2b705'; rr(g, -8, -5, 14, 10, 3); g.fill(); g.fillStyle = '#25384a'; g.fillRect(2, -3, 3, 6); g.save(); g.translate(6, 0); g.rotate(sw); g.strokeStyle = '#d9a200'; g.lineWidth = 3; g.beginPath(); g.moveTo(0, 0); g.lineTo(13, 0); g.stroke(); g.fillStyle = '#555'; g.fillRect(12, -3, 4, 6); g.restore(); g.restore();
+  const dt2 = P(z.s0 + (z.s1 - z.s0) * .72, 50); g.save(); g.translate(dt2.x, dt2.y); g.rotate(dt2.a); g.fillStyle = 'rgba(0,0,0,.25)'; rr(g, -15, -5, 32, 13, 3); g.fill(); g.fillStyle = '#f2b705'; rr(g, -16, -6.5, 22, 13, 2); g.fill(); g.fillStyle = '#e8e8e4'; rr(g, 6, -6, 11, 12, 3); g.fill(); g.restore();
+  for (let k = 0; k < 4; k++) { const ph = (now * .25 + k * .27 + z.id) % 1, p = P(z.s0 + 20 + ph * (z.s1 - z.s0 - 40), 49.5 + Math.sin(now * 2 + k) * 3); g.fillStyle = '#ff7a00'; g.beginPath(); g.arc(p.x, p.y, 2.2, 0, 7); g.fill(); g.fillStyle = '#f3d2b0'; g.beginPath(); g.arc(p.x, p.y, 1, 0, 7); g.fill(); }
+  // Pfeiltafel (Blinkpfeil) + Tempo-Schild
+  const bt = P(z.s0 - 30, 62); g.save(); g.translate(bt.x, bt.y); g.rotate(bt.a); g.fillStyle = '#222'; rr(g, -7, -5, 14, 10, 2); g.fill(); for (let k = 0; k < 3; k++) { g.fillStyle = Math.floor(now * 3) % 3 === k ? '#ffb020' : '#5a4210'; g.beginPath(); g.arc(-3 + k * 3, 0, 1.2, 0, 7); g.fill(); } g.restore();
+  const sg = P(z.s0 - 120, 64); g.fillStyle = '#fff'; g.beginPath(); g.arc(sg.x, sg.y, 7, 0, 7); g.fill(); g.strokeStyle = '#e5483f'; g.lineWidth = 2; g.stroke(); chipAt(g, sg.x, sg.y - 14, 'BAUSTELLE ' + Math.round(z.vmax * 2.2) / 2 * 2, '#f2b705', '#1d1d1b', 9);
+}
+function drawBridges(g, vw) {
+  CROSSP.forEach(pts => {
+    const seg = pts.filter(p => Math.abs(p.l) < 100); if (seg.length < 2) return; const mid = seg[seg.length >> 1]; if (mid.x < vw.x0 - 200 || mid.x > vw.x1 + 200 || mid.y < vw.y0 - 200 || mid.y > vw.y1 + 200) return;
+    const ln = (w, col, ox = 0, oy = 0) => { g.beginPath(); seg.forEach((p, i) => i ? g.lineTo(p.x + ox, p.y + oy) : g.moveTo(p.x + ox, p.y + oy)); g.strokeStyle = col; g.lineWidth = w; g.lineCap = 'butt'; g.stroke(); };
+    ln(26, 'rgba(0,0,0,.28)', 6, 9); ln(24, '#b9b6ab'); ln(18, '#4a4d53'); g.setLineDash([9, 9]); ln(1.4, 'rgba(240,238,225,.7)'); g.setLineDash([]); ln(1.6, '#e6e3da', 0, 0);
+  });
+}
+function drawDet(g, vw) { for (const d of G.det) { const p = lanePos(follow(d.path, d.pd), d.lo ?? 4.5); if (p.x < vw.x0 - 50 || p.x > vw.x1 + 50 || p.y < vw.y0 - 50 || p.y > vw.y1 + 50) continue; g.save(); g.translate(p.x, p.y); g.rotate(p.a); drawVeh(g, { len: d.len, wid: d.wid, kind: d.kind, col: d.col, col2: d.col2, braking: d.v < 3, tr: d.tr }, 0); g.restore(); } }
+function drawAmb(g, vw) { for (const a of G.amb) { const p = follow(CPATH[a.i], a.pd), x = p.x + Math.sin(p.a) * -5 * a.dir, y = p.y + Math.cos(p.a) * 5 * a.dir; if (x < vw.x0 - 50 || x > vw.x1 + 50 || y < vw.y0 - 50 || y > vw.y1 + 50) continue; g.save(); g.translate(x, y); g.rotate(p.a + (a.dir < 0 ? Math.PI : 0)); drawVeh(g, { len: a.len, wid: a.wid, kind: a.kind, col: a.col }, 0); g.restore(); } }
+function drawFireAndFx(g, now) {
+  const f = G.fire; if (!f || !G.crash) return;
+  const srcs = [cpos(f.ds, f.lat)]; const w1 = G.wrecks.find(w => w.kind === 'veh' && !w.done); if (w1 && G.scen === 'D') srcs.push(P(w1.veh.s, w1.veh.lat));
+  if (f.burnt || f.int > .05) srcs.forEach(q => { g.fillStyle = `rgba(10,8,6,${f.burnt ? .35 : .3 * f.int})`; g.beginPath(); g.ellipse(q.x, q.y, 18, 10, .3, 0, 7); g.fill(); });
+  if (fireOn() && f.int > .05) srcs.forEach((q, i) => { glow(g, q.x, q.y, Math.max(6, 46 * f.int + 10 * Math.sin(now * 12 + i)), `rgba(255,120,30,${.55 * f.int})`); });
+}
+function fxEmit(dt) {
+  const f = G.fire; if (!f || !G.crash || !fireOn() || f.int < .03) return;
+  const srcs = [cpos(f.ds, f.lat)]; const w1 = G.wrecks.find(w => w.kind === 'veh' && !w.done); if (w1 && G.scen === 'D') srcs.push(P(w1.veh.s, w1.veh.lat));
+  srcs.forEach(q => { const n = 150 * f.int * dt; for (let i = 0; i < n; i++) part(G, q.x + rnd(-6, 6), q.y + rnd(-4, 4), 'fire'); if (Math.random() < dt * 14 * f.int) part(G, q.x + rnd(-4, 4), q.y - 4, 'smoke', { l: 3.2, vy: -22, r: rnd(5, 9) }); });
+}
+function draw() {
+  const g = ctx, now = performance.now() / 1000, z = CAM.z, sc = K * z; LBL.length = 0;
+  const vx = CAM.x - W / 2 / z, vy = CAM.y - H / 2 / z, vw = { x0: vx, y0: vy, x1: vx + W / z, y1: vy + H / z };
+  const shk = G.shake > 0 ? G.shake * 5 : 0, sx = shk ? rnd(-shk, shk) : 0, sy = shk ? rnd(-shk, shk) : 0;
+  g.setTransform(1, 0, 0, 1, 0, 0); g.fillStyle = '#b9d596'; g.fillRect(0, 0, cv.width, cv.height);
+  g.setTransform(sc, 0, 0, sc, -vx * sc + sx * K, -vy * sc + sy * K);
+  drawBGWorld(g, vx, vy, W / z, H / z, z);
+  const j = G.jam;
+  G.zones.forEach(zn => drawZone(g, zn, now, vw));
+  // Bremsspuren
+  g.lineCap = 'round'; G.skids.forEach(sk => { if (sk.pts.length > 2) { g.strokeStyle = 'rgba(15,15,15,.5)'; g.lineWidth = 1.6; for (const off of [-3, 3]) { g.beginPath(); sk.pts.forEach((q, i) => { const px = q[0] - q[3] * off, py = q[1] + q[2] * off; i ? g.lineTo(px, py) : g.moveTo(px, py); }); g.stroke(); } } });
+  // Rettungsgasse-Band: innen (grün) Blaulicht, außen (orange) Abschleppdienst
+  if (j.active && j.gasse > .15) {
+    const a = Math.min(.5, j.gasse * .6), band = (l0, l1, col, s0, s1) => { if (s1 <= s0) return; g.beginPath(); for (let s = s0; s <= s1; s += 8) { const q = P(s, l0); s === s0 ? g.moveTo(q.x, q.y) : g.lineTo(q.x, q.y); } for (let s = s1; s >= s0; s -= 8) { const q = P(s, l1); g.lineTo(q.x, q.y); } g.closePath(); g.fillStyle = col; g.fill(); };
+    band(GC1 - 9, GC1 + 9, `rgba(47,191,113,${a * .5})`, j.tail, G.acc.s1);
+    g.beginPath(); for (let s = j.tail; s <= G.acc.s1; s += 8) { const q = P(s, GC1); s === j.tail ? g.moveTo(q.x, q.y) : g.lineTo(q.x, q.y); } g.strokeStyle = `rgba(255,255,255,${a + .2})`; g.lineWidth = 1.4; g.setLineDash([6, 9]); g.lineDashOffset = -now * 24; g.stroke(); g.setLineDash([]);
+  }
+  // Hof: geparkte Abschleppwagen + Werkstatt
+  G.fleet.forEach((f, i) => { if (f.state !== 'depot') return; const p = bayPose(f.bay), T = TOWSP[f.type]; if (p.x < vw.x0 - 60 || p.x > vw.x1 + 60 || p.y < vw.y0 - 60 || p.y > vw.y1 + 60) return; g.save(); g.translate(p.x, p.y); g.rotate(p.a); g.scale(.56, .56); g.fillStyle = 'rgba(0,0,0,.25)'; rr(g, -T.L / 2 + 3, -T.W / 2 + 5, T.L, T.W, 4); g.fill(); drawTow(g, f.type, {}); g.restore(); });
+  drawRepairs(g, now, vw);
+  drawFireAndFx(g, now);
+  if (G.crash && (G.phase === 'crash' || G.acc)) { const rw = G.wrecks[0]; if (!rw || !rw.done) drawRig(g, G, now, 0, rw ? craneAnim(rw) : null); }
+  G.west.forEach(v => drawTrafficVeh(g, v, -1, now, vw));
+  G.traf.forEach(v => { drawTrafficVeh(g, v, 1, now, vw); if (v.hero) { const p = P(v.s, v.lat); chipAt(g, p.x, p.y - 22, 'DU', '#FF7A00', '#1d1d1b', 11); } });
+  drawBridges(g, vw); drawAmb(g, vw); drawDet(g, vw);
+  // Einsatzkräfte
+  G.units.forEach(u => {
+    if (u.mode === 'alarm') return; let x, y, a;
+    if (u.mode === 'local' || u.mode === 'return' || u.mode === 'wsWait' || u.mode === 'unload') { x = u.x; y = u.y; a = u.a; } else { const p = P(u.s, u.lat), yaw = Math.atan2(u.ly || 0, Math.max(u.v, 20)); x = p.x; y = p.y; a = p.a + yaw; }
+    u.dx = x; u.dy = y; u.a = a;
+    if (x < vw.x0 - 90 || x > vw.x1 + 90 || y < vw.y0 - 90 || y > vw.y1 + 90) return;
+    g.save(); g.globalAlpha = u.fade; g.translate(x, y); g.rotate(a); drawEm(g, u, now); g.restore();
+    if (u.load) drawTowLoad(g, u, now);
+    if (u.fade >= 1) { const e = unitEta(u); chipAt(g, x, y - 20, u.sp.abbr + (u.type === 'tow' && u.fleet ? ' ' + u.fleet.name.split(' ').pop() : '') + (e != null && e > .5 && u.mode !== 'depart' && u.mode !== 'return' ? ' · ' + minTx(e) : ''), u.sp.col, u.type === 'rd' ? '#1d1d1b' : '#fff'); }
+    if (u.site && u.mode === 'hw' && G.acc && !G.acc.cleared) drawCrew(g, u, x, y, a, now);
+  });
+  G.wrecks.forEach(w => { const an = craneAnim(w); if (an) drawCrane(g, w, an, now); });
+  // Leitkegel der Polizei
+  const pol = unitsOf('pol').find(u => u.site); if (pol && G.acc) { const n = Math.floor(Math.min(1, pol.wt / 6) * 12); for (let i = 0; i < n; i++) { const p = P(G.acc.front - 36 - i * 12, 58 - i * 3.4); g.fillStyle = 'rgba(0,0,0,.25)'; g.beginPath(); g.arc(p.x + 1, p.y + 1.5, 2.6, 0, 7); g.fill(); g.fillStyle = '#ff6a1a'; g.beginPath(); g.arc(p.x, p.y, 2.5, 0, 7); g.fill(); g.fillStyle = '#fff'; g.beginPath(); g.arc(p.x, p.y, 1.2, 0, 7); g.fill(); } }
+  drawParts(g, G);
+  // Markierungen
+  if (j.active && G.acc) { const p = P(j.tail, -104); chipAt(g, p.x, p.y, 'STAU-ENDE · ' + Math.round(j.len * 2) + ' m', '#e5483f', '#fff', 11); }
+  if (G.acc && !G.acc.cleared) { const p = P(G.acc.mid, 40), bob = Math.sin(now * 3) * 2; g.fillStyle = 'rgba(229,72,63,.22)'; g.beginPath(); g.arc(p.x, p.y, 22 + (now * 30 % 22), 0, 7); g.fill(); chipAt(g, p.x, p.y - 62 + bob, '⚠ UNFALL', '#e5483f', '#fff', 12); }
+  if (G.phase === 'crash') { const p = P(G.crash.s0 + 50, 30); chipAt(g, p.x, p.y - 50, 'UNFALL!', '#e5483f', '#fff', 15); }
+  // Aufprall-Blitz
+  if (G.shake > .35) { g.setTransform(1, 0, 0, 1, 0, 0); g.fillStyle = `rgba(255,255,255,${(G.shake - .35) * .5})`; g.fillRect(0, 0, cv.width, cv.height); }
+  // Beschriftungen im Bildschirmraum (bleiben bei jedem Zoom lesbar)
+  g.setTransform(K, 0, 0, K, 0, 0);
+  for (const l of LBL) { const X = (l.x - vx) * z, Y = (l.y - vy) * z; if (X < -80 || X > W + 80 || Y < -20 || Y > H + 20) continue; g.font = `900 ${l.size + 1}px system-ui,Arial`; g.textAlign = 'center'; const w = g.measureText(l.txt).width + 12; g.fillStyle = l.bg; rr(g, X - w / 2, Y - l.size, w, l.size * 1.9, 6); g.fill(); g.fillStyle = l.fg; g.fillText(l.txt, X, Y + l.size * .45); }
+  if (!MOB || (fcnt++ % 3) === 0) drawMini(now);
+}
+function drawCrew(g, u, x, y, a, now) {
+  const w = G.wrecks.find(w2 => !w2.done), wp = w ? P((w.box.s0 + w.box.s1) / 2, Math.min(60, (w.box.l0 + w.box.l1) / 2)) : cposAcc(), k = ss(u.wt / 3);
+  const person = (tx, ty, col) => { g.fillStyle = 'rgba(0,0,0,.3)'; g.beginPath(); g.arc(tx + 1, ty + 1.5, 2.6, 0, 7); g.fill(); g.fillStyle = col; g.beginPath(); g.arc(tx, ty, 2.5, 0, 7); g.fill(); g.fillStyle = '#f3d2b0'; g.beginPath(); g.arc(tx, ty, 1.1, 0, 7); g.fill(); };
+  if (u.type === 'fw') { const f = G.fire; for (let i = 0; i < 3; i++) { const tx = lerp(x, wp.x + (i - 1) * 8, k), ty = lerp(y, wp.y + (i - 1) * 6, k); person(tx, ty, '#d9322b'); if (i === 1 && k > .6) { g.strokeStyle = '#2a6b3f'; g.lineWidth = 1.6; g.beginPath(); g.moveTo(x, y); g.quadraticCurveTo((x + tx) / 2 + 8, (y + ty) / 2 - 8, tx, ty); g.stroke(); if (fireOn() && f && f.int > 0 && Math.random() < .8) { const q = cpos(f.ds, f.lat); part(G, tx, ty, 'foam', { vx: (q.x - tx) * 1.1, vy: (q.y - ty) * 1.1, l: .8, r: 3 }); } } } }
+  else if (u.type === 'rd') { const t2 = ss((u.wt - 2) / 6), pr = t2 < .5 ? t2 * 2 : 1 - (t2 - .5) * 2; const px = lerp(wp.x, x, t2), py = lerp(wp.y, y, t2); person(lerp(x, wp.x, k) + 0, lerp(y, wp.y, k) + 4, '#ff8a00'); if (t2 > 0 && t2 < 1) { g.save(); g.translate(px, py); g.rotate(a); g.fillStyle = '#e8e8e4'; rr(g, -6, -2, 12, 4, 1); g.fill(); g.fillStyle = '#d9322b'; g.fillRect(-1, -2, 2, 4); g.restore(); person(px - 5, py - 3, '#ff8a00'); person(px + 5, py + 3, '#ff8a00'); } }
+  else if (u.type === 'pol') { for (let i = 0; i < 2; i++) person(lerp(x, wp.x - 20, k) + i * 6, lerp(y, wp.y + 14, k), '#3b82f6'); }
+  else if (u.type === 'tow') {
+    const w2 = u.wreck, an = w2 && craneAnim(w2), c = w2 ? w2.clear : 0;
+    if (!u.rel || !w2) { person(x + Math.cos(a + 1.57) * 8, y + Math.sin(a + 1.57) * 8, '#FF7A00'); chipAt(g, x, y - 34, 'wartet auf Freigabe', '#ffb020', '#3b2a00', 9); return; }
+    const kk = c < .12 ? ss(c / .12) : c < .2 ? 1 : 1 - ss((c - .2) / .14), p0 = an ? an.p0 : wp;
+    person(lerp(x, p0.x, clamp(kk, 0, 1)), lerp(y, p0.y, clamp(kk, 0, 1)) + 3, '#FF7A00'); person(x + Math.cos(a + 1.57) * 8, y + Math.sin(a + 1.57) * 8, '#FF7A00');
+    if (an && an.ph === 'hook' && Math.random() < .3) part(G, an.tip.x, an.tip.y, 'spark');
+    if (an && an.ph === 'lower' && Math.random() < .25) part(G, an.pos.x, an.pos.y + 3, 'smoke', { l: 1, vy: -6, r: 2.5 });
+    g.fillStyle = 'rgba(0,0,0,.65)'; rr(g, x - 22, y - 34, 44, 8, 4); g.fill(); g.fillStyle = '#2fbf71'; rr(g, x - 20.5, y - 32.5, 41 * c, 5, 2.5); g.fill();
+    chipAt(g, x, y - 44, an ? { hook: 'schlägt Haken an', lift: 'hebt Wrack', swing: 'schwenkt Wrack', lower: 'setzt ab', strap: 'sichert Ladung' }[an.ph] : 'Bergung', '#2fbf71', '#06361d', 9);
+  }
+}
+function drawTowLoad(g, u, now) {
+  const L = u.load; if (!L) return; const sc = Math.min(1, bedLenOf(u) * .95 / L.len), bed = towBedPos(u), TT = TOWSP[u.tt];
+  g.save(); g.globalAlpha = u.fade; g.translate(bed.x, bed.y); g.rotate(u.a); g.scale(sc, sc); drawVeh(g, { len: L.len, wid: L.wid, kind: L.kind, col: L.col, col2: L.col2, wreck: true }, now); g.restore();
+  g.save(); g.translate(bed.x, bed.y); g.rotate(u.a); g.strokeStyle = '#ffb020'; g.lineWidth = 1.1; for (const k of [-.28, .28]) { g.beginPath(); g.moveTo(k * bedLenOf(u), -5.5); g.lineTo(k * bedLenOf(u), 5.5); g.stroke(); } g.restore();
+}
+function drawRepairs(g, now, vw) {
+  for (const r of G.reps) {
+    if (r.x == null) continue; if (r.x < vw.x0 - 60 || r.x > vw.x1 + 60 || r.y < vw.y0 - 60 || r.y > vw.y1 + 60) continue;
+    const L = r.load, dmg = r.st === 'fix' ? 1 - r.prog : 1;
+    g.save(); g.translate(r.x, r.y); g.rotate(r.a); g.scale(r.sc, r.sc); drawVeh(g, { len: L.len, wid: L.wid, kind: L.kind, col: L.col, col2: L.col2, wreck: dmg > .5, braking: false }, now); g.restore();
+    if (r.st === 'fix') {
+      const ws = YD.ws[r.slot], p = yp(ws.s, ws.lat);
+      if (Math.sin(now * 14 + r.slot) > .3) { g.fillStyle = 'rgba(255,230,140,.9)'; g.beginPath(); g.arc(p.x + Math.sin(now * 9) * 8, p.y + Math.cos(now * 7) * 6, 2.2, 0, 7); g.fill(); g.fillStyle = 'rgba(160,220,255,.5)'; g.beginPath(); g.arc(p.x + Math.sin(now * 9) * 8, p.y + Math.cos(now * 7) * 6, 6, 0, 7); g.fill(); }
+      const q = yp(ws.s, YD.wsBox.l0 - 4); chipAt(g, q.x, q.y - 4, '🔧 ' + Math.round(r.prog * 100) + ' %', '#1d1d1b', '#FF7A00', 10);
+    }
+  }
+  G.ws.forEach((w, i) => { if (!w.q.length) return; const q = yp(wsStop(i) + 14, YD.ws[i].spot - 22); if (q.x < vw.x0 - 60 || q.x > vw.x1 + 60 || q.y < vw.y0 - 60 || q.y > vw.y1 + 60) return; chipAt(g, q.x, q.y, 'wartet ' + w.q.length, '#5a5d65', '#fff', 9); });
+}
+/* ----- Minimap ----- */
+let MINIBG = null, fcnt = 0;
+function drawMini(now) {
+  const g = mctx, mw = mini.width, mh = mini.height, k = mw / WW; if (!MINIBG) { MINIBG = document.createElement('canvas'); MINIBG.width = mw; MINIBG.height = mh; MINIBG.getContext('2d').drawImage(BG, 0, 0, mw, mh); }
+  g.setTransform(1, 0, 0, 1, 0, 0); g.drawImage(MINIBG, 0, 0); g.setTransform(k, 0, 0, k, 0, 0);
+  G.zones.forEach(z => { g.strokeStyle = '#f2b705'; g.lineWidth = 26; g.beginPath(); for (let s = z.s0; s <= z.s1; s += 30) { const p = P(s, 50); s === z.s0 ? g.moveTo(p.x, p.y) : g.lineTo(p.x, p.y); } g.stroke(); });
+  if (G.jam.active && G.acc) { g.strokeStyle = 'rgba(229,72,63,.9)'; g.lineWidth = 30; g.beginPath(); for (let s = G.jam.tail; s <= G.acc.front; s += 30) { const p = P(s, 35); s === G.jam.tail ? g.moveTo(p.x, p.y) : g.lineTo(p.x, p.y); } g.stroke(); }
+  const dot = (x, y, r, c) => { g.fillStyle = c; g.beginPath(); g.arc(x, y, r, 0, 7); g.fill(); };
+  if (G.acc && !G.acc.cleared) { const p = P(G.acc.mid, 30); dot(p.x, p.y, 52 + 14 * Math.sin(now * 5), '#e5483f'); }
+  G.units.forEach(u => { if (u.mode === 'alarm' || u.dx == null) return; dot(u.dx, u.dy, 32, u.sp.col); });
+  const hr = G.traf.find(v => v.hero); if (hr) { const p = P(hr.s, hr.lat); dot(p.x, p.y, 36, '#FF7A00'); }
+  g.setTransform(1, 0, 0, 1, 0, 0); g.strokeStyle = '#fff'; g.lineWidth = 2.5; g.strokeRect((CAM.x - W / 2 / CAM.z) * k, (CAM.y - H / 2 / CAM.z) * k, W / CAM.z * k, H / CAM.z * k);
+}
+/* ===== Hauptschleife ===== */
+let last = performance.now(), hudT = 0;
+function frame(ts) {
+  const dt = Math.min(.05, (ts - last) / 1000); last = ts;
+  if (!G.paused) { for (let k = 0; k < G.speed; k++) { step(dt); fxEmit(dt); siren(dt); } }
+  camStep(dt); draw(); hudT -= dt; if (hudT <= 0) { hudT = .12; updateHud(); } liveTick(dt);
+  requestAnimationFrame(frame);
+}
+function warm(sec) { if (MOB) sec = Math.min(sec, 110); for (let i = 0; i < sec * 10; i++) step(.1); G.t = 0; G.units = []; G.parts = []; }
+/* ===== Oberfläche ===== */
+const panel = $('#panel'); let lastSig = '';
+const fmtLoc = () => 'A7 · Fahrtrichtung Hamburg · km ' + kmOf(G.acc ? G.acc.mid : G.crash ? G.crash.s0 : 1000);
+const uOf = t => G.units.find(u => u.type === t);
+function uStat(t, uu) {
+  const us = uu ? [uu] : unitsOf(t), AL = G.alarmed[t];
+  if (!AL) return t === 'tow' ? 'noch nicht disponiert' : 'nicht alarmiert';
+  if (!us.length) return t === 'tow' ? (G.jobs.length && G.jobs.every(j => j.done) ? 'alle zurück im Depot' : 'zurück im Depot') : 'zurück auf der Wache';
+  const u = us.slice().sort((a, b) => (a.site ? 1 : 0) - (b.site ? 1 : 0))[0], n = us.length > 1 ? ' ×' + us.length : '';
+  if (u.mode === 'alarm') return (u.waiting ? 'wartet auf Hauptwrack' : 'alarmiert · rückt aus') + n; if (u.mode === 'local') return 'Anfahrt · Landstraße' + n;
+  if (u.mode === 'hw') return (u.site ? (t === 'tow' ? (u.rel ? 'Bergung läuft' : 'wartet auf Freigabe') : t === 'pol' ? 'sichert Unfallstelle' : u.done ? 'fertig · wartet auf freie Fahrbahn' : t === 'fw' && fireOn() ? 'löscht' : 'im Einsatz') : (G.jam.active && u.s > G.jam.tail ? 'Anfahrt · Rettungsgasse' : 'Anfahrt · A7')) + n;
+  if (u.mode === 'wsWait') return 'wartet auf Werkstattplatz' + n; if (u.mode === 'unload') return 'liefert in Werkstatt ab' + n; if (u.homing) return 'fährt zum Stellplatz' + n;
+  return (t === 'tow' ? (u.load ? 'Rückfahrt mit Fahrzeug zum Hof' : 'Rückfahrt zum Hof') : 'Rückfahrt zur Wache') + n;
+}
+function uEta(t) { const us = unitsOf(t); if (!us.length) return '–'; const u = us.slice().sort((a, b) => (unitEta(b) ?? 0) - (unitEta(a) ?? 0)).reverse().find(x => !x.site && ['alarm', 'local', 'hw'].includes(x.mode)); if (!u) return us.every(x => x.mode === 'depart' || x.mode === 'return') ? '↩' : 'vor Ort'; const e = unitEta(u); return e == null ? '…' : minTx(e); }
+function unitRow(t) {
+  const sp = t === 'tow' ? { abbr: 'TOW', col: '#FF7A00', label: 'Abschleppdienst' } : USP[t], n = unitsOf(t).length;
+  return `<div class="unit"><div class="dot" style="background:${sp.col};color:${t === 'rd' ? '#1d1d1b' : '#fff'}">${sp.abbr}</div><div><span class="nm">${sp.label}${n > 1 ? ' ×' + n : ''}</span><small data-live="us:${t}">${uStat(t)}</small></div><div class="r" data-live="ue:${t}">${uEta(t)}</div></div>`;
+}
+function timelineHTML() {
+  const L = G.log.filter(l => G.ev.crash == null || l.t >= G.ev.crash - .1);
+  return `<div class="card"><div class="tl">${L.length ? L.map(l => `<div class="d"><b>${rt(l.t - (G.ev.crash ?? 0))}</b><span>${esc(l.txt)}</span></div>`).join('') : '<div>Noch keine Ereignisse.</div>'}</div></div>`;
+}
+function playerHTML(key, memo) {
+  const pl = G.play && G.play.key === key;
+  return `<div class="player"><button class="play" data-act="play" data-key="${key}" data-sec="${memo.sec}">${ic(pl ? 'pause' : 'play')}</button><div class="wave" data-wave="${key}">${memo.bars.map((h, i) => `<i style="--h:${h}px"></i>`).join('')}</div><b data-playt="${key}">${mmss(memo.sec)}</b></div>`;
+}
+const bars = () => Array.from({ length: 30 }, () => 5 + Math.round(Math.random() * 20));
+/* --- Fahrer --- */
+function driverPanel() {
+  if (G.phase === 'select') return `<div><div class="h2">Szenario wählen</div><p class="sub">Du bist Lkw-Fahrer auf der A7. Wähle, was gleich passiert – danach meldest du den Unfall, der Disponent koordiniert die Bergung.</p></div>
+    ${Object.entries(SCEN).map(([k, s]) => `<button class="scn ${G.scen === k ? 'on' : ''}" data-act="scen" data-k="${k}"><div class="ti">${tIc(s.need)}</div><div><b>${s.title}</b><small>${s.desc}</small></div></button>`).join('')}
+    <button class="btn big" data-act="startScen">${ic('arrow')} Fahrt starten</button><div class="muted" style="font-size:12px;color:#8a8a85;text-align:center">Tipp: Mit „Disponent“ oben wechselst du die Seite. Die Simulation läuft in 10-fachem Zeitraffer.</div>`;
+  if (G.phase === 'drive') return `<div class="card" style="display:flex;gap:14px;align-items:center"><div class="spin"></div><div><div class="h2" style="font-size:18px">Du fährst auf der A7 …</div><p class="sub" style="margin:2px 0 0">${esc(SCEN[G.scen].vtype)} · Spur 2 · Fahrtrichtung Hamburg</p></div></div>`;
+  if (G.phase === 'crash') return `<div class="err" style="font-size:16px"><b>Unfall!</b> Bleib ruhig – gleich kannst du die Meldung erstellen.</div>`;
+  if (!G.report) return wizard();
+  return tracking();
+}
+function wizard() {
+  const f = G.form, st = G.step, S = ['Fahrzeug', 'Hergang', 'Fotos', 'Sprache', 'Senden'];
+  const stepper = `<div class="steps">${S.map((s, i) => `<div class="${i + 1 < st ? 'done' : i + 1 === st ? 'cur' : ''}"><i></i>${s}</div>`).join('')}</div>`;
+  const err = G.err ? `<div class="err">${esc(G.err)}</div>` : ''; let c = '';
+  if (st === 1) c = `<div><div class="h2">Unfall melden</div><p class="sub">Dein Standort wurde automatisch erkannt.</p></div>
+    <div class="card"><div class="lbl" style="font-size:11px;font-weight:800;color:#8a8a85">STANDORT</div><b>${fmtLoc()}</b></div>
+    <label class="field"><span>Kennzeichen</span><input class="plate" data-bind="plate" value="${esc(f.plate)}" maxlength="12"></label>
+    <div><div style="font-size:12px;font-weight:800;color:#8a8a85;text-transform:uppercase">Fahrzeugtyp</div><div class="opts">${VTYPES.map(v => `<button class="opt ${f.vtype === v ? 'on' : ''}" data-act="vt" data-v="${esc(v)}">${esc(v)}</button>`).join('')}</div></div>
+    <label class="field"><span>Telefon für Rückfragen</span><input data-bind="phone" value="${esc(f.phone)}"></label>`;
+  if (st === 2) c = `<div><div class="h2">Was ist passiert?</div><p class="sub">Die Antworten sind aus den Fahrzeugdaten vorbelegt – prüfe sie kurz.</p></div>
+    ${QS.map((q, i) => `<div class="q"><h3><span class="n">${i + 1}</span>${q.q}</h3><div class="${q.grid ? 'opt-grid' : 'opts'}">${q.o.map(([v, l]) => `<button class="opt ${f.a[q.k] === v ? 'on' : ''}" data-act="q" data-k="${q.k}" data-v="${v}">${l}</button>`).join('')}</div></div>`).join('')}
+    <div class="q"><h3><span class="n">5</span>Besonderheiten</h3><div class="opt-grid">${CARGO.map(([v, l]) => `<button class="opt multi ${f.a.cargo.includes(v) ? 'on' : ''}" data-act="cargo" data-v="${v}">${l}</button>`).join('')}</div></div>`;
+  if (st === 3) c = `<div><div class="h2">Fotos</div><p class="sub">Aus sicherer Entfernung – hinter der Leitplanke!</p></div>
+    <label class="drop">${ic('cam')}Foto aufnehmen oder hochladen<input type="file" id="photoIn" accept="image/*" multiple capture="environment"></label>
+    ${f.photos.length ? `<div class="thumbs">${f.photos.map((p, i) => `<div class="thumb"><img src="${p}" alt=""><button data-act="rmPhoto" data-i="${i}">${ic('x')}</button></div>`).join('')}</div>` : ''}
+    <button class="btn ghost" data-act="demoPhoto">${ic('plus')} Beispielfoto einfügen (Demo)</button>`;
+  if (st === 4) { const r = G.rec; c = `<div><div class="h2">Sprachmemo</div><p class="sub">Kurz erklären, was passiert ist (Demo – wird nur simuliert).</p></div>
+    <div class="card rec"><button class="mic ${r ? 'on' : ''}" data-act="rec">${ic(r ? 'stop' : 'mic')}</button><div class="timer" id="recT">${mmss(r ? r.sec : f.memo ? f.memo.sec : 0)}</div><div style="color:#8a8a85;font-weight:700">${r ? 'Aufnahme läuft … zum Beenden tippen' : f.memo ? 'Aufnahme gespeichert' : 'Zum Aufnehmen tippen'}</div></div>
+    ${f.memo ? playerHTML('draft', f.memo) + `<button class="btn ghost" data-act="memoDel">${ic('x')} Löschen</button>` : ''}`; }
+  if (st === 5) c = `<div><div class="h2">Alles korrekt?</div><p class="sub">Die Meldung geht an die Disposition. Rettungskräfte werden automatisch mitalarmiert.</p></div>
+    <div class="card sum"><dl><dt>Standort</dt><dd>km ${kmOf(G.acc.mid)}</dd><dt>Fahrzeug</dt><dd>${esc(f.vtype)} · ${esc(f.plate)}</dd>${QS.map(q => `<dt>${q.q.replace('?', '')}</dt><dd>${LAB[q.k + ':' + f.a[q.k]]}</dd>`).join('')}<dt>Besonderheiten</dt><dd>${f.a.cargo.length ? f.a.cargo.map(v => LAB['cargo:' + v]).join(', ') : 'keine'}</dd><dt>Fotos</dt><dd>${f.photos.length}</dd><dt>Sprachmemo</dt><dd>${f.memo ? mmss(f.memo.sec) : 'keins'}</dd></dl></div>`;
+  return `${stepper}${st === 1 ? `<button class="btn ghost" data-act="quick">${ic('send')} Mit Vorschlag sofort senden (Demo)</button>` : ''}${err}${c}
+    <div class="row"><button class="btn ghost" style="width:auto" data-act="back">${ic('back')}</button>${st < 5 ? `<button class="btn" data-act="next">Weiter ${ic('arrow')}</button>` : `<button class="btn" data-act="send">${ic('send')} Notruf senden</button>`}</div>`;
+}
+function tracking() {
+  const cleared = G.acc && G.acc.cleared, towing = unitsOf('tow').some(u => u.rel), nW = G.wrecks.length, dW = G.wrecks.filter(w => w.done).length;
+  const head = cleared ? 'Fahrbahn frei – gute Weiterfahrt!' : G.jobs.length ? (towing ? 'Bergung läuft' : 'Abschleppdienst ist unterwegs') : 'Meldung gesendet – Disposition prüft';
+  return `<div class="card" style="background:#1D1D1B;color:#fff"><div class="chip or" style="margin-bottom:8px">Meldung gesendet</div><div class="h2" style="color:#fff">${head}</div>${!G.jobs.length && !cleared ? '<p class="sub" style="color:#bbb">Polizei und Rettungsdienst sind automatisch alarmiert. Bleib hinter der Leitplanke, Warnweste an.</p>' : ''}${G.jobs.length && !cleared ? `<div class="eta" style="margin-top:10px" data-live="ue:tow">${uEta('tow')}</div><div style="color:#bbb;font-weight:700">bis zum Abschleppdienst · ${dW}/${nW} Wracks geborgen</div>` : ''}</div>
+    <div class="h">Einsatzkräfte</div>${['pol', 'rd', 'fw'].filter(t => G.alarmed[t]).map(unitRow).join('')}${unitRow('tow')}
+    <div class="h">Ablauf</div>${timelineHTML()}
+    <button class="btn ghost" data-act="newSim">${ic('plus')} Neue Simulation</button>`;
+}
+/* --- Disponent --- */
+const curWreck = () => G.wrecks.find(w => w.id === G.selWreck) || G.wrecks.find(w => !w.done && !w.tow) || G.wrecks[0];
+const routeList = () => G.acc ? RAMPS.filter(r => r.s + 70 < G.acc.front - 130).slice(-4) : [];
+function fleetBack(f) { const u = G.units.find(x => x.fleet === f); if (!u) return null; if (u.mode === 'return') return (u.path.len - u.pd) / u.sp.vLoc; if (u.mode === 'depart') return Math.max(0, ((u.exitS || EXIT.s) - u.s) / 60) + backPath(gateU('depot'), u.exitS).len / 80; return null; }
+function dispatchPanel() {
+  if (!G.acc) return `<div class="card" style="display:flex;gap:12px;align-items:center"><div class="spin"></div><div><b>Leitstelle bereit</b><small style="display:block;color:#9a9a93">${G.phase === 'select' ? 'Wechsle zum Fahrer und starte ein Szenario.' : 'Verkehr normal – warte auf Meldungen …'}</small></div></div>`;
+  const r = G.report, W = curWreck(), nW = G.wrecks.length, dW = G.wrecks.filter(w => w.done).length;
+  let h = `<div class="card" style="border-left:5px solid var(--red)"><div class="row"><b style="font-size:16px">Unfall A7 · km ${kmOf(G.acc.mid)}</b><span class="chip red" style="margin-left:auto">${G.acc.cleared ? 'geräumt' : 'aktiv'}</span></div><div style="color:#9a9a93;font-weight:600;margin-top:4px">Stau: <b style="color:#fff" data-live="jam">0 m</b> · Rettungsgasse: <b style="color:#fff" data-live="gasse">–</b>${G.fire && G.fire.on ? ' · <b style="color:#ff8a4d">BRAND</b>' : ''}</div></div>`;
+  if (!r) h += `<div class="card"><b>Noch keine Fahrer-Meldung</b><p style="color:#9a9a93;margin:4px 0 10px">Die Alarmierung läuft bereits automatisch (Unfallerkennung). Du kannst die Meldung abwarten oder überspringen.</p><button class="btn ghost" data-act="skipReport">Meldung überspringen (Demo)</button></div>`;
+  else {
+    h += `<div class="h"><span>Meldung des Fahrers</span><span>${rt(G.ev.report - G.ev.crash)} nach Unfall</span></div><div class="card"><dl class="qa"><dt>Fahrzeug</dt><dd>${esc(r.vtype)} · ${esc(r.plate)}</dd><dt>Fahrer</dt><dd>${esc(r.name)} · ${esc(r.phone)}</dd><dt>Ereignis</dt><dd>${LAB['type:' + r.a.type]}</dd><dt>Fahrbahn</dt><dd>${LAB['block:' + r.a.block]} blockiert</dd><dt>Verletzte</dt><dd>${LAB['hurt:' + r.a.hurt]}</dd></dl>
+      <div class="chips" style="margin-top:8px">${r.a.cargo.length ? r.a.cargo.map(v => `<span class="chip red">${LAB['cargo:' + v]}</span>`).join('') : '<span class="chip">keine Besonderheiten</span>'}</div>
+      ${r.photos.length ? `<div class="gal" style="margin-top:10px">${r.photos.map(p => `<img src="${p}" alt="">`).join('')}</div>` : ''}${r.memo ? `<div style="margin-top:10px">${playerHTML('rep', r.memo)}</div>` : ''}</div>`;
+  }
+  h += `<div class="h"><span>Automatisch alarmiert</span></div>${['pol', 'rd', 'fw'].filter(t => G.alarmed[t]).map(unitRow).join('') || '<div class="empty">Noch keine Kräfte alarmiert …</div>'}`;
+  h += `<div class="h"><span>Bergungsaufträge</span><span>${dW}/${nW} geborgen</span></div>` + G.wrecks.map(w => { const st = w.done ? '✓ geborgen' : w.tow ? (w.tow.fleet.name + (w.tow.rel ? ' · Bergung läuft' : ' · unterwegs')) : 'offen'; return `<button class="pk ${W && W.id === w.id ? 'on' : ''} ${w.done ? 'off' : ''}" data-act="pickWreck" data-id="${w.id}"><div class="ti dk">${tIc(w.need, 40, 24)}</div><div><span class="nm">${w.label}</span><small>Bedarf: ${TOWT[w.need].size}</small></div><div class="go" style="font-size:12px">${st}</div></button>`; }).join('');
+  if (W && !W.done && !W.tow) {
+    const fl = G.fleet.map(f => ({ f, ok: f.type >= W.need && f.state === 'depot' }));
+    if (!G.towSel || !fl.find(x => x.f.id === G.towSel && x.ok)) { const b = fl.filter(x => x.ok).sort((a, b) => a.f.type - b.f.type)[0]; G.towSel = b ? b.f.id : null; }
+    h += `<div class="h"><span>Fahrzeug für: ${W.label}</span></div>${fl.map(({ f, ok }) => `<button class="pk ${ok ? '' : 'off'} ${G.towSel === f.id ? 'on' : ''}" data-act="pickTruck" data-id="${f.id}"><div class="ti dk">${tIc(f.type, 40, 24)}</div><div><span class="nm">${f.name}</span><small>${f.state !== 'depot' ? 'im Einsatz' + (fleetBack(f) != null ? ' · zurück in ' + minTx(fleetBack(f)) : '') : f.type < W.need ? 'zu klein' : TOWT[f.type].desc}</small></div><div class="go">${f.state !== 'depot' ? '–' : f.type < W.need ? '–' : f.type === W.need ? 'passend' : 'größer'}</div></button>`).join('')}
+    <div class="h"><span>Routen (Stau &amp; Baustellen berücksichtigt)</span><span data-live="rbest"></span></div>${routeList().map(rp => `<button class="pk" data-act="pickRoute" data-i="${rp.id}" data-route="${rp.id}"><div><span class="nm">über ${rp.name}</span><small data-live="rd:${rp.id}">…</small></div><div class="go" data-live="rt:${rp.id}">…</div></button>`).join('')}
+    <div class="card" style="font-size:13px;color:#cfcfc9"><b style="color:#fff">Frühester Bergungsbeginn:</b> <span data-live="start" style="font-weight:900;color:#FF7A00">…</span><br><span style="color:#9a9a93">Bergung erst nach Freigabe durch Polizei${G.alarmed.fw ? ' und Feuerwehr (Brand gelöscht)' : ''}.</span></div>
+    <button class="btn grn big" data-act="accept" ${r && G.towSel && !(W.kind !== 'rig' && rigOpen() && !rigOpen().tow) ? '' : 'disabled'}>${ic('chk')} Auftrag annehmen &amp; losschicken</button>${!r ? '<div style="color:#9a9a93;font-size:12px;text-align:center">Erst nach Eingang der Fahrer-Meldung möglich.</div>' : (W.kind !== 'rig' && rigOpen() && !rigOpen().tow) ? '<div style="color:#ffb020;font-size:12px;text-align:center;font-weight:700">Zuerst das Hauptwrack disponieren – es blockiert die Fahrbahn.</div>' : ''}`;
+  }
+  if (G.jobs.length || G.units.some(u => u.type === 'tow')) h += `<div class="h"><span>Abschleppdienste im Einsatz</span></div>${G.units.filter(u => u.type === 'tow').map(u => { const e = unitEta(u); return `<div class="unit"><div class="dot" style="background:#FF7A00;color:#fff">TOW</div><div><span class="nm">${esc(u.fleet.name)}${u.wreck ? ' → ' + esc(u.wreck.label) : ''}</span><small>${uStat('tow', u)}${e != null && e > .5 && ['alarm', 'local', 'hw'].includes(u.mode) && !u.site ? ' · ' + minTx(e) : ''}</small></div>${canRecall(u) ? `<button class="btn ghost" style="width:auto;padding:6px 10px;margin-left:auto;font-size:12px" data-act="recall" data-id="${u.id}">↩ Zurückrufen</button>` : '<div class="r">–</div>'}</div>`; }).join('') || unitRow('tow')}`;
+  if (G.reps.length || G.fixed || G.ws.some(w => w.q.length)) h += `<div class="h"><span>Werkstatt (Hof)</span><span>${G.fixed} repariert</span></div>` + G.ws.map((w, i) => { const r = w.cur; return `<div class="pk off" style="cursor:default;opacity:1"><div class="ti dk" style="font-size:20px">🔧</div><div><span class="nm">Platz ${i + 1}</span><small>${r ? (r.st === 'in' ? 'Fahrzeug wird eingefahren' : (r.load.rig ? 'Lkw' : 'Fahrzeug') + ' in Reparatur') : 'frei'}${w.q.length ? ' · ' + w.q.length + ' wartet' : ''}</small></div><div class="go" style="font-size:12px">${r && r.st === 'fix' ? Math.round(r.prog * 100) + ' %' : '–'}</div></div>`; }).join('');
+  h += `<div class="h">Ablauf</div>${timelineHTML()}<button class="btn ghost" data-act="newSim">${ic('plus')} Neue Simulation</button>`;
+  return h;
+}
+function sigNow() {
+  return [G.view, G.phase, G.step, !!G.report, G.alertSeen, G.towSel, G.jobs.length, G.selWreck, G.wrecks.filter(w => w.done).length, G.wrecks.filter(w => w.tow).length, G.acc && G.acc.cleared, G.fire && G.fire.on, G.units.map(u => u.type + u.mode + (u.site ? 1 : 0) + (u.rel ? 1 : 0)).join(','), G.fleet.map(f => f.state).join(''), G.reps.map(r => r.st + Math.round(r.prog * 10)).join(), G.ws.map(w => w.q.length).join(), G.fixed, !!G.rec, G.log.length, G.err, G.form && G.form.photos.length, G.form && !!G.form.memo, G.play && G.play.key, G.scen].join('|');
+}
+function renderPanel(force) {
+  const s = sigNow(); if (!force && s === lastSig) return; lastSig = s;
+  const ctl = document.activeElement; if (!force && ctl && ctl.tagName === 'INPUT' && panel.contains(ctl)) return;
+  panel.className = G.view === 'driver' ? 'light' : ''; panel.innerHTML = G.view === 'driver' ? driverPanel() : dispatchPanel();
+  $('#vDrv').className = G.view === 'driver' ? 'on' : ''; $('#vDis').className = G.view === 'dispatch' ? 'on' : '';
+  $('#vDrv').innerHTML = ic('driver') + ' Fahrer'; const n = G.report && !G.alertSeen ? 1 : 0; $('#vDis').innerHTML = ic('desk') + ' Disponent' + (n ? `<span class="badge">${n}</span>` : '');
+  if (G.view === 'dispatch' && G.report && !G.alertSeen && !$('#ov').classList.contains('on')) showOverlay('alert');
+  setBtns();
+}
+/* ===== HUD, Live-Werte, Overlays ===== */
+function setBtns() { $('#bPause').innerHTML = ic(G.paused ? 'play' : 'pause'); $('#bPause').classList.toggle('on', G.paused); $('#bSpeed').textContent = G.speed + '×'; $('#bSpeed').classList.toggle('on', G.speed > 1); $('#bSound').innerHTML = ic(G.mute ? 'mute' : 'snd'); }
+function updateHud() {
+  $('#hClock').textContent = G.ev.crash != null ? rt(G.t - G.ev.crash) : '–'; const j = G.jam; $('#hJam').textContent = Math.round(j.len * 2) + ' m'; $('#hJamP').classList.toggle('red', j.active);
+  $('#hGasse').textContent = j.active ? Math.round(j.gasse * 100) + ' %' : '–';
+}
+let liveT = 0;
+function routeInfo() {
+  const f = G.fleet.find(x => x.id === G.towSel), tt = f ? f.type : need0(), sp = towSpec(tt), W0 = curWreck(), est = RAMPS.map(r => routeEst(sp, r.id, W0));
+  let best = null; est.forEach(e => { if (e && e.ok && (!best || e.total < best.total)) best = e; }); return { est, best, sp };
+}
+const need0 = () => (curWreck() || { need: 0 }).need;
+function releaseEta() {
+  let e = 0; const pol = uOf('pol'), fw = uOf('fw');
+  if (G.alarmed.pol && pol) e = Math.max(e, pol.site ? 0 : (unitEta(pol) ?? 0));
+  if (G.alarmed.fw && fw) e = Math.max(e, (fw.site ? Math.max(0, fw.sp.work + 3 - fw.wt) : (unitEta(fw) ?? 0) + fw.sp.work + 3));
+  return e;
+}
+function LV(k, ri) {
+  const [a, b] = k.split(':');
+  if (a === 'us') return uStat(b); if (a === 'ue') return uEta(b);
+  if (a === 'jam') return Math.round(G.jam.len * 2) + ' m (' + G.jam.count + ' Fzg.)'; if (a === 'gasse') return G.jam.active ? Math.round(G.jam.gasse * 100) + ' %' : '–';
+  if (!ri) return null; const e = ri.est[+b];
+  if (a === 'rt') return !e || !e.ok ? '–' : minTx(e.total);
+  if (a === 'rd') return !e ? '' : !e.ok ? 'Auffahrt zu nah an der Unfallstelle' : `Landstraße ${minTx(e.loc)} · A7 frei ${minTx(e.free)} · Stau ${minTx(e.jam + e.jamNo)}${e.pen ? ' · Auffahrt im Stau' : ''}`;
+  if (a === 'rbest') return ri.best ? 'Empfohlen: ' + RAMPS[ri.best.i].name : '';
+  if (a === 'start') { const e2 = G.routeSel != null ? ri.est[G.routeSel] : ri.best; return e2 && e2.ok ? minTx(Math.max(e2.total, releaseEta())) + ' nach Abfahrt' : '–'; }
+  return null;
+}
+function liveTick(dt) {
+  if (G.rec) { G.rec.sec = (performance.now() - G.rec.t0) / 1000; const el = $('#recT'); if (el) el.textContent = mmss(G.rec.sec); }
+  if (G.play) {
+    const p = (performance.now() - G.play.start) / (G.play.sec * 1000), w = document.querySelector(`[data-wave="${G.play.key}"]`);
+    if (p >= 1) { G.play = null; renderPanel(true); } else if (w) { w.querySelectorAll('i').forEach((b, i, all) => b.classList.toggle('on', i / all.length < p)); const t = document.querySelector(`[data-playt="${G.play.key}"]`); if (t) t.textContent = mmss(p * G.play.sec); }
+  }
+  liveT -= dt; if (liveT > 0) return; liveT = .25;
+  renderPanel(false);
+  const ri = G.acc && G.view === 'dispatch' && curWreck() && !curWreck().tow && !curWreck().done ? routeInfo() : null;
+  if (ri && !G.routeManual) G.routeSel = ri.best ? ri.best.i : null;
+  document.querySelectorAll('[data-route]').forEach(b => b.classList.toggle('on', +b.dataset.route === G.routeSel));
+  document.querySelectorAll('[data-live]').forEach(el => { const v = LV(el.dataset.live, ri); if (v != null && el.textContent !== v) el.textContent = v; });
+}
+function showOverlay(kind) {
+  const ov = $('#ov'); if (!kind) { ov.classList.remove('on'); ov.innerHTML = ''; return; }
+  if (kind === 'intro') ov.innerHTML = `<div class="modal"><div class="m-h"><div><h1>Unfall auf der Autobahn</h1><p>Demo: Meldung, Alarmierung, Brand, Stau, Rettungsgasse und mehrfache Bergung</p></div></div><div class="m-b"><div class="how"><div><b>1 · Fahrer</b><span>Du fährst auf der A7. Ein Unfall passiert – du meldest ihn per App (Fotos, Fragen, Sprachmemo).</span></div><div><b>2 · Automatik</b><span>Polizei, Rettungsdienst und Feuerwehr werden automatisch alarmiert und fahren selbstständig an.</span></div><div><b>3 · Stau &amp; Rettungsgasse</b><span>Nachkommende Fahrzeuge stauen sich und bilden eine Rettungsgasse. Zufällige Baustellen und Schleicher sorgen für Verkehr – die Routen berücksichtigen alles.</span></div><div><b>4 · Disponent</b><span>Du wechselst die Rolle und schickst für jedes Wrack den passenden Abschleppwagen los. Karte: ziehen, Mausrad bzw. zwei Finger zoomen, Minimap unten links.</span></div></div><button class="btn big" data-act="closeOv">Los geht’s</button></div></div>`;
+  if (kind === 'pause') ov.innerHTML = `<div class="modal" style="max-width:380px"><div class="m-h"><div><h1>Pause</h1></div></div><div class="m-b"><button class="btn big" data-act="resume">Weiter</button></div></div>`;
+  if (kind === 'alert') { const r = G.report, a = r.a; ov.innerHTML = `<div class="modal" style="max-width:520px"><div class="m-h"><div class="bell">${ic('bell')}</div><div><h1>Neuer Einsatz</h1><p>Fahrer-Meldung · A7 km ${kmOf(G.acc.mid)}</p></div></div><div class="m-b"><div class="chips"><span class="chip or">${esc(r.vtype)}</span><span class="chip">${LAB['type:' + a.type]}</span><span class="chip ${a.block !== 'nein' ? 'red' : ''}">Fahrbahn: ${LAB['block:' + a.block]}</span><span class="chip ${a.hurt === 'ja' ? 'red' : ''}">Verletzte: ${LAB['hurt:' + a.hurt]}</span></div><div style="color:#cfcfc9">${r.photos.length} Foto(s)${r.memo ? ' · Sprachmemo ' + mmss(r.memo.sec) : ''}. Polizei${G.alarmed.rd ? ', Rettungsdienst' : ''}${G.alarmed.fw ? ' und Feuerwehr' : ''} sind bereits automatisch alarmiert.</div><button class="btn big" data-act="alertView">Details ansehen &amp; disponieren</button></div></div>`; sfx.alert(); }
+  if (kind === 'results') { const R = G.results, t = v => v == null ? '–' : rt(v) + ' min'; ov.innerHTML = `<div class="modal" style="max-width:520px"><div class="m-h"><div><h1>Einsatz abgeschlossen</h1><p>Die Fahrbahn ist wieder frei.</p></div></div><div class="m-b"><div class="stars">${[0, 1, 2].map(i => `<svg viewBox="0 0 24 24" class="${i < R.stars ? 'on' : ''}">${IC.star}</svg>`).join('')}</div>
+    <div class="stat4"><div><b>${t(R.dur)}</b><small>Unfall bis Freigabe</small></div><div><b>${Math.round(R.jamMax * 2)} m</b><small>Max. Staulänge</small></div><div><b>${t(R.toPol)}</b><small>Polizei vor Ort</small></div><div><b>${t(R.toRd)}</b><small>Rettungsdienst</small></div><div><b>${t(R.toFw)}</b><small>Feuerwehr</small></div><div><b>${t(R.toTow)}</b><small>Abschleppdienst</small></div><div><b>${R.wrecks}</b><small>Wracks · ${R.tows} Abschleppwagen</small></div><div><b>${t(R.rep)}</b><small>Meldung des Fahrers</small></div><div><b>${t(R.disp)}</b><small>Disposition bis Abfahrt</small></div></div>
+    <div style="color:#9a9a93;font-size:12px">Sterne: schnelle Disposition (≤ 4 min), passendes Fahrzeug, zügige Räumung (≤ 18 min). Zeiten im Zeitraffer.</div><button class="btn big" data-act="newSim">Neue Simulation</button></div></div>`; }
+  ov.classList.add('on');
+}
+/* ===== Foto-Hilfen ===== */
+function demoPhoto(n) {
+  const c = document.createElement('canvas'); c.width = 520; c.height = 380; const g = c.getContext('2d');
+  const sky = g.createLinearGradient(0, 0, 0, 220); sky.addColorStop(0, ['#9FC4E8', '#C9B8E0', '#F2B98A'][n % 3]); sky.addColorStop(1, '#EFE8DC'); g.fillStyle = sky; g.fillRect(0, 0, 520, 380);
+  g.fillStyle = '#7C9A62'; g.fillRect(0, 210, 520, 50); g.fillStyle = '#55565C'; g.fillRect(0, 250, 520, 130); g.fillStyle = '#fff'; for (let x = 10; x < 520; x += 90) g.fillRect(x, 318, 50, 5);
+  g.fillStyle = '#c9ccd1'; g.fillRect(0, 232, 520, 5); g.save(); g.translate(250, 280); g.rotate((n % 2 ? -1 : 1) * (.15 + (n % 3) * .12));
+  g.fillStyle = '#F4F4F2'; g.fillRect(-180, -80, 230, 90); g.fillStyle = '#FF7A00'; g.fillRect(-180, -80, 230, 12); g.fillStyle = '#c8453b'; g.fillRect(55, -55, 90, 65); g.fillStyle = '#BFD8EE'; g.fillRect(105, -48, 34, 24); g.fillStyle = '#222'; [-140, -95, 85, 120].forEach(x => { g.beginPath(); g.arc(x, 18, 19, 0, 7); g.fill(); }); g.restore();
+  g.fillStyle = 'rgba(0,0,0,.55)'; g.fillRect(0, 350, 520, 30); g.fillStyle = '#fff'; g.font = '700 14px Arial'; g.fillText('Beispielfoto ' + (n + 1) + ' – Demo', 12, 370); return c.toDataURL('image/jpeg', .7);
+}
+function resizeImg(file) { return new Promise(res => { const r = new FileReader(); r.onload = () => { const im = new Image(); im.onload = () => { const k = Math.min(1, 520 / Math.max(im.width, im.height)), c = document.createElement('canvas'); c.width = Math.round(im.width * k); c.height = Math.round(im.height * k); c.getContext('2d').drawImage(im, 0, 0, c.width, c.height); res(c.toDataURL('image/jpeg', .7)); }; im.onerror = () => res(null); im.src = r.result; }; r.onerror = () => res(null); r.readAsDataURL(file); }); }
+/* ===== Aktionen ===== */
+function sendReport() {
+  const f = G.form; if (G.rec) stopRec(); G.report = { plate: f.plate.trim().toUpperCase() || 'H-TR 4410', vtype: f.vtype, name: f.name, phone: f.phone, a: JSON.parse(JSON.stringify(f.a)), photos: f.photos.slice(), memo: f.memo };
+  onReport(); sfx.ok(); toast('Meldung gesendet', 'good'); renderPanel(true);
+}
+function startRec() { G.rec = { sec: 0, t0: performance.now() }; } function stopRec() { const s = Math.max(1, Math.round((performance.now() - G.rec.t0) / 1000)); G.form.memo = { sec: s, bars: bars() }; G.rec = null; }
+function newSim() { G.phase = 'select'; G.acc = null; G.crash = null; G.obs = []; G.units = []; G.parts = []; G.report = null; G.jobs = []; G.returns = []; G.wrecks = []; G.fire = null; G.skids = []; G.selWreck = null; G.results = null; G.alarmed = {}; G.ev = {}; G.log = []; G.sched = []; genZones(); G.fleet.forEach(f => f.state = 'depot'); G.camFollow = null; G.jam = { active: false, tail: 0, len: 0, count: 0, gasse: 0, growth: 0, hist: [] }; G.traf = G.traf.filter(v => !v.hero); G.paused = false; G.view = 'driver'; showOverlay(null); renderPanel(true); }
+const ACT = {
+  view: d => { G.view = d.v; renderPanel(true); },
+  closeOv: () => showOverlay(null),
+  resume: () => { G.paused = false; showOverlay(null); renderPanel(true); },
+  scen: d => { G.scen = d.k; renderPanel(true); },
+  startScen: () => { startScenario(G.scen); renderPanel(true); },
+  vt: d => { G.form.vtype = d.v; renderPanel(true); },
+  q: d => { G.form.a[d.k] = d.v; renderPanel(true); },
+  cargo: d => { const c = G.form.a.cargo, i = c.indexOf(d.v); i < 0 ? c.push(d.v) : c.splice(i, 1); renderPanel(true); },
+  back: () => { G.err = ''; G.step = Math.max(1, G.step - 1); renderPanel(true); },
+  next: () => { G.err = ''; if (G.step === 1 && !G.form.plate.trim()) G.err = 'Bitte Kennzeichen eingeben.'; if (G.step === 4 && G.rec) stopRec(); if (!G.err) G.step++; renderPanel(true); },
+  demoPhoto: () => { G.form.photos.push(demoPhoto(G.form.photos.length)); renderPanel(true); },
+  rmPhoto: d => { G.form.photos.splice(+d.i, 1); renderPanel(true); },
+  rec: () => { G.rec ? stopRec() : startRec(); renderPanel(true); },
+  memoDel: () => { G.form.memo = null; G.play = null; renderPanel(true); },
+  play: d => { G.play = G.play && G.play.key === d.key ? null : { key: d.key, sec: +d.sec, start: performance.now() }; renderPanel(true); },
+  quick: () => { const f = G.form; while (f.photos.length < 2) f.photos.push(demoPhoto(f.photos.length)); if (!f.memo) f.memo = { sec: 9, bars: bars() }; sendReport(); },
+  skipReport: () => ACT.quick(),
+  send: () => sendReport(),
+  recall: d => { recallUnit(+d.id); renderPanel(true); },
+  pickTruck: d => { G.towSel = d.id; renderPanel(true); },
+  pickRoute: d => { G.routeSel = +d.i; G.routeManual = true; document.querySelectorAll('[data-route]').forEach(b => b.classList.toggle('on', +b.dataset.route === G.routeSel)); },
+  pickWreck: d => { G.selWreck = +d.id; G.towSel = null; G.routeManual = false; renderPanel(true); },
+  accept: () => { if (G.routeSel == null) { const ri = routeInfo(); G.routeSel = ri.best ? ri.best.i : RAMPS.length - 1; } if (dispatchTow(G.towSel, G.routeSel, curWreck().id)) { G.towSel = null; G.routeManual = false; renderPanel(true); } },
+  alertView: () => { G.alertSeen = true; showOverlay(null); renderPanel(true); },
+  newSim: () => newSim(),
+};
+document.addEventListener('click', e => { const t = e.target.closest('[data-act]'); if (t && ACT[t.dataset.act]) ACT[t.dataset.act](t.dataset); });
+document.addEventListener('input', e => { const b = e.target.dataset && e.target.dataset.bind; if (!b || !G.form) return; if (b === 'plate') e.target.value = e.target.value.toUpperCase(); G.form[b] = e.target.value; });
+document.addEventListener('change', async e => { if (e.target.id !== 'photoIn') return; for (const f of e.target.files) { const d = await resizeImg(f); if (d) G.form.photos.push(d); } renderPanel(true); });
+$('#bPause').onclick = () => { G.paused = !G.paused; showOverlay(G.paused ? 'pause' : null); setBtns(); };
+$('#bSpeed').onclick = () => { G.speed = G.speed === 1 ? 2 : G.speed === 2 ? 4 : 1; setBtns(); };
+$('#bSound').onclick = () => { G.mute = !G.mute; setBtns(); };
+document.addEventListener('keydown', e => { if (e.target.tagName === 'INPUT') return; if (e.code === 'Space') { e.preventDefault(); $('#bPause').click(); } else if (e.key === '1') G.speed = 1; else if (e.key === '2') G.speed = 2; else if (e.key === '4') G.speed = 4; setBtns(); });
+document.addEventListener('visibilitychange', () => { if (document.hidden && !G.paused) { G.paused = true; setBtns(); } });
+window.addEventListener('resize', fit);
+/* Kamera: ziehen, zoomen, Minimap */
+let drag = null, pinch = null; const ptrs = new Map();
+const pd = () => { const a = [...ptrs.values()]; return Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y) || 1; };
+cv.addEventListener('pointerdown', e => { ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY }); try { cv.setPointerCapture(e.pointerId); } catch (_) { } if (ptrs.size === 1) { drag = { x: e.clientX, y: e.clientY, cx: CAM.x, cy: CAM.y }; cv.classList.add('drag'); } else if (ptrs.size === 2) { drag = null; pinch = { d: pd(), z: CAM.z }; } });
+cv.addEventListener('pointermove', e => {
+  if (ptrs.has(e.pointerId)) ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (pinch && ptrs.size >= 2) { CAM.z = clamp(pinch.z * pd() / pinch.d, ZMIN, ZMAX); G.camFollow = null; clampCam(); return; }
+  if (!drag) return; const r = cv.getBoundingClientRect(), k = W / r.width / CAM.z; const dx = (e.clientX - drag.x) * k, dy = (e.clientY - drag.y) * k; if (Math.abs(dx) + Math.abs(dy) > 2) G.camFollow = null; CAM.x = drag.cx - dx; CAM.y = drag.cy - dy; clampCam();
+});
+const pup = e => { ptrs.delete(e.pointerId); if (ptrs.size < 2) pinch = null; if (ptrs.size === 1) { const q = [...ptrs.values()][0]; drag = { x: q.x, y: q.y, cx: CAM.x, cy: CAM.y }; } else if (!ptrs.size) { drag = null; cv.classList.remove('drag'); } };
+cv.addEventListener('pointerup', pup); cv.addEventListener('pointercancel', pup);
+cv.addEventListener('wheel', e => { e.preventDefault(); const r = cv.getBoundingClientRect(), mx = (e.clientX - r.left) / r.width * W, my = (e.clientY - r.top) / r.height * H, z0 = CAM.z, wx = CAM.x + (mx - W / 2) / z0, wy = CAM.y + (my - H / 2) / z0; CAM.z = clamp(z0 * (e.deltaY < 0 ? 1.15 : 1 / 1.15), ZMIN, ZMAX); CAM.x = wx - (mx - W / 2) / CAM.z; CAM.y = wy - (my - H / 2) / CAM.z; G.camFollow = null; clampCam(); }, { passive: false });
+const miniGo = e => { const r = mini.getBoundingClientRect(); CAM.x = (e.clientX - r.left) / r.width * WW; CAM.y = (e.clientY - r.top) / r.height * WH; G.camFollow = null; clampCam(); };
+let mdrag = false; mini.addEventListener('pointerdown', e => { mdrag = true; mini.setPointerCapture(e.pointerId); miniGo(e); }); mini.addEventListener('pointermove', e => { if (mdrag) miniGo(e); }); mini.addEventListener('pointerup', () => mdrag = false);
+$('#bZin').onclick = () => { CAM.z *= 1.25; G.camFollow = G.camFollow; clampCam(); }; $('#bZout').onclick = () => { CAM.z /= 1.25; clampCam(); };
+$('#bCtr').onclick = () => { G.camFollow = G.acc ? 'acc' : G.phase === 'drive' || G.phase === 'crash' ? 'hero' : null; if (!G.camFollow) { const p = P(2300, 0); CAM.x = p.x; CAM.y = p.y; } };
+/* ===== Start ===== */
+window.addEventListener('pointerdown', () => { try { AC = AC || new (window.AudioContext || window.webkitAudioContext)(); if (AC.state === 'suspended') AC.resume(); } catch (_) { } }, { once: true });
+if (window.visualViewport) visualViewport.addEventListener('resize', fit); window.addEventListener('orientationchange', () => setTimeout(fit, 250));
+BG = buildBG(); fit(); genZones(); warm(150); CAM.x = P(1500, 120).x; CAM.y = P(1500, 120).y; CAM.z = .7; clampCam(); G.slowT = 30; G.phase = 'select'; renderPanel(true); showOverlay('intro'); requestAnimationFrame(frame);
+</script>
+</body>
+</html>
