@@ -197,7 +197,7 @@ const C = []; let Lh = 0;
 })();
 function at(s) { s = clamp(s, 0, Lh); const f = s / 2, i = Math.min(C.length - 2, f | 0), k = f - i, a = C[i], b = C[i + 1]; return { x: lerp(a.x, b.x, k), y: lerp(a.y, b.y, k), tx: lerp(a.tx, b.tx, k), ty: lerp(a.ty, b.ty, k) }; }
 function P(s, lat) { const c = at(s); return { x: c.x - c.ty * lat, y: c.y + c.tx * lat, a: Math.atan2(c.ty, c.tx) }; }
-const MED = 7, LAT = [49.5, 32.5, 15.5], SH = 66, STRIP = 84, STRIP2 = 100, STRIP3 = 116, CORR = 24, CORR2 = 38.7, SHIFT = [17, 20, -5.5], GS = 5.5, LATL = 190;   // Spur 0 = rechts, 2 = links; Gasse innen (CORR) Blaulicht, außen (CORR2) Abschleppdienst
+const MED = 7, LAT = [49.5, 32.5, 15.5], SH = 66, STRIP = 84, STRIP2 = 100, STRIP3 = 116, CORR = 24, CORR2 = 38.7, SHIFT = [17, 20, -5.5], SHIFTN = [6.5, 9, -5.5], GC1 = 25.7, GS = 5.5, LATL = 190;   // Spur 0 = rechts, 2 = links; Gasse innen (CORR) Blaulicht, außen (CORR2) Abschleppdienst
 const kmOf = s => (140 + s / 500).toFixed(1).replace('.', ',');
 const RN = ['AS Nord', 'AS Wald', 'AS Mitte', 'AS Süd', 'AS Hafen', 'AS Ost', 'AS Berg', 'AS Tal', 'AS Feld', 'AS Dorf', 'AS Stadt', 'AS See', 'AS Park', 'AS Mühle'];
 const RAMPS = []; for (let s = 320, i = 0; s < Lh - 900; s += 500, i++) RAMPS.push({ id: i, name: RN[i % RN.length], s });
@@ -404,9 +404,19 @@ function drawVeh(g, v, now) {
   g.fillStyle = 'rgba(0,0,0,.22)'; rr(g, -L / 2 + 2, -Wd / 2 + 3, L, Wd, 3); g.fill();
   if (k === 'car' || k === 'van') bodyCar(g, L, Wd, v.col);
   else if (k === 'truck') { g.fillStyle = v.col2; rr(g, -L / 2, -Wd / 2, L - 13, Wd, 2); g.fill(); g.fillStyle = 'rgba(0,0,0,.12)'; g.fillRect(-L / 2 + 4, -Wd / 2, 1.5, Wd); g.fillStyle = v.col; rr(g, L / 2 - 13, -Wd / 2 + .5, 13, Wd - 1, 3); g.fill(); g.fillStyle = '#25384a'; g.fillRect(L / 2 - 4, -Wd / 2 + 2, 2.5, Wd - 4); }
-  else if (k === 'semi') { g.fillStyle = v.col2; rr(g, -L / 2, -Wd / 2, 48, Wd, 2); g.fill(); g.fillStyle = 'rgba(0,0,0,.1)'; for (let x = -L / 2 + 6; x < -L / 2 + 46; x += 8) g.fillRect(x, -Wd / 2, 1, Wd); g.fillStyle = v.col; rr(g, L / 2 - 22, -Wd / 2 + .5, 22, Wd - 1, 3); g.fill(); g.fillStyle = '#25384a'; g.fillRect(L / 2 - 4, -Wd / 2 + 2, 2.5, Wd - 4); g.fillStyle = '#222'; g.fillRect(L / 2 - 24, -1, 4, 2); }
+  else if (k === 'semi') {   // Gelenkzug: Zugmaschine + Auflieger, Auflieger schwenkt um den Sattelpunkt
+    const tl = L - 24, hx = L / 2 - 23, tr = v.tr || 0;
+    g.save(); g.translate(hx, 0); g.rotate(tr);
+    g.fillStyle = v.col2; rr(g, -tl, -Wd / 2, tl, Wd, 2); g.fill(); g.fillStyle = 'rgba(0,0,0,.1)'; for (let x = -tl + 6; x < -2; x += 8) g.fillRect(x, -Wd / 2, 1, Wd);
+    g.fillStyle = 'rgba(255,255,255,.22)'; g.fillRect(-tl + 1, -Wd / 2 + 1, tl - 4, 1.4);
+    g.fillStyle = '#2b2d31'; g.fillRect(-tl + 5, -Wd / 2 - .6, 6, 1.6); g.fillRect(-tl + 5, Wd / 2 - 1, 6, 1.6); g.fillRect(-tl + 12, -Wd / 2 - .6, 6, 1.6); g.fillRect(-tl + 12, Wd / 2 - 1, 6, 1.6);
+    if (v.braking) { g.fillStyle = '#ff2a1f'; g.fillRect(-tl - .3, -Wd / 2 + .6, 1.8, 2.6); g.fillRect(-tl - .3, Wd / 2 - 3.2, 1.8, 2.6); }
+    g.restore();
+    g.fillStyle = '#3a3d44'; rr(g, hx - 9, -Wd / 2 + 1.5, 11, Wd - 3, 2); g.fill();
+    g.fillStyle = v.col; rr(g, L / 2 - 22, -Wd / 2 + .5, 22, Wd - 1, 3); g.fill(); g.fillStyle = 'rgba(255,255,255,.25)'; rr(g, L / 2 - 20, -Wd / 2 + 1.5, 10, 2.4, 1); g.fill();
+    g.fillStyle = '#25384a'; g.fillRect(L / 2 - 4, -Wd / 2 + 2, 2.5, Wd - 4); g.fillStyle = '#222'; g.fillRect(L / 2 - 24, -1, 4, 2); }
   else if (k === 'bus') { g.fillStyle = v.col; rr(g, -L / 2, -Wd / 2, L, Wd, 4); g.fill(); g.fillStyle = 'rgba(255,255,255,.5)'; rr(g, -L / 2 + 3, -Wd / 2 + 1.5, L - 6, Wd - 3, 3); g.fill(); g.fillStyle = '#25384a'; g.fillRect(L / 2 - 5, -Wd / 2 + 1.5, 3, Wd - 3); }
-  if (v.braking) { g.fillStyle = '#ff2a1f'; g.fillRect(-L / 2 - .3, -Wd / 2 + .6, 1.8, 2.6); g.fillRect(-L / 2 - .3, Wd / 2 - 3.2, 1.8, 2.6); }
+  if (v.braking && k !== 'semi') { g.fillStyle = '#ff2a1f'; g.fillRect(-L / 2 - .3, -Wd / 2 + .6, 1.8, 2.6); g.fillRect(-L / 2 - .3, Wd / 2 - 3.2, 1.8, 2.6); }
   if (v.ly && Math.abs(v.ly) > 3 && Math.floor(now * 3) % 2) { const sd = v.ly > 0 ? 1 : -1; g.fillStyle = '#ffb020'; g.beginPath(); g.arc(L / 2 - 1, sd * (Wd / 2 - .6), 1.4, 0, 7); g.arc(-L / 2 + 1, sd * (Wd / 2 - .6), 1.4, 0, 7); g.fill(); }
   if (v.wreck) { g.fillStyle = 'rgba(15,12,10,.42)'; rr(g, -L / 2, -Wd / 2, L, Wd, 3); g.fill(); }
   if (v.hz && Math.floor(now * 2.6) % 2) { g.fillStyle = '#ffb020'; for (const [x, y] of [[-L / 2 + 1, -Wd / 2 + 1], [-L / 2 + 1, Wd / 2 - 1], [L / 2 - 1, -Wd / 2 + 1], [L / 2 - 1, Wd / 2 - 1]]) { g.beginPath(); g.arc(x, y, 1.5, 0, 7); g.fill(); } }
@@ -568,7 +578,7 @@ function obstacleAhead(v, lane, range) { const lat = LAT[lane]; for (const o of 
 function laneFree(v, l) {
   const lat = LAT[l];
   const chk = o => o !== v && (Math.abs(o.lat - lat) < (o.wid + v.wid) / 2 + 1.5 || o.lane === l) && o.s > v.s - v.len / 2 - o.len / 2 - 18 && o.s < v.s + v.len / 2 + o.len / 2 + 28 + Math.max(0, v.v - o.v) * .9;
-  if (G.traf.some(chk) || G.units.some(u => (u.mode === 'hw' || u.mode === 'depart') && chk(u))) return false;
+  if (G.traf.some(chk) || G.units.some(u => (u.mode === 'hw' || u.mode === 'depart') && !(u.crossing && !v.type) && chk(u))) return false;
   for (const o of allObs()) if (ovl(lat, v.wid, o) && o.s1 > v.s - 10 && o.s0 - v.s < 60) return false;
   return true;
 }
@@ -598,6 +608,11 @@ function seekGap(v) {
   return best ? clamp(best.u + .8 * (best.gc - v.s), 6, 60) : null;
 }
 const zoneAhead = v => G.zones.find(z => v.s > z.s0 - 240 && v.s < z.s0 + 6);
+function artic(v, hd, dt) {   // Auflieger folgt der Zugmaschine kinematisch (Deichsel ≈ 36 px)
+  if (v.kind !== 'semi') return; if (v.th == null) v.th = hd;
+  let d = hd - v.th; d = Math.atan2(Math.sin(d), Math.cos(d)); v.th += clamp((Math.max(v.v, 0) / 36) * Math.sin(d) * dt, -.2, .2);
+  let r = v.th - hd; r = Math.atan2(Math.sin(r), Math.cos(r)); v.tr = clamp(r, -.75, .75);
+}
 function stepTraffic(dt) {
   const T = G.traf, hwU = G.units.filter(u => u.mode === 'hw' || u.mode === 'depart'), sirens = hwU.filter(u => u.siren), AO = allObs();
   const lam = [.3, .48, .38], alertOn = G.units.some(u => u.mode !== 'gone' && u.mode !== 'return' && !u.site && u.siren && G.acc);
@@ -605,6 +620,7 @@ function stepTraffic(dt) {
   const yielders = new Map(); for (const z of T) if (z.zwait && z.zip) { let y = null; for (const o of T) if (o.lane === 1 && !o.wreck && o.s < z.s + z.len / 2 && z.s - o.s < 150 && (!y || o.s > y.s)) y = o; if (y) yielders.set(y, z); }
   // Ausweich-Ausfahrt für diesen Moment: letzte Ausfahrt vor dem Stauende, Wiedereinfahrt hinter der Unfallstelle
   let dv = null; if (G.acc && !G.acc.cleared && G.jam.active) { const ex = OFFS.filter(o => o.s < G.jam.tail - 60).pop(), rk = RAMPS.findIndex(r => r.s > G.acc.s1 + 90); if (ex && rk >= 0) dv = { ex, rk }; }
+  const mpts = []; for (const d of G.det) if (d.pd >= d.path.len - 60) mpts.push(RAMPS[d.k].s + 70); for (const u of G.units) if (u.mode === 'hw' && u.lat > 62 && !u.crossing) mpts.push(u.s);
   for (const v of T) {
     if (v.wreck) { v.v = 0; v.braking = false; v.stopT += dt; v.shT = SHIFT[v.lane]; const tl = LAT[v.lane] + v.shT, nl = v.lat + clamp(tl - v.lat, -26 * dt, 26 * dt); if (nl !== v.lat && !latBlocked(v, nl)) v.lat = nl; continue; }
     let gap = 1e9, rear = 1e9, lead = null;
@@ -619,6 +635,7 @@ function stepTraffic(dt) {
     if (zc) { vt = Math.min(vt, zc.vmax * 1.05); const sk = seekGap(v); if (sk != null) vt = Math.min(vt, sk); v.zwait = v.v < 6 && zc.s0 - v.s < 70; }
     else if (v.lane > 0) { v.zwait = false; const y = yielders.get(v); if (y && gap < 1e8) vt = Math.min(vt, Math.max(0, (gap - (y.len + 16) - 5) / .85)); }
     if (G.acc && !G.acc.cleared) { if (v.s > G.acc.front - 130 && v.s < G.acc.s1 + 20) vt = Math.min(vt, 26); } else if (G.obs.length) { const o = G.obs[0]; if (v.s > o.s0 - 130 && v.s < o.s1 + 20) vt = Math.min(vt, 26); }
+    if (v.lane === 0 && !v.noBrake && mpts.length) for (const m of mpts) if (v.s < m && m - v.s < 140) vt = Math.min(vt, Math.max(0, (m - v.s - 60) / .9));   // auf die Autobahn einfädelnde Fahrzeuge hereinlassen
     if (v.slow && G.t > v.slow) { v.slow = 0; v.vd = v.vd0 || v.vd; }
     v.braking = vt < v.v - 4;
     v.v = clamp(vt, v.v - 260 * dt, v.v + 42 * dt);
@@ -631,8 +648,8 @@ function stepTraffic(dt) {
     for (const u of sirens) if (u.s < v.s && v.s - u.s < 300) { near = true; if (v.s - u.s < 260) want = true; }
     if (near && v.v > 12) v.v = Math.min(v.v, Math.max(14, v.vd * .6));
     v.near = near; const emerg = (G.acc && !G.acc.cleared) || near || alertOn;
-    v.shT = want && emerg ? SHIFT[v.lane] : 0;
-    if (v.shT) { const tl2 = LAT[v.lane] + v.shT; for (const o of AO) if (o.s1 > v.s - 5 && o.s0 - v.s < 160 && o.zone && ovl(tl2, v.wid, o)) { v.shT = 0; break; } }
+    v.shT = want && emerg ? (G.acc && v.s > G.acc.front - (v.lane === 0 ? 400 : 300) ? SHIFT : SHIFTN)[v.lane] : 0;
+    if (v.shT > 0) { for (const o of AO) if (o.zone && o.s1 > v.s - 5 && o.s0 - v.s < 160 && (v.v > 3 || v.s + v.len / 2 > o.s0 - 3)) while (v.shT > 0 && ovl(LAT[v.lane] + v.shT, v.wid, o)) v.shT -= .5; if (v.shT < 0) v.shT = 0; }
     // Ausweichen vor dem Stau: Entscheidung einmalig vor der Ausfahrt
     if (dv && v.divert == null && !v.hero && !v.noBrake && v.s > dv.ex.s - 700 && v.s < dv.ex.s - 60) v.divert = Math.random() < .7 ? dv.ex.id : -1;
     v.lcT -= dt;
@@ -641,9 +658,9 @@ function stepTraffic(dt) {
       if (!urgentZip) v.lcT = rnd(.3, .6); const cur = v.lane, moving = v.v > 6; let pick = -1;
       if (urgentZip) { if (laneFreeZip(v, 1)) { pick = 1; v.lcT = 1.2; } }
       else if (v.divert >= 0 && v.divert != null && cur > 0 && laneFree(v, cur - 1) && !obstacleAhead(v, cur - 1, 360)) pick = cur - 1;
-      else if (moving && obstacleAhead(v, cur, 360)) { const c = [cur - 1, cur + 1].filter(l => l >= 0 && l <= 2 && !obstacleAhead(v, l, 360) && laneFree(v, l)); if (c.length) pick = c[(Math.random() * c.length) | 0]; }
+      else if ((moving || v.stopT > 1.5) && obstacleAhead(v, cur, 360)) { const c = [cur - 1, cur + 1].filter(l => l >= 0 && l <= 2 && !obstacleAhead(v, l, 360) && laneFree(v, l)); if (c.length) pick = c[(Math.random() * c.length) | 0]; }
       else if (v.v > 12 && lead && lead.v !== undefined && gap < 90 && lead.v < v.vd - 5 && cur < 2 && laneFree(v, cur + 1) && !obstacleAhead(v, cur + 1, 360)) pick = cur + 1;       // Überholen
-      else if (v.v > 6 && gap < 140 && lead && lead.v !== undefined && lead.v < 24) {                                                                                                   // Stau umfahren: freiere Spur wählen
+      else if ((v.v > 6 || v.stopT > 2) && gap < 140 && lead && lead.v !== undefined && lead.v < 24) {                                                                                                   // Stau umfahren: freiere Spur wählen
         let best = -1, bg = gap + 45; for (const l of [cur - 1, cur + 1]) if (l >= 0 && l <= 2 && !obstacleAhead(v, l, 360)) { const lg = leadGap(v, l).gap; if (lg > bg && laneFree(v, l)) { bg = lg; best = l; } } pick = best;
       }
       else if (moving && gap > 130 && cur > 0 && Math.random() < (v.kind === 'car' ? .12 : .5) && laneFree(v, cur - 1) && !obstacleAhead(v, cur - 1, 360)) pick = cur - 1;
@@ -651,6 +668,7 @@ function stepTraffic(dt) {
     }
     const tl = LAT[v.lane] + v.shT, old = v.lat, nl = v.lat + clamp(tl - v.lat, -26 * dt, 26 * dt);
     if (nl !== v.lat && !latBlocked(v, nl)) v.lat = nl; v.ly = (v.lat - old) / dt;
+    const yt = clamp(Math.atan2(v.ly, Math.max(v.v, 16)), -.3, .3) * (v.len > 40 ? .6 : 1); v.yaw = (v.yaw || 0) + (yt - (v.yaw || 0)) * Math.min(1, dt * 4); artic(v, v.yaw, dt);
   }
   // Ausfahrt nehmen
   if (dv) for (const v of T.slice()) if (v.divert === dv.ex.id && v.lane === 0 && v.s >= dv.ex.s && v.s < dv.ex.s + 40 && !v.wreck && Math.abs(v.lat - LAT[0]) < 3) {
@@ -670,21 +688,25 @@ function stepTraffic(dt) {
 }
 /* ===== Umleiter: Ausfahrt → Landstraße → Wiedereinfahrt hinter der Unfallstelle ===== */
 const _dp = {}; function detPath(xi, rk) { const key = xi + '_' + rk; if (_dp[key]) return _dp[key]; const pts = offConn(OFFS[xi].s); for (let u = OFFS[xi].s + 100; u < RAMPS[rk].s - 90; u += 10) pts.push(Lpt(u)); return _dp[key] = mkPath(pts.concat(rampConn(rk))); }
-const lanePos = p => ({ x: p.x - Math.sin(p.a) * 4.5, y: p.y + Math.cos(p.a) * 4.5, a: p.a });
+const lanePos = (p, o = 4.5) => ({ x: p.x - Math.sin(p.a) * o, y: p.y + Math.cos(p.a) * o, a: p.a });
 function pathVehAhead(x, y, a, len, self) {
   const test = (ox, oy, ol, oa) => { if (Math.cos(oa - a) < .3) return false; const dx = ox - x, dy = oy - y, d = Math.hypot(dx, dy); if (d > 60 || d < .01) return false; const fw = (dx * Math.cos(a) + dy * Math.sin(a)); return fw > 0 && fw < (len + ol) / 2 + 8 && Math.abs(-dx * Math.sin(a) + dy * Math.cos(a)) < 6; };
-  for (const d of G.det) if (d !== self) { const p = lanePos(follow(d.path, d.pd)); if (test(p.x, p.y, d.len, p.a)) return true; }
+  for (const d of G.det) if (d !== self) { const p = lanePos(follow(d.path, d.pd), d.lo ?? 4.5); if (test(p.x, p.y, d.len, p.a)) return true; }
   for (const u of G.units) if (u !== self && (u.mode === 'local' || u.mode === 'return') && u.x) { if (test(u.x, u.y, u.len, u.a)) return true; }
   for (const am of G.amb) { const p = follow(CPATH[am.i], am.pd); if (test(p.x - Math.sin(p.a) * 5 * am.dir * -1, p.y + Math.cos(p.a) * 5 * am.dir, am.len, p.a + (am.dir < 0 ? Math.PI : 0))) return true; }
   return false;
 }
 function stepDet(dt) {
   for (const d of G.det.slice()) {
-    const p = lanePos(follow(d.path, d.pd)), blocked = pathVehAhead(p.x, p.y, p.a, d.len, d);
-    d.v = clamp(blocked ? 0 : d.vd, d.v - 240 * dt, d.v + 40 * dt);
+    const p = lanePos(follow(d.path, d.pd), d.lo ?? 4.5), blocked = pathVehAhead(p.x, p.y, p.a, d.len, d);
+    // Blaulicht-Fahrzeug (Polizei/RD/FW) von hinten: sofort rechts ranfahren und stehen bleiben
+    const yld = G.units.some(u => u.siren && u.type !== 'tow' && (u.mode === 'local' || u.mode === 'return') && u.x && Math.cos(u.a - p.a) > .3 && (() => { const dx = p.x - u.x, dy = p.y - u.y, fw = dx * Math.cos(u.a) + dy * Math.sin(u.a), lt = -dx * Math.sin(u.a) + dy * Math.cos(u.a); return fw > -6 && fw < 280 && Math.abs(lt) < 16; })());
+    d.lo = (d.lo ?? 4.5) + clamp((yld ? 8.5 : 4.5) - (d.lo ?? 4.5), -14 * dt, 14 * dt);
+    d.v = clamp(blocked || yld ? 0 : d.vd, d.v - 240 * dt, d.v + 40 * dt); artic(d, p.a, dt);
     if (d.pd >= d.path.len - 1) {                       // Wiedereinfahrt auf die Autobahn
       const nv = newVeh(0, RAMPS[d.k].s + 70, d.kind); nv.col = d.col; nv.col2 = d.col2; nv.v = 24; nv.lat = STRIP; nv.vd = d.vd; nv.divert = -1;
-      if (laneFreeZip(nv, 0) && !G.units.some(u => (u.mode === 'hw' || u.mode === 'depart') && Math.abs(u.s - nv.s) < 40 && Math.abs(u.lat - STRIP) < 14)) { G.traf.push(nv); G.det = G.det.filter(x => x !== d); }
+      d.wait = (d.wait || 0) + dt;
+      if ((laneFreeZip(nv, 0) || d.wait > 6 && !G.traf.some(o => o.lane === 0 && Math.abs(o.s - nv.s) < (o.len + nv.len) / 2 + 8)) && !G.units.some(u => (u.mode === 'hw' || u.mode === 'depart') && Math.abs(u.s - nv.s) < 40 && Math.abs(u.lat - STRIP) < 14)) { G.traf.push(nv); G.det = G.det.filter(x => x !== d); }
       continue;
     }
     d.pd = Math.min(d.path.len, d.pd + d.v * dt);
@@ -775,11 +797,11 @@ function updateCrash(dt) {
 }
 /* ===== Einsatzkräfte ===== */
 const USP = {
-  pol: { label: 'Polizei', abbr: 'POL', len: 28, wid: 12, vFree: 128, vJam: 58, vLoc: 100, delay: 3, base: 'pol', tlat: STRIP3, off: 120, work: null, col: '#3b82f6' },
-  fw: { label: 'Feuerwehr', abbr: 'FW', len: 40, wid: 12.6, vFree: 115, vJam: 52, vLoc: 92, delay: 6, base: 'fw', tlat: CORR, off: 52, work: 14, col: '#d9322b' },
+  pol: { label: 'Polizei', abbr: 'POL', len: 28, wid: 12, vFree: 128, vJam: 58, vLoc: 100, delay: 3, base: 'pol', tlat: CORR, off: 14, work: null, col: '#3b82f6' },
+  fw: { label: 'Feuerwehr', abbr: 'FW', len: 40, wid: 12.6, vFree: 115, vJam: 52, vLoc: 92, delay: 6, base: 'fw', tlat: CORR, off: 14, work: 14, col: '#d9322b' },
   rd: { label: 'Rettungsdienst', abbr: 'RD', len: 32, wid: 13, vFree: 125, vJam: 56, vLoc: 100, delay: 4, base: 'rd', tlat: CORR, off: 12, work: 12, col: '#ff8a00' },
 };
-function towSpec(tt) { const T = TOWSP[tt], B = TOWT[tt]; return { label: 'Abschleppdienst', abbr: 'TOW', len: T.L * .56, wid: T.W * .56, vFree: B.vFree, vJam: B.vJam, vLoc: 80, delay: 3, base: 'depot', tlat: CORR2, off: 9, work: B.work, col: '#FF7A00' }; }
+function towSpec(tt) { const T = TOWSP[tt], B = TOWT[tt]; return { label: 'Abschleppdienst', abbr: 'TOW', len: T.L * .56, wid: Math.min(T.W * .56, 11.4), vFree: B.vFree, vJam: B.vJam, vLoc: 80, delay: 3, base: 'depot', tlat: CORR, off: 9, work: B.work, col: '#FF7A00' }; }
 const _lp = {};
 function lpath(b, i, bay) {
   if (b === 'depot') { const bb = bay == null ? 4 : bay, k = 'd' + bb + '_' + i; return _lp[k] || (_lp[k] = mkPath(yardOutPts(bb).concat(Lseg(YD.gateS, RAMPS[i].s - 90), rampConn(i)))); }
@@ -805,7 +827,7 @@ const stageS = (sp, w) => stageFrontFor(sp, w) - sp.len / 2;
 function routeEst(sp, i, w) {
   if (!G.acc) return null; const sIn = RAMPS[i].s + 70, sOut = stageS(sp, w);
   if (sIn > sOut - 10) return { ok: false, i };
-  const loc = lpath(sp.base, i).len / sp.vLoc, h = hwTime(sIn, sOut, sp.vFree, sp.vJam), pen = G.jam.active && sIn >= G.jam.tail - G.jam.growth * (sp.delay + loc) - 260 ? 30 : 0;
+  const loc = lpath(sp.base, i).len / sp.vLoc, h = hwTime(sIn, sOut, sp.vFree, sp.vJam), pen = (G.jam.active && sIn >= G.jam.tail - G.jam.growth * (sp.delay + loc) - 150 ? 120 : 0) + (sIn > G.acc.front - 420 ? 200 : 0);
   return { ok: true, i, total: sp.delay + loc + h.t + pen, loc, free: h.free, jam: h.jam, jamNo: h.jamNo, pen };
 }
 const bestRoute = (sp, w) => { let b = null; for (let i = 0; i < RAMPS.length; i++) { const r = routeEst(sp, i, w); if (r && r.ok && (!b || r.total < b.total)) b = r; } return b; };
@@ -868,14 +890,26 @@ function mergeFree(u, s) { return !G.units.some(o => o !== u && (o.mode === 'hw'
 function stepHW(u, dt) {
   const sp = u.sp;
   // In die Rettungsgasse wechseln nur bei freier Querung und weit vor dem Stauende – sonst bleibt das Fahrzeug auf dem Rettungsweg
-  if (u.want != null && !u.strip && u.lat > 62) {
-    const jamAhead = G.jam.active && G.jam.tail < u.s + 480 + G.jam.growth * 10;
-    const clear = !G.traf.some(o => o.lat > 28 && o.lat < 80 && Math.abs(o.s - u.s) < (o.len + u.len) / 2 + 38);
-    u.tlat = !jamAhead && clear ? u.want : stripLane(u); if (jamAhead && u.lat > 62) u.want = null;
+  const gl = G.acc && u.s + 260 > G.acc.front ? (u.type === 'tow' ? CORR2 : CORR) : GC1;   // Einsatzraum zweispurig, sonst genau eine Gasse
+  if (u.mode === 'hw') {
+    if (u.lat > 62 && !u.crossing) {                 // noch auf der Auffahrt: warten, bis eine Lücke zum Einfädeln in die Rettungsgasse frei ist
+      const corr = G.traf.some(o => Math.abs(o.lat - gl) < (o.wid + u.wid) / 2 + .5 && Math.abs(o.s - u.s) < (o.len + u.len) / 2 + 14) || G.units.some(o => o !== u && o.mode === 'hw' && o.lat <= 62 && Math.abs(o.lat - gl) < (o.wid + u.wid) / 2 + .5 && Math.abs(o.s - u.s) < (o.len + u.len) / 2 + 10);
+      const busy = corr || G.traf.some(o => o.lat > 28 && o.lat < 80 && Math.abs(o.s - u.s) < (o.len + u.len) / 2 + 12) || G.units.some(o => o !== u && o.mode === 'hw' && o.lat > 30 && o.lat < 80 && Math.abs(o.s - u.s) < (o.len + u.len) / 2 + 8);
+      u.entW = busy ? (u.entW || 0) + dt : 0;
+      if (!busy) { u.crossing = true; u.blockT = 0; }
+      else if (u.entW > 3 && !corr) { u.lat = gl; u.entW = 0; u.fade = .15; u.crossing = false; }
+      else u.tlat = STRIP;
+    }
+    if (u.crossing) { u.tlat = gl; if (u.lat <= 46) u.crossing = false; }
+    else if (u.lat <= 62) u.tlat = gl;
   }
+  if (u.mode === 'hw' && !u.site && u.lat <= 62 && !u.crossing && Math.abs(u.lat - gl) > 4 && u.v < 1) {   // zwischen den Spuren eingeklemmt
+    u.wedgeT = (u.wedgeT || 0) + dt;
+    if (u.wedgeT > 5 && !G.traf.some(o => Math.abs(o.lat - gl) < (o.wid + u.wid) / 2 + .5 && Math.abs(o.s - u.s) < (o.len + u.len) / 2 + 4)) { u.lat = gl; u.fade = .15; u.wedgeT = 0; }
+  } else u.wedgeT = 0;
   const old = u.lat, nl = u.lat + clamp(u.tlat - u.lat, -36 * dt, 36 * dt); if (nl !== u.lat && !latBlocked(u, nl)) u.lat = nl;
-  // Querung durch den Stau blockiert → auf den Seitenstreifen/Rettungsweg ausweichen
-  if (!u.strip && u.tlat < u.lat - 4 && u.lat > 40 && u.lat < 62 && u.tlat < 60) { u.blockT = (u.blockT || 0) + (u.v < 3 && latBlocked(u, u.lat - 1) ? dt : 0); if (u.blockT > 1.2) { u.tlat = stripLane(u); u.strip = true; } } else u.blockT = 0;
+  // Querung blockiert → zurück auf die Auffahrt und neu versuchen (nie auf Standstreifen weiterfahren)
+  if (u.crossing && u.lat > 46 && u.lat < 70) { u.blockT = (u.blockT || 0) + (u.v < 3 && latBlocked(u, u.lat - 1) ? dt : 0); if (u.blockT > 5) { u.crossing = false; u.tlat = STRIP; u.blockT = 0; u.entW = 0; } } else u.blockT = 0;
   let gap = 1e9, rear = 1e9;
   const nb = (o, r) => { if (o !== u && o.s > u.s && latOv(u, o)) { const g = r - (u.s + u.len / 2); if (g < gap) { gap = g; rear = r; } } };
   G.traf.forEach(o => nb(o, o.s - o.len / 2)); G.units.forEach(o => { if (o.mode === 'hw' || o.mode === 'depart') nb(o, o.s - o.len / 2); });
@@ -883,17 +917,26 @@ function stepHW(u, dt) {
   let vt = sp.vFree; const j = G.jam;
   for (const z of G.zones) if (u.s > z.s0 - 60 && u.s < z.s1) vt = Math.min(vt, z.vmax * 1.7);
   if (j.active && u.s > j.tail - 40 && u.s < G.acc.front + 5) vt = Math.min(vt, sp.vJam);
-  if (u.mode === 'hw') { const gT = stageFrontFor(sp, u.wreck) - (u.s + u.len / 2); vt = Math.min(vt, Math.max(0, gT / .5)); }
+  if (u.mode === 'hw') { const gT = stageFrontFor(sp, u.wreck) - (u.s + u.len / 2); vt = Math.min(vt, Math.max(0, gT / .5)); if (u.lat > 62 && !u.crossing) vt = 0; }
   if (gap < 1e8) vt = Math.min(vt, Math.max(0, (gap - 4) / .7));
   u.v = clamp(vt, u.v - 320 * dt, u.v + 70 * dt); let ns = u.s + u.v * dt; if (gap < 1e8) ns = Math.min(ns, rear - u.len / 2 - 1.5); u.s = Math.max(u.s, ns); u.ly = (u.lat - old) / dt;
   u.stillT = u.v < 2.5 ? (u.stillT || 0) + dt : 0;
   if (u.mode === 'hw' && !u.site) {
     const tgt = stageFrontFor(sp, u.wreck), dFront = G.acc.front - u.s, exact = Math.abs(tgt - (u.s + u.len / 2)) < 7 && u.v < 1.5, fallback = u.stillT > 1.8 && (u.type === 'tow' ? Math.abs(tgt - (u.s + u.len / 2)) < 150 : dFront < 280);
-    if (exact || fallback) { u.site = true; u.wt = 0; const nm = USP[u.type] ? USP[u.type].label : 'Abschleppdienst'; if (!G.ev['arr_' + u.type]) { G.ev['arr_' + u.type] = G.t; addLog('arr_' + u.type, nm + ' vor Ort'); } toast(nm + ' ist vor Ort', 'good'); }
+    if ((exact || fallback) && u.lat <= 62) { u.site = true; u.wt = 0; const nm = USP[u.type] ? USP[u.type].label : 'Abschleppdienst'; if (!G.ev['arr_' + u.type]) { G.ev['arr_' + u.type] = G.t; addLog('arr_' + u.type, nm + ' vor Ort'); } toast(nm + ' ist vor Ort', 'good'); }
   }
-  if (u.mode === 'depart') { if (!u.exitS) { const nx = OFFS.find(o => o.s - 70 > u.s + 220); u.exitS = nx && nx.s < EXIT.s ? nx.s : EXIT.s; } if (u.s > G.acc.s1 + 40) u.tlat = STRIP; if (u.s >= u.exitS - 70) { u.mode = 'return'; const cp = { x: P(u.s, u.lat).x, y: P(u.s, u.lat).y }, bp = backPath(gateU(u.sp.base), u.exitS); let rp = [cp].concat(bp.pts); if (u.type === 'tow') { if (u.load) { u.slot = wsPick(u); rp = rp.concat(yardToSpot(u.slot)); } else rp = rp.concat(yardToBay(u.fleet.bay)); } u.path = mkPath(rp); u.pd = 0; u.x = cp.x; u.y = cp.y; u.a = P(u.s, u.lat).a; } }
+  if (u.mode === 'depart') { if (!u.exitS) { const nx = OFFS.find(o => o.s - 70 > u.s + 220); u.exitS = nx && nx.s < EXIT.s ? nx.s : EXIT.s; } if (u.s > G.acc.s1 + 40 && u.s >= u.exitS - 420) u.tlat = STRIP; if (u.s >= u.exitS - 70) { u.mode = 'return'; const cp = { x: P(u.s, u.lat).x, y: P(u.s, u.lat).y }, bp = backPath(gateU(u.sp.base), u.exitS); let rp = [cp].concat(bp.pts); if (u.type === 'tow') { if (u.load) { u.slot = wsPick(u); rp = rp.concat(yardToSpot(u.slot)); } else rp = rp.concat(yardToBay(u.fleet.bay)); } u.path = mkPath(rp); u.pd = 0; u.x = cp.x; u.y = cp.y; u.a = P(u.s, u.lat).a; } }
 }
 /* ===== Hof & Werkstatt ===== */
+function canRecall(u) { return u.type === 'tow' && !u.load && !u.rel && !u.homing && ['alarm', 'local', 'hw'].includes(u.mode); }
+function recallUnit(id) {
+  const u = G.units.find(x => x.id === id); if (!u || !canRecall(u)) return false;
+  const f = u.fleet, w = u.wreck; if (w) { w.tow = null; w.clear = 0; } G.jobs = G.jobs.filter(j => j.u !== u); u.wreck = null;
+  if (u.mode === 'alarm') { G.units = G.units.filter(x => x !== u); f.state = 'depot'; }
+  else if (u.mode === 'local') { let k = 1; while (k < u.path.cum.length && u.path.cum[k] < u.pd) k++; const here = { x: u.x, y: u.y }; u.path = mkPath([here].concat(u.path.pts.slice(0, k).reverse())); u.pd = 0; u.mode = 'return'; u.homing = true; }
+  else { u.mode = 'depart'; u.site = false; u.exitS = 0; u.want = null; }
+  addLog('recall_' + u.id + '_' + Math.round(G.t), f.name + ' zurückgerufen'); toast(f.name + ' wurde zurückgerufen', 'bad'); G.selWreck = (w || {}).id ?? G.selWreck; return true;
+}
 function wsPick(u) { let best = 0, bs = 1e9; G.ws.forEach((w, i) => { const sc = (w.cur ? 1 : 0) + w.q.length; if (sc < bs) { bs = sc; best = i; } }); G.ws[best].q.push(u); return best; }
 function startUnload(u) {
   const w = G.ws[u.slot], L = u.load, ys = YD.ws[u.slot], bed = towBedPos(u), d = { x: Math.cos(u.a), y: Math.sin(u.a) };
@@ -923,6 +966,7 @@ function towLoadInfo(w) { if (w.kind === 'veh') { const v = w.veh; return { kind
 function stepUnits(dt) {
   const A = G.acc;
   for (const u of G.units.slice()) {
+    if (u.fade < 1) u.fade = Math.min(1, u.fade + dt * 1.6);
     if (u.mode === 'alarm') {
       if (G.t - u.t0 >= u.delay) { const rig = rigOpen(); if (u.type === 'tow' && u.wreck && u.wreck.kind !== 'rig' && rig && !(rig.tow && (rig.tow.site || rig.tow.mode === 'hw'))) { u.waiting = true; } else { u.waiting = false; startUnitRoute(u); } }
       continue;
@@ -930,9 +974,12 @@ function stepUnits(dt) {
     if (u.mode === 'local' || u.mode === 'return') {
       const ms = u.mode === 'local' ? RAMPS[u.ramp].s + 70 : 0; if (u.mode === 'local' && u.pd + u.sp.vLoc * dt >= u.path.len && !mergeFree(u, ms)) { u.pd = Math.min(u.pd, u.path.len - .5); continue; }
       if (u.x && pathVehAhead(u.x, u.y, u.a, u.len, u)) continue;
-      u.pd += u.sp.vLoc * dt; const p = lanePos(follow(u.path, u.pd)); u.x = p.x; u.y = p.y; u.a = p.a;
+      u.pd += u.sp.vLoc * dt; const fp = follow(u.path, u.pd);
+      const nearDet = G.det.some(d => { const q = lanePos(follow(d.path, d.pd), 4.5), dx = q.x - fp.x, dy = q.y - fp.y, fw = dx * Math.cos(fp.a) + dy * Math.sin(fp.a), lt = -dx * Math.sin(fp.a) + dy * Math.cos(fp.a); return Math.cos(q.a - fp.a) > .3 && fw > -(u.len + d.len) / 2 - 8 && fw < 90 && Math.abs(lt) < 14; });
+      u.lo = (u.lo ?? 4.5) + clamp((nearDet ? -4.5 : 4.5) - (u.lo ?? 4.5), -14 * dt, 14 * dt);
+      const p = lanePos(fp, u.lo); u.x = p.x; u.y = p.y; u.a = p.a;
       if (u.pd >= u.path.len) {
-        if (u.mode === 'local') { u.mode = 'hw'; u.s = ms; u.lat = STRIP; u.v = u.sp.vLoc * .5; if (u.type !== 'pol') { u.want = u.sp.tlat; u.tlat = stripLane(u); if (G.jam.active && u.s >= G.jam.tail - 260 - G.jam.growth * 8) { u.strip = true; u.want = null; } } else u.tlat = STRIP3; }
+        if (u.mode === 'local') { u.mode = 'hw'; u.s = ms; u.lat = STRIP; u.v = u.sp.vLoc * .5; u.tlat = STRIP; u.crossing = false; u.entW = 0; }
         else if (u.type === 'tow' && u.load && !u.homing) { u.mode = 'wsWait'; }
         else { G.units = G.units.filter(x => x !== u); if (u.type === 'tow') { u.fleet.state = 'depot'; const j = G.jobs.find(x => x.u === u); if (j) j.done = true; addLog('towBack_' + u.fleet.id, u.fleet.name + ' zurück im Depot'); toast(u.fleet.name + ' ist zurück im Depot', 'good'); } }
       }
@@ -955,7 +1002,7 @@ function stepUnits(dt) {
       }
     }
     if (A && A.cleared && (u.mode === 'hw') && u.type !== 'tow' && !u.dep) { u.dep = G.t + 1 + (u.depRank || 0) * 1.4; }
-    if (u.dep && G.t >= u.dep && u.mode === 'hw') { u.mode = 'depart'; u.site = false; u.tlat = u.type === 'pol' ? STRIP3 : u.tlat; addLog('dep_' + u.type + u.id, (USP[u.type] ? USP[u.type].label : 'Fahrzeug') + ' fährt zurück zur Wache'); }
+    if (u.dep && G.t >= u.dep && u.mode === 'hw') { u.mode = 'depart'; u.site = false; addLog('dep_' + u.type + u.id, (USP[u.type] ? USP[u.type].label : 'Fahrzeug') + ' fährt zurück zur Wache'); }
   }
 }
 function finishWreck(tow, w) {
@@ -1032,7 +1079,7 @@ function drawCrane(g, w, an, now) {
 }
 function drawTrafficVeh(g, v, dir, now, vw) {
   const p = P(v.s, dir > 0 ? v.lat : -LAT[v.lane]); if (p.x < vw.x0 - 90 || p.x > vw.x1 + 90 || p.y < vw.y0 - 90 || p.y > vw.y1 + 90) return;
-  let x = p.x, y = p.y, a = p.a + (dir > 0 ? Math.atan2(v.ly || 0, Math.max(v.v, 14)) + (v.rotFix || 0) : Math.PI), sc = 1, lift = 0, an = null;
+  let x = p.x, y = p.y, a = p.a + (dir > 0 ? (v.yaw || 0) + (v.rotFix || 0) : Math.PI), sc = 1, lift = 0, an = null;
   if (v.wreck) { const w = wreckOf(v); an = w && craneAnim(w); if (an) { x = an.pos.x; y = an.pos.y; a = an.a; sc = an.sc; lift = an.lift; } }
   if (lift > 0) { g.fillStyle = `rgba(0,0,0,${.28 * lift})`; g.beginPath(); g.ellipse(x + 3 + 5 * lift, y + 5 + 7 * lift, v.len * .5 * sc, v.wid * .5 * sc, a, 0, 7); g.fill(); }
   g.save(); g.translate(x, y); g.rotate(a); g.scale(sc, sc); drawVeh(g, v, now); g.restore();
@@ -1066,7 +1113,7 @@ function drawBridges(g, vw) {
     ln(26, 'rgba(0,0,0,.28)', 6, 9); ln(24, '#b9b6ab'); ln(18, '#4a4d53'); g.setLineDash([9, 9]); ln(1.4, 'rgba(240,238,225,.7)'); g.setLineDash([]); ln(1.6, '#e6e3da', 0, 0);
   });
 }
-function drawDet(g, vw) { for (const d of G.det) { const p = lanePos(follow(d.path, d.pd)); if (p.x < vw.x0 - 50 || p.x > vw.x1 + 50 || p.y < vw.y0 - 50 || p.y > vw.y1 + 50) continue; g.save(); g.translate(p.x, p.y); g.rotate(p.a); drawVeh(g, { len: d.len, wid: d.wid, kind: d.kind, col: d.col, col2: d.col2, braking: d.v < 3 }, 0); g.restore(); } }
+function drawDet(g, vw) { for (const d of G.det) { const p = lanePos(follow(d.path, d.pd), d.lo ?? 4.5); if (p.x < vw.x0 - 50 || p.x > vw.x1 + 50 || p.y < vw.y0 - 50 || p.y > vw.y1 + 50) continue; g.save(); g.translate(p.x, p.y); g.rotate(p.a); drawVeh(g, { len: d.len, wid: d.wid, kind: d.kind, col: d.col, col2: d.col2, braking: d.v < 3, tr: d.tr }, 0); g.restore(); } }
 function drawAmb(g, vw) { for (const a of G.amb) { const p = follow(CPATH[a.i], a.pd), x = p.x + Math.sin(p.a) * -5 * a.dir, y = p.y + Math.cos(p.a) * 5 * a.dir; if (x < vw.x0 - 50 || x > vw.x1 + 50 || y < vw.y0 - 50 || y > vw.y1 + 50) continue; g.save(); g.translate(x, y); g.rotate(p.a + (a.dir < 0 ? Math.PI : 0)); drawVeh(g, { len: a.len, wid: a.wid, kind: a.kind, col: a.col }, 0); g.restore(); } }
 function drawFireAndFx(g, now) {
   const f = G.fire; if (!f || !G.crash) return;
@@ -1092,9 +1139,10 @@ function draw() {
   g.lineCap = 'round'; G.skids.forEach(sk => { if (sk.pts.length > 2) { g.strokeStyle = 'rgba(15,15,15,.5)'; g.lineWidth = 1.6; for (const off of [-3, 3]) { g.beginPath(); sk.pts.forEach((q, i) => { const px = q[0] - q[3] * off, py = q[1] + q[2] * off; i ? g.lineTo(px, py) : g.moveTo(px, py); }); g.stroke(); } } });
   // Rettungsgasse-Band: innen (grün) Blaulicht, außen (orange) Abschleppdienst
   if (j.active && j.gasse > .15) {
-    const a = Math.min(.5, j.gasse * .6), band = (l0, l1, col) => { g.beginPath(); for (let s = j.tail; s <= G.acc.s1; s += 8) { const q = P(s, l0); s === j.tail ? g.moveTo(q.x, q.y) : g.lineTo(q.x, q.y); } for (let s = G.acc.s1; s >= j.tail; s -= 8) { const q = P(s, l1); g.lineTo(q.x, q.y); } g.closePath(); g.fillStyle = col; g.fill(); };
-    band(CORR - 7.5, CORR + 7.5, `rgba(47,191,113,${a * .5})`); band(CORR2 - 7, CORR2 + 7, `rgba(255,150,40,${a * .42})`);
-    for (const l of [CORR, CORR2]) { g.beginPath(); for (let s = j.tail; s <= G.acc.s1; s += 8) { const q = P(s, l); s === j.tail ? g.moveTo(q.x, q.y) : g.lineTo(q.x, q.y); } g.strokeStyle = `rgba(255,255,255,${a + .2})`; g.lineWidth = 1.4; g.setLineDash([6, 9]); g.lineDashOffset = -now * 24; g.stroke(); g.setLineDash([]); }
+    const a = Math.min(.5, j.gasse * .6), band = (l0, l1, col, s0, s1) => { if (s1 <= s0) return; g.beginPath(); for (let s = s0; s <= s1; s += 8) { const q = P(s, l0); s === s0 ? g.moveTo(q.x, q.y) : g.lineTo(q.x, q.y); } for (let s = s1; s >= s0; s -= 8) { const q = P(s, l1); g.lineTo(q.x, q.y); } g.closePath(); g.fillStyle = col; g.fill(); };
+    const sc0 = Math.max(j.tail, G.acc.front - 300);
+    band(GC1 - 9, GC1 + 9, `rgba(47,191,113,${a * .5})`, j.tail, sc0); band(CORR - 7.5, CORR + 7.5, `rgba(47,191,113,${a * .5})`, sc0, G.acc.s1); band(CORR2 - 7, CORR2 + 7, `rgba(255,150,40,${a * .42})`, sc0, G.acc.s1);
+    for (const [l, s0, s1] of [[GC1, j.tail, sc0], [CORR, sc0, G.acc.s1], [CORR2, sc0, G.acc.s1]]) { if (s1 <= s0) continue; g.beginPath(); for (let s = s0; s <= s1; s += 8) { const q = P(s, l); s === s0 ? g.moveTo(q.x, q.y) : g.lineTo(q.x, q.y); } g.strokeStyle = `rgba(255,255,255,${a + .2})`; g.lineWidth = 1.4; g.setLineDash([6, 9]); g.lineDashOffset = -now * 24; g.stroke(); g.setLineDash([]); }
   }
   // Hof: geparkte Abschleppwagen + Werkstatt
   G.fleet.forEach((f, i) => { if (f.state !== 'depot') return; const p = bayPose(f.bay), T = TOWSP[f.type]; if (p.x < vw.x0 - 60 || p.x > vw.x1 + 60 || p.y < vw.y0 - 60 || p.y > vw.y1 + 60) return; g.save(); g.translate(p.x, p.y); g.rotate(p.a); g.scale(.56, .56); g.fillStyle = 'rgba(0,0,0,.25)'; rr(g, -T.L / 2 + 3, -T.W / 2 + 5, T.L, T.W, 4); g.fill(); drawTow(g, f.type, {}); g.restore(); });
@@ -1191,8 +1239,8 @@ function warm(sec) { for (let i = 0; i < sec * 10; i++) step(.1); G.t = 0; G.uni
 const panel = $('#panel'); let lastSig = '';
 const fmtLoc = () => 'A7 · Fahrtrichtung Hamburg · km ' + kmOf(G.acc ? G.acc.mid : G.crash ? G.crash.s0 : 1000);
 const uOf = t => G.units.find(u => u.type === t);
-function uStat(t) {
-  const us = unitsOf(t), AL = G.alarmed[t];
+function uStat(t, uu) {
+  const us = uu ? [uu] : unitsOf(t), AL = G.alarmed[t];
   if (!AL) return t === 'tow' ? 'noch nicht disponiert' : 'nicht alarmiert';
   if (!us.length) return t === 'tow' ? (G.jobs.length && G.jobs.every(j => j.done) ? 'alle zurück im Depot' : 'zurück im Depot') : 'zurück auf der Wache';
   const u = us.slice().sort((a, b) => (a.site ? 1 : 0) - (b.site ? 1 : 0))[0], n = us.length > 1 ? ' ×' + us.length : '';
@@ -1281,7 +1329,7 @@ function dispatchPanel() {
     <div class="card" style="font-size:13px;color:#cfcfc9"><b style="color:#fff">Frühester Bergungsbeginn:</b> <span data-live="start" style="font-weight:900;color:#FF7A00">…</span><br><span style="color:#9a9a93">Bergung erst nach Freigabe durch Polizei${G.alarmed.fw ? ' und Feuerwehr (Brand gelöscht)' : ''}.</span></div>
     <button class="btn grn big" data-act="accept" ${r && G.towSel && !(W.kind !== 'rig' && rigOpen() && !rigOpen().tow) ? '' : 'disabled'}>${ic('chk')} Auftrag annehmen &amp; losschicken</button>${!r ? '<div style="color:#9a9a93;font-size:12px;text-align:center">Erst nach Eingang der Fahrer-Meldung möglich.</div>' : (W.kind !== 'rig' && rigOpen() && !rigOpen().tow) ? '<div style="color:#ffb020;font-size:12px;text-align:center;font-weight:700">Zuerst das Hauptwrack disponieren – es blockiert die Fahrbahn.</div>' : ''}`;
   }
-  if (G.jobs.length) h += `<div class="h"><span>Abschleppdienste im Einsatz</span></div>${unitRow('tow')}`;
+  if (G.jobs.length || G.units.some(u => u.type === 'tow')) h += `<div class="h"><span>Abschleppdienste im Einsatz</span></div>${G.units.filter(u => u.type === 'tow').map(u => { const e = unitEta(u); return `<div class="unit"><div class="dot" style="background:#FF7A00;color:#fff">TOW</div><div><span class="nm">${esc(u.fleet.name)}${u.wreck ? ' → ' + esc(u.wreck.label) : ''}</span><small>${uStat('tow', u)}${e != null && e > .5 && ['alarm', 'local', 'hw'].includes(u.mode) && !u.site ? ' · ' + minTx(e) : ''}</small></div>${canRecall(u) ? `<button class="btn ghost" style="width:auto;padding:6px 10px;margin-left:auto;font-size:12px" data-act="recall" data-id="${u.id}">↩ Zurückrufen</button>` : '<div class="r">–</div>'}</div>`; }).join('') || unitRow('tow')}`;
   if (G.reps.length || G.fixed || G.ws.some(w => w.q.length)) h += `<div class="h"><span>Werkstatt (Hof)</span><span>${G.fixed} repariert</span></div>` + G.ws.map((w, i) => { const r = w.cur; return `<div class="pk off" style="cursor:default;opacity:1"><div class="ti dk" style="font-size:20px">🔧</div><div><span class="nm">Platz ${i + 1}</span><small>${r ? (r.st === 'in' ? 'Fahrzeug wird eingefahren' : (r.load.rig ? 'Lkw' : 'Fahrzeug') + ' in Reparatur') : 'frei'}${w.q.length ? ' · ' + w.q.length + ' wartet' : ''}</small></div><div class="go" style="font-size:12px">${r && r.st === 'fix' ? Math.round(r.prog * 100) + ' %' : '–'}</div></div>`; }).join('');
   h += `<div class="h">Ablauf</div>${timelineHTML()}<button class="btn ghost" data-act="newSim">${ic('plus')} Neue Simulation</button>`;
   return h;
@@ -1386,6 +1434,7 @@ const ACT = {
   quick: () => { const f = G.form; while (f.photos.length < 2) f.photos.push(demoPhoto(f.photos.length)); if (!f.memo) f.memo = { sec: 9, bars: bars() }; sendReport(); },
   skipReport: () => ACT.quick(),
   send: () => sendReport(),
+  recall: d => { recallUnit(+d.id); renderPanel(true); },
   pickTruck: d => { G.towSel = d.id; renderPanel(true); },
   pickRoute: d => { G.routeSel = +d.i; G.routeManual = true; document.querySelectorAll('[data-route]').forEach(b => b.classList.toggle('on', +b.dataset.route === G.routeSel)); },
   pickWreck: d => { G.selWreck = +d.id; G.towSel = null; G.routeManual = false; renderPanel(true); },
