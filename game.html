@@ -163,7 +163,7 @@ input{font:inherit}
 'use strict';
 /* ===== Hilfen ===== */
 const $ = s => document.querySelector(s);
-const W = 1280, H = 720, WW = 3000, WH = 1700, TZ = 10;   // W/H = Ansichtsfenster, WW/WH = Welt                         // TZ: Zeitraffer (1 Sim-Sekunde = 10 s Echtzeit)
+const W = 1280, H = 720, WW = 6000, WH = 3400, TZ = 10;   // W/H = Ansichtsfenster, WW/WH = Welt                         // TZ: Zeitraffer (1 Sim-Sekunde = 10 s Echtzeit)
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v)), lerp = (a, b, t) => a + (b - a) * t, rnd = (a, b) => a + Math.random() * (b - a);
 const ss = t => { t = clamp(t, 0, 1); return t * t * (3 - 2 * t); };
 const pad2 = n => String(n).padStart(2, '0'), mmss = s => pad2(Math.floor(s / 60)) + ':' + pad2(Math.floor(s % 60));
@@ -183,10 +183,12 @@ const ic = (n, c = '') => `<svg class="ico ${c}" viewBox="0 0 24 24" fill="none"
 const tIc = (t, w = 44, h = 27) => `<svg viewBox="0 0 80 48" width="${w}" height="${h}"><use href="#i-${['tow', 'flat', 'heavy'][t]}"/></svg>`;
 
 /* ===== Autobahn-Geometrie: Mittellinie als Kurve, Position = (s, lat) ===== */
+
+/* ===== Autobahn-Geometrie: Mittellinie als Kurve, Position = (s, lat) ===== */
 const C = []; let Lh = 0;
 (function () {
-  const raw = [], M = 6000;
-  for (let i = 0; i <= M; i++) { const t = i / M; raw.push({ x: -140 + 3280 * t, y: 860 + 300 * Math.sin(t * 3.0 + .6) + 90 * Math.sin(t * 8.5 + 1.7) }); }
+  const raw = [], M = 9000;
+  for (let i = 0; i <= M; i++) { const t = i / M; raw.push({ x: -140 + 6280 * t, y: 1700 + 520 * Math.sin(t * 3.4 + .6) + 170 * Math.sin(t * 9.5 + 1.7) }); }
   const cum = [0]; for (let i = 1; i < raw.length; i++) cum.push(cum[i - 1] + Math.hypot(raw[i].x - raw[i - 1].x, raw[i].y - raw[i - 1].y));
   const total = cum[cum.length - 1]; let j = 0;
   for (let s = 0; s <= total; s += 2) { while (cum[j + 1] < s) j++; const k = (s - cum[j]) / (cum[j + 1] - cum[j] || 1); C.push({ x: lerp(raw[j].x, raw[j + 1].x, k), y: lerp(raw[j].y, raw[j + 1].y, k) }); }
@@ -195,90 +197,198 @@ const C = []; let Lh = 0;
 })();
 function at(s) { s = clamp(s, 0, Lh); const f = s / 2, i = Math.min(C.length - 2, f | 0), k = f - i, a = C[i], b = C[i + 1]; return { x: lerp(a.x, b.x, k), y: lerp(a.y, b.y, k), tx: lerp(a.tx, b.tx, k), ty: lerp(a.ty, b.ty, k) }; }
 function P(s, lat) { const c = at(s); return { x: c.x - c.ty * lat, y: c.y + c.tx * lat, a: Math.atan2(c.ty, c.tx) }; }
-const MED = 7, LAT = [49.5, 32.5, 15.5], SH = 66, STRIP = 84, STRIP2 = 100, STRIP3 = 116, CORR = 24, CORR2 = 38.7, SHIFT = [17, 20, -5.5], GS = 5.5, LATL = 190;   // Rettungsgasse: innen (CORR) Blaulicht, außen (CORR2) Abschleppdienst   // Spur 0 = rechts, 2 = links
+const MED = 7, LAT = [49.5, 32.5, 15.5], SH = 66, STRIP = 84, STRIP2 = 100, STRIP3 = 116, CORR = 24, CORR2 = 38.7, SHIFT = [17, 20, -5.5], GS = 5.5, LATL = 190;   // Spur 0 = rechts, 2 = links; Gasse innen (CORR) Blaulicht, außen (CORR2) Abschleppdienst
 const kmOf = s => (140 + s / 500).toFixed(1).replace('.', ',');
-const RAMPS = [320, 820, 1320, 1820, 2320, 2820].map((s, i) => ({ id: i, name: ['AS Nord', 'AS Wald', 'AS Mitte', 'AS Süd', 'AS Hafen', 'AS Ost'][i], s }));
+const RN = ['AS Nord', 'AS Wald', 'AS Mitte', 'AS Süd', 'AS Hafen', 'AS Ost', 'AS Berg', 'AS Tal', 'AS Feld', 'AS Dorf', 'AS Stadt', 'AS See', 'AS Park', 'AS Mühle'];
+const RAMPS = []; for (let s = 320, i = 0; s < Lh - 900; s += 500, i++) RAMPS.push({ id: i, name: RN[i % RN.length], s });
 const OFFS = RAMPS.map((r, i) => ({ id: i, s: r.s - 260 }));
 const EXIT = { s: Math.round(Lh - 260), name: 'AS Ende' };
-const BASES = { depot: { u: 470, name: 'TRUCK RESCUE DEPOT', roof: '#FF7A00' }, fw: { u: 1250, name: 'FEUERWEHR', roof: '#d9453b' }, pol: { u: 1950, name: 'AUTOBAHNPOLIZEI', roof: '#3f6fb5' }, rd: { u: 2600, name: 'RETTUNGSWACHE', roof: '#f2f2f2' } };
-const CROSS = [1070, 2070, 3070].map(s => ({ s, name: ['B27', 'K12', 'L35'][[1070, 2070, 3070].indexOf(s)] }));
+const BASES = { depot: { u: 1150, name: 'TRUCK RESCUE · HOF & WERKSTATT', roof: '#FF7A00' }, fw: { u: 2700, name: 'FEUERWEHR', roof: '#d9453b' }, pol: { u: 4100, name: 'AUTOBAHNPOLIZEI', roof: '#3f6fb5' }, rd: { u: 5500, name: 'RETTUNGSWACHE', roof: '#f2f2f2' } };
+const CN = ['B27', 'K12', 'L35', 'B3', 'K41', 'L8', 'B14'];
+const CROSS = [650, 1950, 3300, 4800, 6000].map((s, i) => ({ s, name: CN[i % CN.length] }));
+/* Hof & Werkstatt (im (s,lat)-Koordinatensystem der Landstraße) */
+const DU = BASES.depot.u;
+const YD = { s0: DU - 215, s1: DU + 330, l0: 214, l1: 376, gateS: DU - 200, aisle: 254 };
+YD.bays = []; for (let i = 0; i < 9; i++) YD.bays.push(i < 5 ? { s: DU - 170 + 52 * i, lat: 234 } : { s: DU - 170 + 52 * (i - 5), lat: 274 });
+YD.ws = [0, 1, 2].map(i => ({ s: DU + 110 + 72 * i, lat: 328, spot: 274 }));
+YD.wsBox = { s0: DU + 80, s1: DU + 290, l0: 296, l1: 372 };
 function bez(a, b, c, d, n) { const o = []; for (let i = 0; i <= n; i++) { const t = i / n, u = 1 - t; o.push({ x: u * u * u * a.x + 3 * u * u * t * b.x + 3 * u * t * t * c.x + t * t * t * d.x, y: u * u * u * a.y + 3 * u * u * t * b.y + 3 * u * t * t * c.y + t * t * t * d.y }); } return o; }
 const Lpt = u => P(clamp(u, 0, Lh), LATL);
 const rampConn = i => { const s = RAMPS[i].s; return bez(P(s - 90, LATL), P(s - 20, LATL), P(s - 30, 100), P(s + 70, STRIP), 14); };
 const offConn = s => bez(P(s - 70, STRIP), P(s, 100), P(s + 10, LATL), P(s + 90, LATL), 14);
 const exitConn = () => offConn(EXIT.s);
 function mkPath(pts) { const cum = [0]; for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y)); return { pts, cum, len: cum[cum.length - 1] }; }
-function localPath(baseU, i) { const u0 = RAMPS[i].s - 90, st = baseU < u0 ? 10 : -10, pts = []; for (let u = baseU; st > 0 ? u < u0 : u > u0; u += st) pts.push(Lpt(u)); return mkPath(pts.concat(rampConn(i))); }
-function backPath(baseU, exitS) { exitS = exitS || EXIT.s; const pts = offConn(exitS), st = baseU < exitS + 90 ? -10 : 10; for (let u = exitS + 90; st < 0 ? u > baseU : u < baseU; u += st) pts.push(Lpt(u)); return mkPath(pts); }
+const gateU = base => base === 'depot' ? YD.gateS : BASES[base].u;
+function Lseg(u0, u1) { const st = u0 < u1 ? 10 : -10, pts = []; for (let u = u0; st > 0 ? u < u1 : u > u1; u += st) pts.push(Lpt(u)); return pts; }
+function localPath(baseU, i) { const u0 = RAMPS[i].s - 90; return mkPath(Lseg(baseU, u0).concat(rampConn(i))); }
+function backPath(baseU, exitS) { exitS = exitS || EXIT.s; return mkPath(offConn(exitS).concat(Lseg(exitS + 90, baseU))); }
+/* Hof-Wege */
+const yp = (s, lat) => { const p = P(s, lat); return { x: p.x, y: p.y }; };
+function yardOutPts(i) {   // Stellplatz → Gasse → Tor → Landstraße
+  const b = YD.bays[i], pts = bez(yp(b.s, b.lat), yp(b.s - 24, b.lat), yp(b.s - 18, YD.aisle), yp(b.s - 44, YD.aisle), 10);
+  for (let s = b.s - 64; s > YD.gateS + 20; s -= 20) pts.push(yp(s, YD.aisle));
+  return pts.concat(bez(yp(YD.gateS + 20, YD.aisle), yp(YD.gateS, YD.aisle), yp(YD.gateS, 232), yp(YD.gateS, LATL), 8));
+}
+const wsStop = slot => YD.ws[slot].s + 40;
+function yardToSpot(slot) {   // Tor → Werkstattvorplatz
+  const w = YD.ws[slot], st = wsStop(slot), pts = bez(yp(YD.gateS, LATL), yp(YD.gateS, 232), yp(YD.gateS + 4, YD.aisle), yp(YD.gateS + 30, YD.aisle), 8);
+  for (let s = YD.gateS + 50; s < st - 60; s += 20) pts.push(yp(s, YD.aisle));
+  return pts.concat(bez(yp(st - 60, YD.aisle), yp(st - 30, YD.aisle), yp(st - 28, w.spot), yp(st, w.spot), 8));
+}
+function spotToBay(slot, i) {  // Vorplatz → Wendeschleife → Gasse → Stellplatz
+  const w = YD.ws[slot], b = YD.bays[i], st = wsStop(slot), pts = bez(yp(st, w.spot), yp(st + 26, w.spot), yp(st + 26, YD.aisle), yp(st, YD.aisle), 8);
+  for (let s = st - 20; s > b.s + 56; s -= 20) pts.push(yp(s, YD.aisle));
+  return pts.concat(bez(yp(b.s + 56, YD.aisle), yp(b.s + 26, YD.aisle), yp(b.s + 28, b.lat), yp(b.s, b.lat), 10));
+}
+function yardToBay(i) {       // Tor → Stellplatz (ohne Ladung)
+  const b = YD.bays[i], pts = bez(yp(YD.gateS, LATL), yp(YD.gateS, 232), yp(YD.gateS + 4, YD.aisle), yp(YD.gateS + 30, YD.aisle), 8);
+  for (let s = YD.gateS + 50; s < b.s + 56; s += 20) pts.push(yp(s, YD.aisle));
+  return pts.concat(bez(yp(b.s + 56, YD.aisle), yp(b.s + 26, YD.aisle), yp(b.s + 28, b.lat), yp(b.s, b.lat), 10));
+}
+function wsOutPts(slot) {     // fertig repariertes Fahrzeug: Werkstatt → Gasse → Tor → Landstraße
+  const w = YD.ws[slot], pts = [yp(w.s, w.lat), yp(w.s, w.spot + 8)].concat(bez(yp(w.s, w.spot), yp(w.s, YD.aisle + 8), yp(w.s - 6, YD.aisle), yp(w.s - 34, YD.aisle), 8));
+  for (let s = w.s - 54; s > YD.gateS + 20; s -= 20) pts.push(yp(s, YD.aisle));
+  return pts.concat(bez(yp(YD.gateS + 20, YD.aisle), yp(YD.gateS, YD.aisle), yp(YD.gateS, 232), yp(YD.gateS, LATL), 8));
+}
+const bayPose = i => { const b = YD.bays[i], p = P(b.s, b.lat); return { x: p.x, y: p.y, a: p.a + Math.PI }; };
+const wsPose = slot => { const w = YD.ws[slot], p = P(w.s, w.lat); return { x: p.x, y: p.y, a: p.a - Math.PI / 2 }; };
+const spotPose = slot => { const w = YD.ws[slot], p = P(w.s, w.spot); return { x: p.x, y: p.y, a: p.a }; };
 function follow(p, d) {
   d = clamp(d, 0, p.len); let i = 1; while (i < p.cum.length - 1 && p.cum[i] < d) i++;
   const a = p.pts[i - 1], b = p.pts[i], l = p.cum[i] - p.cum[i - 1] || 1, k = (d - p.cum[i - 1]) / l;
   return { x: lerp(a.x, b.x, k), y: lerp(a.y, b.y, k), a: Math.atan2(b.y - a.y, b.x - a.x) };
 }
-
-/* ===== Statischer Hintergrund (einmal vorgerendert) ===== */
-
 /* Querstraßen (Brücken über die Autobahn) als Polylinie */
-function crossPts(i) { const s = CROSS[i].s, pts = []; for (let l = -1100; l <= 1100; l += 40) { const p = P(s + 70 * Math.sin(l / 260), l); pts.push({ x: p.x, y: p.y, l }); } return pts.filter(p => p.x > -40 && p.x < WW + 40 && p.y > -40 && p.y < WH + 40); }
+function crossPts(i) { const s = CROSS[i].s, pts = []; for (let l = -1500; l <= 1500; l += 40) { const p = P(s + 70 * Math.sin(l / 260), l); pts.push({ x: p.x, y: p.y, l }); } return pts.filter(p => p.x > -40 && p.x < WW + 40 && p.y > -40 && p.y < WH + 40); }
 const CROSSP = CROSS.map((c, i) => crossPts(i));
 
-/* ===== Statischer Hintergrund (einmal vorgerendert) ===== */
-let BG = null; const SBG = 1.25;
-function buildBG() {
-  const c = document.createElement('canvas'); c.width = Math.round(WW * SBG); c.height = Math.round(WH * SBG); const g = c.getContext('2d'); g.scale(SBG, SBG); const R = rng(5);
-  let gr = g.createLinearGradient(0, 0, 0, WH); gr.addColorStop(0, '#bcd89c'); gr.addColorStop(1, '#a8cb86'); g.fillStyle = gr; g.fillRect(0, 0, WW, WH);
-  for (let i = 0; i < 260; i++) { g.fillStyle = R() < .5 ? 'rgba(255,255,255,.06)' : 'rgba(70,110,50,.07)'; g.beginPath(); g.arc(R() * WW, R() * WH, 40 + R() * 120, 0, 7); g.fill(); }
-  const ribbon = (l0, l1, col, s0 = -40, s1 = Lh + 40, st = 8) => { g.beginPath(); for (let s = s0; s <= s1; s += st) { const p = P(s, l0); s === s0 ? g.moveTo(p.x, p.y) : g.lineTo(p.x, p.y); } for (let s = s1; s >= s0; s -= st) { const p = P(s, l1); g.lineTo(p.x, p.y); } g.closePath(); g.fillStyle = col; g.fill(); };
-  const line = (lat, col, w, dash, s0 = -40, s1 = Lh + 40) => { g.beginPath(); for (let s = s0; s <= s1; s += 6) { const p = P(s, lat); s === s0 ? g.moveTo(p.x, p.y) : g.lineTo(p.x, p.y); } g.strokeStyle = col; g.lineWidth = w; g.setLineDash(dash || []); g.stroke(); g.setLineDash([]); };
+/* ===== Statischer Hintergrund: Kacheln (grob komplett + fein bei Bedarf) ===== */
+let BG = null;                       // grobe Gesamtkarte
+const SLO = .5, TS = 600, SHI = 1.5, TILES = new Map(); let tileN = 0;
+const RIV = [
+  (t) => ({ x: 1500 + 260 * Math.sin(t * 4.6) + 200 * t, y: -40 + 3480 * t }),
+  (t) => ({ x: 4400 + 240 * Math.sin(t * 3.9 + 1) - 160 * t, y: -40 + 3480 * t })];
+const LAKES = [[4300, 560, 330, 190, .3], [1100, 3000, 300, 150, -.2], [5200, 2950, 260, 150, .4], [2900, 420, 150, 80, 0]];
+function sRange(T) {
+  if (!T.cull) return [-40, Lh + 40];
+  let a = Infinity, b = -Infinity; for (let s = 0; s <= Lh; s += 40) { const p = at(s); if (p.x > T.x0 - 520 && p.x < T.x1 + 520 && p.y > T.y0 - 520 && p.y < T.y1 + 520) { a = Math.min(a, s); b = Math.max(b, s); } }
+  return a > b ? [0, -1] : [Math.max(-40, a - 80), Math.min(Lh + 40, b + 80)];
+}
+function paintBG(g, T) {
+  const R = rng(5), V = (x, y, r) => !T.cull || (x + r > T.x0 && x - r < T.x1 && y + r > T.y0 && y - r < T.y1);
+  const [SA, SB] = sRange(T);
+  let gr = g.createLinearGradient(0, 0, 0, WH); gr.addColorStop(0, '#bcd89c'); gr.addColorStop(1, '#a8cb86'); g.fillStyle = gr; g.fillRect(T.x0 - 2, T.y0 - 2, T.x1 - T.x0 + 4, T.y1 - T.y0 + 4);
+  for (let i = 0; i < 700; i++) { const c = R() < .5, x = R() * WW, y = R() * WH, r = 40 + R() * 120; if (!V(x, y, r)) continue; g.fillStyle = c ? 'rgba(255,255,255,.06)' : 'rgba(70,110,50,.07)'; g.beginPath(); g.arc(x, y, r, 0, 7); g.fill(); }
+  const ribbon = (l0, l1, col, s0 = SA, s1 = SB, st = 8) => { if (s1 < s0) return; g.beginPath(); for (let s = s0; s <= s1; s += st) { const p = P(s, l0); s === s0 ? g.moveTo(p.x, p.y) : g.lineTo(p.x, p.y); } for (let s = s1; s >= s0; s -= st) { const p = P(s, l1); g.lineTo(p.x, p.y); } g.closePath(); g.fillStyle = col; g.fill(); };
+  const line = (lat, col, w, dash, s0 = SA, s1 = SB) => { if (s1 < s0) return; g.beginPath(); for (let s = s0; s <= s1; s += 6) { const p = P(s, lat); s === s0 ? g.moveTo(p.x, p.y) : g.lineTo(p.x, p.y); } g.strokeStyle = col; g.lineWidth = w; g.setLineDash(dash || []); g.stroke(); g.setLineDash([]); };
   const quad = (s0, s1, l0, l1, col) => { const a = P(s0, l0), b = P(s1, l0), d = P(s1, l1), e = P(s0, l1); g.fillStyle = col; g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(b.x, b.y); g.lineTo(d.x, d.y); g.lineTo(e.x, e.y); g.closePath(); g.fill(); };
-  const tree = (x, y, r) => { g.fillStyle = 'rgba(30,50,20,.26)'; g.beginPath(); g.ellipse(x + r * .5, y + r * .7, r, r * .85, 0, 0, 7); g.fill(); g.fillStyle = ['#4f9a4f', '#5aa857', '#3f8a49', '#68b25c'][(R() * 4) | 0]; g.beginPath(); g.arc(x, y, r, 0, 7); g.fill(); g.fillStyle = 'rgba(255,255,255,.18)'; g.beginPath(); g.arc(x - r * .3, y - r * .3, r * .55, 0, 7); g.fill(); };
+  const tree = (x, y, r) => { const ci = (R() * 4) | 0; if (!V(x, y, r * 2)) return; g.fillStyle = 'rgba(30,50,20,.26)'; g.beginPath(); g.ellipse(x + r * .5, y + r * .7, r, r * .85, 0, 0, 7); g.fill(); g.fillStyle = ['#4f9a4f', '#5aa857', '#3f8a49', '#68b25c'][ci]; g.beginPath(); g.arc(x, y, r, 0, 7); g.fill(); g.fillStyle = 'rgba(255,255,255,.18)'; g.beginPath(); g.arc(x - r * .3, y - r * .3, r * .55, 0, 7); g.fill(); };
   const poly = (pts, w, col, cap = 'round') => { g.lineCap = cap; g.lineJoin = 'round'; g.beginPath(); pts.forEach((p, i) => i ? g.lineTo(p.x, p.y) : g.moveTo(p.x, p.y)); g.strokeStyle = col; g.lineWidth = w; g.stroke(); };
   const road = (pts, w, dash) => { poly(pts, w + 5, '#d6d1c2'); poly(pts, w, '#4a4d53'); if (dash) { g.setLineDash([10, 10]); poly(pts, 1.6, 'rgba(240,238,225,.7)', 'butt'); g.setLineDash([]); } };
-  const house = (x, y, a, w, h) => { g.save(); g.translate(x, y); g.rotate(a); g.fillStyle = 'rgba(0,0,0,.22)'; rr(g, -w / 2 + 3, -h / 2 + 4, w, h, 2); g.fill(); g.fillStyle = ['#e9e2d2', '#d9c7ad', '#dfe6ec', '#efd5cb', '#cfd9e6'][(R() * 5) | 0]; rr(g, -w / 2, -h / 2, w, h, 2); g.fill(); g.fillStyle = ['#c0674b', '#8f5a45', '#6f7b8a', '#a35c44'][(R() * 4) | 0]; g.fillRect(-w / 2, -h / 2, w, h / 2); g.fillStyle = 'rgba(255,255,255,.25)'; g.fillRect(-w / 2, -h / 2, w, 2); g.restore(); };
-  // Felder, Solarpark, Wald
+  const house = (x, y, a, w, h) => { const c1 = (R() * 5) | 0, c2 = (R() * 4) | 0; if (!V(x, y, 30)) return; g.save(); g.translate(x, y); g.rotate(a); g.fillStyle = 'rgba(0,0,0,.22)'; rr(g, -w / 2 + 3, -h / 2 + 4, w, h, 2); g.fill(); g.fillStyle = ['#e9e2d2', '#d9c7ad', '#dfe6ec', '#efd5cb', '#cfd9e6'][c1]; rr(g, -w / 2, -h / 2, w, h, 2); g.fill(); g.fillStyle = ['#c0674b', '#8f5a45', '#6f7b8a', '#a35c44'][c2]; g.fillRect(-w / 2, -h / 2, w, h / 2); g.fillStyle = 'rgba(255,255,255,.25)'; g.fillRect(-w / 2, -h / 2, w, 2); g.restore(); };
+  // Felder, Solarparks, Wald
   const fcol = ['#d9d98f', '#a9cd7d', '#c7bb73', '#b5d68b', '#9ec371', '#e0cf8a'];
-  for (const [l0, l1] of [[134, 172], [-134, -172], [-172, -300], [210, 330]]) for (let s = -40; s < Lh + 40; s += 80) { const k = R() * 6 | 0; quad(s, s + 74, l0, l1, fcol[k]); quad(s, s + 74, l0, l0 + (l1 - l0) * .1, 'rgba(60,90,40,.18)'); }
-  for (let i = 0; i < 14; i++) { const s = 200 + R() * (Lh - 400), side = R() < .5 ? -1 : 1, p = P(s, side * (380 + R() * 200)); g.save(); g.translate(p.x, p.y); g.rotate(p.a); g.fillStyle = '#2f4d73'; g.fillRect(-60, -30, 120, 60); g.strokeStyle = 'rgba(255,255,255,.35)'; g.lineWidth = 1; for (let k = -60; k <= 60; k += 12) { g.beginPath(); g.moveTo(k, -30); g.lineTo(k, 30); g.stroke(); } for (let k = -30; k <= 30; k += 12) { g.beginPath(); g.moveTo(-60, k); g.lineTo(60, k); g.stroke(); } g.restore(); }
-  for (let i = 0; i < 520; i++) { const s = R() * Lh, side = R() < .5 ? -1 : 1, lat = side * (110 + R() * 420); if (Math.abs(lat) < 132 || (lat > 170 && lat < 215)) continue; const p = P(s, lat); if (p.x > 0 && p.x < WW && p.y > 0 && p.y < WH) tree(p.x, p.y, 5 + R() * 7); }
-  for (let i = 0; i < 90; i++) { const x = R() * WW, y = R() < .5 ? R() * 120 : WH - R() * 120; tree(x, y, 7 + R() * 9); }
-  // See + Fluss
-  g.fillStyle = '#e8e2bd'; g.beginPath(); g.ellipse(2140, 330, 210, 120, .3, 0, 7); g.fill(); g.fillStyle = '#8cc8ea'; g.beginPath(); g.ellipse(2140, 330, 190, 104, .3, 0, 7); g.fill(); g.fillStyle = 'rgba(255,255,255,.35)'; g.beginPath(); g.ellipse(2090, 300, 70, 26, .3, 0, 7); g.fill();
-  const rvp = []; for (let i = 0; i <= 60; i++) { const t = i / 60; rvp.push({ x: 1580 + 190 * Math.sin(t * 5.2) + 140 * t, y: -40 + 1800 * t }); }
-  poly(rvp, 74, '#e8e2bd'); poly(rvp, 54, '#8cc8ea'); poly(rvp, 34, '#a4d6f1'); g.setLineDash([22, 34]); poly(rvp, 2, 'rgba(255,255,255,.4)', 'butt'); g.setLineDash([]);
-  // Dörfer mit Nebenstraßen an der Landstraße
-  [[520, 1, 1], [1000, -1, 1], [1500, 1, 1], [2150, 1, 1], [2380, -1, 1], [2950, 1, 1], [3280, -1, 1]].forEach(([s, side]) => {
+  for (const [l0, l1] of [[134, 172], [-134, -172], [-172, -300], [210, 330]]) for (let s = -40; s < Lh + 40; s += 80) { const k = R() * 6 | 0; if (s + 80 < SA || s > SB) continue; quad(s, s + 74, l0, l1, fcol[k]); quad(s, s + 74, l0, l0 + (l1 - l0) * .1, 'rgba(60,90,40,.18)'); }
+  for (let i = 0; i < 26; i++) { const s = 200 + R() * (Lh - 400), side = R() < .5 ? -1 : 1, p = P(s, side * (380 + R() * 200)); if (!V(p.x, p.y, 90)) continue; g.save(); g.translate(p.x, p.y); g.rotate(p.a); g.fillStyle = '#2f4d73'; g.fillRect(-60, -30, 120, 60); g.strokeStyle = 'rgba(255,255,255,.35)'; g.lineWidth = 1; for (let k = -60; k <= 60; k += 12) { g.beginPath(); g.moveTo(k, -30); g.lineTo(k, 30); g.stroke(); } for (let k = -30; k <= 30; k += 12) { g.beginPath(); g.moveTo(-60, k); g.lineTo(60, k); g.stroke(); } g.restore(); }
+  for (let i = 0; i < 1500; i++) { const s = R() * Lh, side = R() < .5 ? -1 : 1, lat = side * (110 + R() * 420), r = 5 + R() * 7; if (Math.abs(lat) < 132 || (lat > 170 && lat < 215)) continue; if (lat > 205 && s > YD.s0 - 40 && s < YD.s1 + 40 && lat < YD.l1 + 40) continue; const p = P(s, lat); if (p.x > 0 && p.x < WW && p.y > 0 && p.y < WH) tree(p.x, p.y, r); }
+  for (let i = 0; i < 360; i++) { const x = R() * WW, y = R() < .5 ? R() * 150 : WH - R() * 150; tree(x, y, 7 + R() * 9); }
+  // Seen + Flüsse
+  for (const [x, y, rx, ry, a] of LAKES) { if (!V(x, y, rx + 40)) continue; g.fillStyle = '#e8e2bd'; g.beginPath(); g.ellipse(x, y, rx + 20, ry + 16, a, 0, 7); g.fill(); g.fillStyle = '#8cc8ea'; g.beginPath(); g.ellipse(x, y, rx, ry, a, 0, 7); g.fill(); g.fillStyle = 'rgba(255,255,255,.35)'; g.beginPath(); g.ellipse(x - rx * .3, y - ry * .3, rx * .35, ry * .25, a, 0, 7); g.fill(); }
+  for (const f of RIV) { const rvp = []; for (let i = 0; i <= 120; i++) rvp.push(f(i / 120)); poly(rvp, 74, '#e8e2bd'); poly(rvp, 54, '#8cc8ea'); poly(rvp, 34, '#a4d6f1'); g.setLineDash([22, 34]); poly(rvp, 2, 'rgba(255,255,255,.4)', 'butt'); g.setLineDash([]); }
+  // Dörfer mit Nebenstraßen
+  [[300, 1], [2300, 1], [3550, 1], [4300, 1], [5100, 1], [300, -1], [1300, -1], [2450, -1], [2900, -1], [4100, -1], [5100, -1]].forEach(([s, side]) => {
     const a = P(s, side * 190), b = P(s, side * 400), c2 = P(s + 160, side * 400); road([a, b, c2], 12); road([P(s - 140, side * 300), P(s + 220, side * 300)], 10);
     for (let k = 0; k < 16; k++) { const hs = s - 130 + k * 28, ho = side * (300 + (k % 2 ? 24 : -24)), p = P(hs, ho); house(p.x, p.y, p.a, 18 + R() * 8, 14 + R() * 5); }
     for (let k = 0; k < 7; k++) { const p = P(s + 170, side * (330 + k * 20)); house(p.x, p.y, p.a + 1.57, 18, 14); }
   });
   // Landstraßen (Süd = Ausrücken, Nord = Kulisse), Auf-/Abfahrten
-  const Ls = [], Ln = []; for (let u = -40; u <= Lh + 40; u += 10) { Ls.push(P(u, LATL)); Ln.push(P(u, -LATL)); }
-  road(Ls, 20, true); road(Ln, 18, true); RAMPS.forEach((r, i) => road(rampConn(i), 14)); road(exitConn(), 14); OFFS.forEach(o => road(offConn(o.s), 14));
-  RAMPS.forEach(r => { const a = P(r.s + 60, -LATL), b = P(r.s + 140, -78); road([a, P(r.s + 100, -140), b], 12); });
+  const Ls = [], Ln = []; for (let u = SA; u <= SB; u += 10) { Ls.push(P(u, LATL)); Ln.push(P(u, -LATL)); }
+  if (Ls.length > 1) { road(Ls, 20, true); road(Ln, 18, true); }
+  RAMPS.forEach((r, i) => { if (r.s + 200 > SA && r.s - 300 < SB) { road(rampConn(i), 14); const a = P(r.s + 60, -LATL), b = P(r.s + 140, -78); road([a, P(r.s + 100, -140), b], 12); } });
+  if (EXIT.s + 200 > SA && EXIT.s - 300 < SB) road(exitConn(), 14); OFFS.forEach(o => { if (o.s + 200 > SA && o.s - 300 < SB) road(offConn(o.s), 14); });
   // Autobahn
   ribbon(-130, 130, '#8d9a73'); ribbon(-91, -7, '#9a9a96'); ribbon(7, 91, '#9a9a96'); ribbon(91, 126, '#aaa59a'); ribbon(91, 93, '#8a867c'); ribbon(124.5, 126.5, '#8a867c'); ribbon(-126, -91, '#aaa59a'); ribbon(7, 58, '#43464c'); ribbon(-58, -7, '#43464c'); ribbon(58, 73, '#56595f'); ribbon(-73, -58, '#56595f'); ribbon(-7, 7, '#7da36a'); ribbon(-6, 6, '#8fb77a');
   for (const sg of [1, -1]) { line(sg * 58, '#f4f2ea', 2.2); line(sg * 8.5, '#f4f2ea', 2.2); line(sg * 24, 'rgba(244,242,234,.85)', 1.8, [12, 14]); line(sg * 41, 'rgba(244,242,234,.85)', 1.8, [12, 14]); line(sg * 91, '#b8bcc2', 1.6); line(sg * 7, '#c9ccd1', 2.4); }
-  for (let s = 0; s < Lh; s += 18) for (const l of [7, -7, 91, -91]) { const p = P(s, l); g.fillStyle = '#7d8087'; g.fillRect(p.x - .8, p.y - .8, 1.6, 1.6); }
-  for (let s = 100; s < Lh; s += 250) { const p = P(s, 96); g.fillStyle = '#2d6cc0'; g.fillRect(p.x - 3, p.y - 2, 6, 4); }
-  // Querstraßen (Brücken werden dynamisch darübergelegt)
-  CROSSP.forEach(pts => road(pts, 16, true));
+  for (let s = Math.max(0, SA); s < SB; s += 18) for (const l of [7, -7, 91, -91]) { const p = P(s, l); g.fillStyle = '#7d8087'; g.fillRect(p.x - .8, p.y - .8, 1.6, 1.6); }
+  for (let s = 100; s < Lh; s += 250) { if (s < SA || s > SB) continue; const p = P(s, 96); g.fillStyle = '#2d6cc0'; g.fillRect(p.x - 3, p.y - 2, 6, 4); }
+  CROSSP.forEach(pts => { if (pts.length > 1) road(pts, 16, true); });
   // Schilderbrücken + Schilder
-  [...RAMPS.map(r => r.s - 200), EXIT.s - 210].forEach(s => { const a = P(s, -80), b = P(s, 80); g.beginPath(); g.moveTo(a.x + 3, a.y + 4); g.lineTo(b.x + 3, b.y + 4); g.lineWidth = 5; g.strokeStyle = 'rgba(0,0,0,.2)'; g.stroke(); g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(b.x, b.y); g.strokeStyle = '#6d727a'; g.lineWidth = 3; g.stroke(); for (const l of [32, -32]) { const q = P(s, l); g.save(); g.translate(q.x, q.y); g.rotate(q.a); g.fillStyle = '#1f7a4d'; rr(g, -5, -13, 10, 26, 2); g.fill(); g.fillStyle = '#fff'; g.fillRect(-2, -9, 4, 18); g.restore(); } });
+  [...RAMPS.map(r => r.s - 200), EXIT.s - 210].forEach(s => { if (s < SA - 60 || s > SB + 60) return; const a = P(s, -80), b = P(s, 80); g.beginPath(); g.moveTo(a.x + 3, a.y + 4); g.lineTo(b.x + 3, b.y + 4); g.lineWidth = 5; g.strokeStyle = 'rgba(0,0,0,.2)'; g.stroke(); g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(b.x, b.y); g.strokeStyle = '#6d727a'; g.lineWidth = 3; g.stroke(); for (const l of [32, -32]) { const q = P(s, l); g.save(); g.translate(q.x, q.y); g.rotate(q.a); g.fillStyle = '#1f7a4d'; rr(g, -5, -13, 10, 26, 2); g.fill(); g.fillStyle = '#fff'; g.fillRect(-2, -9, 4, 18); g.restore(); } });
   const sign = (x, y, t, bg, fg) => { g.fillStyle = 'rgba(0,0,0,.25)'; rr(g, x - 19, y - 12, 44, 26, 5); g.fill(); g.fillStyle = bg; rr(g, x - 21, y - 14, 44, 26, 5); g.fill(); g.strokeStyle = '#fff'; g.lineWidth = 1.6; rr(g, x - 19, y - 12, 40, 22, 3); g.stroke(); g.fillStyle = fg; g.font = '900 15px Arial'; g.textAlign = 'center'; g.fillText(t, x + 1, y + 3); };
-  for (let s = 300; s < Lh; s += 600) { const p = P(s, 112); sign(p.x, p.y, 'A7', '#1f5fae', '#fff'); }
-  CROSS.forEach((cr, i) => { const p = P(cr.s - 40, 120); sign(p.x, p.y, cr.name, '#f2c230', '#1d1d1b'); });
-  // Gebäude an der Landstraße (Depot, Feuerwehr, Polizei, Rettungswache)
+  for (let s = 300; s < Lh; s += 600) { const p = P(s, 112); if (V(p.x, p.y, 40)) sign(p.x, p.y, 'A7', '#1f5fae', '#fff'); }
+  CROSS.forEach(cr => { const p = P(cr.s - 40, 120); if (V(p.x, p.y, 40)) sign(p.x, p.y, cr.name, '#f2c230', '#1d1d1b'); });
+  // Wachen (Feuerwehr, Polizei, Rettung)
   g.font = '900 14px system-ui,Arial'; g.textAlign = 'center';
   for (const [k, b] of Object.entries(BASES)) {
-    const p = P(b.u, LATL + 48), w = k === 'depot' ? 150 : 96, h = k === 'depot' ? 58 : 48;
-    g.save(); g.translate(p.x, p.y); g.rotate(p.a); g.fillStyle = 'rgba(0,0,0,.25)'; rr(g, -w / 2 + 4, -h / 2 + 6, w, h, 5); g.fill(); g.fillStyle = k === 'depot' ? '#5a5d65' : '#cfc9bb'; rr(g, -w / 2 - 8, -h / 2 - 8, w + 16, h + 16, 6); g.fill();
+    if (k === 'depot') continue;
+    const p = P(b.u, LATL + 48), w = 96, h = 48; if (!V(p.x, p.y, 120)) continue;
+    g.save(); g.translate(p.x, p.y); g.rotate(p.a); g.fillStyle = 'rgba(0,0,0,.25)'; rr(g, -w / 2 + 4, -h / 2 + 6, w, h, 5); g.fill(); g.fillStyle = '#cfc9bb'; rr(g, -w / 2 - 8, -h / 2 - 8, w + 16, h + 16, 6); g.fill();
     g.fillStyle = b.roof; rr(g, -w / 2, -h / 2, w, h, 4); g.fill(); g.fillStyle = 'rgba(255,255,255,.28)'; g.fillRect(-w / 2 + 4, -h / 2 + 4, w - 8, 6); g.fillStyle = 'rgba(0,0,0,.22)'; for (let x = -w / 2 + 12; x < w / 2 - 14; x += 24) g.fillRect(x, 2, 15, h / 2 - 5);
     if (k === 'rd') { g.fillStyle = '#d9453b'; g.fillRect(-4, -h / 2 + 12, 8, 20); g.fillRect(-10, -h / 2 + 18, 20, 8); } g.restore();
-    const lp = P(b.u, LATL + 112); const tw = g.measureText(b.name).width + 16; g.fillStyle = 'rgba(29,29,27,.88)'; rr(g, lp.x - tw / 2, lp.y - 10, tw, 21, 10); g.fill(); g.fillStyle = k === 'depot' ? '#FF7A00' : '#fff'; g.fillText(b.name, lp.x, lp.y + 5);
+    const lp = P(b.u, LATL + 112); const tw = g.measureText(b.name).width + 16; g.fillStyle = 'rgba(29,29,27,.88)'; rr(g, lp.x - tw / 2, lp.y - 10, tw, 21, 10); g.fill(); g.fillStyle = '#fff'; g.fillText(b.name, lp.x, lp.y + 5);
   }
-  g.font = '900 12px system-ui,Arial'; [...RAMPS.map(r => [r.name, r.s]), [EXIT.name, EXIT.s]].forEach(([n, s]) => { const p = P(s, 140); const tw = g.measureText(n).width + 14; g.fillStyle = '#1f7a4d'; rr(g, p.x - tw / 2, p.y - 9, tw, 18, 4); g.fill(); g.fillStyle = '#fff'; g.fillText(n, p.x, p.y + 4); });
-  { const p = P(120, -122); g.font = '900 14px system-ui,Arial'; g.textAlign = 'left'; g.fillStyle = '#1f5fae'; rr(g, p.x - 4, p.y - 12, 190, 24, 5); g.fill(); g.fillStyle = '#fff'; g.fillText('A7  ·  Richtung Hamburg →', p.x + 4, p.y + 5); }
+  paintYard(g, T, V);
+  g.font = '900 12px system-ui,Arial'; g.textAlign = 'center'; [...RAMPS.map(r => [r.name, r.s]), [EXIT.name, EXIT.s]].forEach(([n, s]) => { const p = P(s, 140); if (!V(p.x, p.y, 80)) return; const tw = g.measureText(n).width + 14; g.fillStyle = '#1f7a4d'; rr(g, p.x - tw / 2, p.y - 9, tw, 18, 4); g.fill(); g.fillStyle = '#fff'; g.fillText(n, p.x, p.y + 4); });
+  { const p = P(120, -122); if (V(p.x, p.y, 200)) { g.font = '900 14px system-ui,Arial'; g.textAlign = 'left'; g.fillStyle = '#1f5fae'; rr(g, p.x - 4, p.y - 12, 190, 24, 5); g.fill(); g.fillStyle = '#fff'; g.fillText('A7  ·  Richtung Hamburg →', p.x + 4, p.y + 5); } }
+}
+/* Hof + Werkstatt */
+function paintYard(g, T, V) {
+  const c = P(DU, 295); if (!V(c.x, c.y, 320)) return;
+  const qd = (s0, s1, l0, l1) => { const a = P(s0, l0), b = P(s1, l0), d = P(s1, l1), e = P(s0, l1); g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(b.x, b.y); g.lineTo(d.x, d.y); g.lineTo(e.x, e.y); g.closePath(); };
+  const ln = (s0, l0, s1, l1, col, w, dash) => { const a = P(s0, l0), b = P(s1, l1); g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(b.x, b.y); g.strokeStyle = col; g.lineWidth = w; g.setLineDash(dash || []); g.stroke(); g.setLineDash([]); };
+  const y = YD;
+  // Schatten + Betonfläche + Zufahrt
+  g.save(); g.translate(4, 6); qd(y.s0, y.s1, y.l0, y.l1); g.fillStyle = 'rgba(0,0,0,.22)'; g.fill(); g.restore();
+  qd(y.s0 - 8, y.s1 + 8, y.l0 - 8, y.l1 + 8); g.fillStyle = '#7e8a62'; g.fill();
+  qd(y.s0, y.s1, y.l0, y.l1); g.fillStyle = '#b7b4aa'; g.fill();
+  qd(y.gateS - 18, y.gateS + 18, 196, y.l0 + 2); g.fillStyle = '#4a4d53'; g.fill();
+  // Fahrgasse (Asphalt) + Mittelmarkierung
+  qd(y.gateS - 6, y.s1 - 30, y.aisle - 12, y.aisle + 12); g.fillStyle = '#6a6d73'; g.fill(); ln(y.gateS, y.aisle, y.s1 - 30, y.aisle, 'rgba(255,255,255,.6)', 1.2, [10, 10]);
+  // Stellplätze
+  y.bays.forEach((b, i) => { qd(b.s - 24, b.s + 24, b.lat - 15, b.lat + 15); g.fillStyle = 'rgba(255,255,255,.17)'; g.fill(); for (const d of [-24, 24]) ln(b.s + d, b.lat - 15, b.s + d, b.lat + 15, 'rgba(255,255,255,.9)', 1.6); const q = P(b.s + 12, b.lat + (b.lat < y.aisle ? -9 : 9)); g.fillStyle = 'rgba(255,255,255,.45)'; g.font = '900 8px Arial'; g.textAlign = 'center'; g.fillText(i + 1, q.x, q.y + 3); });
+  // Zaun mit Tor
+  const fence = (s0, l0, s1, l1) => ln(s0, l0, s1, l1, '#4a4f58', 2.2); const gx = y.gateS;
+  fence(y.s0, y.l0, gx - 16, y.l0); fence(gx + 16, y.l0, y.s1, y.l0); fence(y.s1, y.l0, y.s1, y.l1); fence(y.s1, y.l1, y.s0, y.l1); fence(y.s0, y.l1, y.s0, y.l0);
+  for (const d of [-16, 16]) { const p = P(gx + d, y.l0); g.fillStyle = '#FF7A00'; g.fillRect(p.x - 3, p.y - 3, 6, 6); }
+  { const a = P(gx - 16, y.l0 - 2), b = P(gx + 16, y.l0 - 2); g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(b.x, b.y); g.strokeStyle = 'rgba(255,122,0,.9)'; g.lineWidth = 2; g.setLineDash([5, 4]); g.stroke(); g.setLineDash([]); }
+  // Bürogebäude
+  const office = (s0, s1, l0, l1, col, ttl) => { g.save(); g.translate(3, 5); qd(s0, s1, l0, l1); g.fillStyle = 'rgba(0,0,0,.25)'; g.fill(); g.restore(); qd(s0, s1, l0, l1); g.fillStyle = col; g.fill(); qd(s0 + 4, s1 - 4, l0 + 4, l0 + 10); g.fillStyle = 'rgba(255,255,255,.3)'; g.fill(); const p = P((s0 + s1) / 2, (l0 + l1) / 2 + 3); g.save(); g.translate(p.x, p.y); g.rotate(p.a); g.fillStyle = 'rgba(0,0,0,.3)'; for (let x = -34; x <= 34; x += 17) g.fillRect(x - 5, 7, 10, 7); g.fillStyle = '#fff'; g.font = '900 11px Arial'; g.textAlign = 'center'; g.fillText(ttl, 0, -4); g.restore(); };
+  office(y.s0 + 22, y.s0 + 130, 322, 366, '#FF7A00', 'DISPOSITION');
+  // Werkstatt: Halle mit offener Front, Hebebühnen pro Platz
+  const wb = y.wsBox; g.save(); g.translate(4, 6); qd(wb.s0, wb.s1, wb.l0, wb.l1); g.fillStyle = 'rgba(0,0,0,.28)'; g.fill(); g.restore();
+  qd(wb.s0, wb.s1, wb.l0, wb.l1); g.fillStyle = '#8a8f99'; g.fill();
+  qd(wb.s0, wb.s1, wb.l0 + 52, wb.l1); g.fillStyle = '#5d6370'; g.fill(); qd(wb.s0 + 3, wb.s1 - 3, wb.l0 + 54, wb.l0 + 60); g.fillStyle = 'rgba(255,255,255,.25)'; g.fill();
+  qd(wb.s0, wb.s1, wb.l0, wb.l1); g.strokeStyle = '#3b3f48'; g.lineWidth = 2.2; g.stroke();
+  y.ws.forEach((w, i) => { qd(w.s - 26, w.s + 26, w.lat - 24, w.lat + 24); g.fillStyle = '#9ba0a8'; g.fill(); g.strokeStyle = '#f2b705'; g.lineWidth = 1.4; g.setLineDash([5, 4]); g.stroke(); g.setLineDash([]); ln(w.s - 36, wb.l0, w.s - 36, wb.l1, '#3b3f48', 1.4); const q = P(w.s, wb.l0 + 9); g.save(); g.translate(q.x, q.y); g.rotate(q.a); g.fillStyle = 'rgba(255,255,255,.75)'; g.font = '900 8px Arial'; g.textAlign = 'center'; g.fillText('PLATZ ' + (i + 1), 0, 0); g.restore(); });
+  { const q = P((wb.s0 + wb.s1) / 2, wb.l1 - 12); g.save(); g.translate(q.x, q.y); g.rotate(q.a); const tw = 112; g.fillStyle = '#1d1d1b'; rr(g, -tw / 2, -10, tw, 20, 10); g.fill(); g.fillStyle = '#FF7A00'; g.font = '900 11px Arial'; g.textAlign = 'center'; g.fillText('🔧 WERKSTATT', 0, 4); g.restore(); }
+  { const q = P(DU, y.l1 + 22); g.save(); g.translate(q.x, q.y); g.rotate(q.a); const nm = BASES.depot.name, tw = nm.length * 7.2 + 20; g.fillStyle = 'rgba(29,29,27,.9)'; rr(g, -tw / 2, -11, tw, 22, 11); g.fill(); g.fillStyle = '#FF7A00'; g.font = '900 12px system-ui,Arial'; g.textAlign = 'center'; g.fillText(nm, 0, 4); g.restore(); }
+  // Hecke/Bäume am Zaun
+  for (let s = y.s0 + 10; s < y.s1; s += 34) for (const l of [y.l1 + 10]) { const p = P(s, l); g.fillStyle = '#4a8a46'; g.beginPath(); g.arc(p.x, p.y, 6, 0, 7); g.fill(); }
+}
+function makeTile(tx, ty, sc, T) {
+  const c = document.createElement('canvas'); c.width = Math.ceil((T.x1 - T.x0) * sc); c.height = Math.ceil((T.y1 - T.y0) * sc); const g = c.getContext('2d');
+  g.scale(sc, sc); g.translate(-T.x0, -T.y0); g.beginPath(); g.rect(T.x0, T.y0, T.x1 - T.x0, T.y1 - T.y0); g.clip(); paintBG(g, T); return c;
+}
+function buildBG() { return makeTile(0, 0, SLO, { x0: 0, y0: 0, x1: WW, y1: WH, cull: false }); }
+function hiTile(tx, ty) {
+  const key = tx + ',' + ty; let t = TILES.get(key);
+  if (t) { t.u = ++tileN; return t.c; }
+  const T = { x0: tx * TS, y0: ty * TS, x1: Math.min(WW, (tx + 1) * TS), y1: Math.min(WH, (ty + 1) * TS), cull: true };
+  const pad = 8; T.x0 -= pad; T.y0 -= pad; T.x1 += pad; T.y1 += pad;
+  const c = makeTile(tx, ty, SHI, T); TILES.set(key, { c, u: ++tileN, x0: T.x0, y0: T.y0 });
+  if (TILES.size > 28) { let k0 = null, u0 = Infinity; TILES.forEach((v, k) => { if (v.u < u0) { u0 = v.u; k0 = k; } }); TILES.delete(k0); }
   return c;
+}
+function drawBGWorld(g, vx, vy, vw, vh, z) {
+  if (z < .62) { g.drawImage(BG, vx * SLO, vy * SLO, vw * SLO, vh * SLO, vx, vy, vw, vh); return; }
+  g.drawImage(BG, vx * SLO, vy * SLO, vw * SLO, vh * SLO, vx, vy, vw, vh);   // Fallback unter fehlenden Kacheln
+  let built = 0;
+  for (let ty = Math.max(0, Math.floor(vy / TS)); ty <= Math.min(Math.floor((WH - 1) / TS), Math.floor((vy + vh) / TS)); ty++)
+    for (let tx = Math.max(0, Math.floor(vx / TS)); tx <= Math.min(Math.floor((WW - 1) / TS), Math.floor((vx + vw) / TS)); tx++) {
+      const key = tx + ',' + ty, t = TILES.get(key);
+      if (!t) { if (built >= 1) continue; built++; }
+      const c = hiTile(tx, ty), e = TILES.get(key); g.drawImage(c, e.x0, e.y0, c.width / SHI, c.height / SHI);
+    }
 }
 /* ===== Fahrzeug-Sprites (Draufsicht, Fahrtrichtung = +x) ===== */
 const CARCOL = ['#dcdcdc', '#2c3e50', '#c0392b', '#2980b9', '#7f8c8d', '#e0b92c', '#27ae60', '#f1f1f1', '#8e44ad'];
@@ -425,8 +535,8 @@ const G = {
   traf: [], west: [], amb: [], det: [], zones: [], zobs: [], slowT: 40, units: [], parts: [], obs: [], acc: null, crash: null, sched: [], alarmed: {}, ev: {}, log: [],
   spawn: [0, 0, 0], wspawn: [0, 0, 0], jam: { active: false, tail: 0, len: 0, count: 0, gasse: 0, growth: 0, hist: [] }, jamT: 0,
   form: null, step: 1, report: null, towSel: null, routeSel: null, routeManual: false, alertSeen: true, results: null, rec: null, play: null, clearAt: 0, idleT: 0,
-  fleet: [[0, 'Abschlepper 1'], [0, 'Abschlepper 2'], [0, 'Abschlepper 3'], [1, 'Plateau 1'], [1, 'Plateau 2'], [1, 'Plateau 3'], [2, 'Schwerlast 1'], [2, 'Schwerlast 2'], [2, 'Schwerlast 3']].map(([t, n], i) => ({ id: 'T' + (i + 1), type: t, name: n, state: 'depot' })),
-  wrecks: [], jobs: [], returns: [], fire: null, skids: [], cones: 0, shake: 0, selWreck: null, camFollow: null,
+  fleet: [[0, 'Abschlepper 1'], [0, 'Abschlepper 2'], [0, 'Abschlepper 3'], [1, 'Plateau 1'], [1, 'Plateau 2'], [1, 'Plateau 3'], [2, 'Schwerlast 1'], [2, 'Schwerlast 2'], [2, 'Schwerlast 3']].map(([t, n], i) => ({ id: 'T' + (i + 1), type: t, name: n, state: 'depot', bay: i })),
+  ws: [0, 1, 2].map(() => ({ cur: null, q: [] })), reps: [], fixed: 0, wrecks: [], jobs: [], returns: [], fire: null, skids: [], cones: 0, shake: 0, selWreck: null, camFollow: null,
 };
 const toast = (m, c = '') => { const d = document.createElement('div'); d.className = 'toast ' + c; d.textContent = m; const b = $('#toasts'); b.appendChild(d); while (b.children.length > 4) b.firstChild.remove(); setTimeout(() => d.remove(), 4200); };
 const addLog = (k, txt) => { G.ev[k] = G.t; G.log.push({ t: G.t, txt, k }); };
@@ -622,7 +732,7 @@ function updateJam() {
 /* ===== Szenario starten, Unfall abspielen ===== */
 function startScenario(k) {
   G.scen = k; G.phase = 'drive'; G.sched = []; G.units = []; G.parts = []; G.obs = []; G.acc = null; G.alarmed = {}; G.ev = {}; G.log = []; G.report = null; G.jobs = []; G.returns = []; G.wrecks = []; G.fire = null; G.skids = []; G.cones = 0; G.selWreck = null; G.results = null; G.jam = { active: false, tail: 0, len: 0, count: 0, gasse: 0, growth: 0, hist: [] };
-  G.fleet.forEach(f => f.state = 'depot'); G.step = 1; G.towSel = null; G.routeSel = null; G.routeManual = false; G.alertSeen = true; G.t = 0;
+  G.fleet.forEach(f => f.state = 'depot'); G.ws = [0, 1, 2].map(() => ({ cur: null, q: [] })); G.reps = []; G.fixed = 0; G.step = 1; G.towSel = null; G.routeSel = null; G.routeManual = false; G.alertSeen = true; G.t = 0;
   // Unfallort: weit stromabwärts, nicht in/an Baustellen oder Auffahrten
   let sAcc = 2500;
   for (let i = 0; i < 120; i++) { const c = rnd(760, Lh - 640); if (G.zones.every(z => c < z.s0 - 120 || c > z.s1 + 80) && RAMPS.every(r => c < r.s - 110 || c > r.s + 180) && CROSS.every(x => Math.abs(x.s - c) > 120)) { sAcc = c; break; } }
@@ -670,7 +780,11 @@ const USP = {
   rd: { label: 'Rettungsdienst', abbr: 'RD', len: 32, wid: 13, vFree: 125, vJam: 56, vLoc: 100, delay: 4, base: 'rd', tlat: CORR, off: 12, work: 12, col: '#ff8a00' },
 };
 function towSpec(tt) { const T = TOWSP[tt], B = TOWT[tt]; return { label: 'Abschleppdienst', abbr: 'TOW', len: T.L * .56, wid: T.W * .56, vFree: B.vFree, vJam: B.vJam, vLoc: 80, delay: 3, base: 'depot', tlat: CORR2, off: 9, work: B.work, col: '#FF7A00' }; }
-const _lp = {}; const lpath = (b, i) => _lp[b + i] || (_lp[b + i] = localPath(BASES[b].u, i));
+const _lp = {};
+function lpath(b, i, bay) {
+  if (b === 'depot') { const bb = bay == null ? 4 : bay, k = 'd' + bb + '_' + i; return _lp[k] || (_lp[k] = mkPath(yardOutPts(bb).concat(Lseg(YD.gateS, RAMPS[i].s - 90), rampConn(i)))); }
+  return _lp[b + i] || (_lp[b + i] = localPath(BASES[b].u, i));
+}
 function hwTime(sFrom, sTo, vF, vJ) {
   const r = { t: 0, free: 0, jam: 0, jamNo: 0 }; if (!G.acc || sTo <= sFrom) return r;
   const j = G.jam, tail = j.active ? Math.max(0, j.tail - j.growth * 22) : 1e9;
@@ -747,7 +861,7 @@ function onReport() {
 }
 function startUnitRoute(u) {
   const b = u.fixed != null ? routeEst(u.sp, u.fixed, u.wreck) : bestRoute(u.sp, u.wreck), i = b && b.ok ? b.i : RAMPS.length - 1;
-  u.ramp = i; u.path = lpath(u.sp.base, i); u.pd = 0; u.mode = 'local'; u.alarmEta = b && b.ok ? b.total : null;
+  u.ramp = i; u.path = lpath(u.sp.base, i, u.fleet ? u.fleet.bay : null); u.pd = 0; u.mode = 'local'; u.alarmEta = b && b.ok ? b.total : null;
   if (!G.ev['out_' + u.type]) addLog('out_' + u.type, (USP[u.type] ? USP[u.type].label : 'Abschleppdienst') + ' rückt aus über ' + RAMPS[i].name);
 }
 function mergeFree(u, s) { return !G.units.some(o => o !== u && (o.mode === 'hw' || o.mode === 'depart') && Math.abs(o.s - s) < (o.len + u.len) / 2 + 8 && Math.abs(o.lat - STRIP) < 14) && !G.traf.some(v => Math.abs(v.s - s) < (v.len + u.len) / 2 + 4 && Math.abs(v.lat - STRIP) < (v.wid + u.wid) / 2 + 1); }
@@ -777,7 +891,32 @@ function stepHW(u, dt) {
     const tgt = stageFrontFor(sp, u.wreck), dFront = G.acc.front - u.s, exact = Math.abs(tgt - (u.s + u.len / 2)) < 7 && u.v < 1.5, fallback = u.stillT > 1.8 && (u.type === 'tow' ? Math.abs(tgt - (u.s + u.len / 2)) < 150 : dFront < 280);
     if (exact || fallback) { u.site = true; u.wt = 0; const nm = USP[u.type] ? USP[u.type].label : 'Abschleppdienst'; if (!G.ev['arr_' + u.type]) { G.ev['arr_' + u.type] = G.t; addLog('arr_' + u.type, nm + ' vor Ort'); } toast(nm + ' ist vor Ort', 'good'); }
   }
-  if (u.mode === 'depart') { if (!u.exitS) { const nx = OFFS.find(o => o.s - 70 > u.s + 220); u.exitS = nx && nx.s < EXIT.s ? nx.s : EXIT.s; } if (u.s > G.acc.s1 + 40) u.tlat = STRIP; if (u.s >= u.exitS - 70) { u.mode = 'return'; const cp = { x: P(u.s, u.lat).x, y: P(u.s, u.lat).y }, bp = backPath(BASES[u.sp.base].u, u.exitS); u.path = mkPath([cp].concat(bp.pts)); u.pd = 0; u.x = cp.x; u.y = cp.y; u.a = P(u.s, u.lat).a; } }
+  if (u.mode === 'depart') { if (!u.exitS) { const nx = OFFS.find(o => o.s - 70 > u.s + 220); u.exitS = nx && nx.s < EXIT.s ? nx.s : EXIT.s; } if (u.s > G.acc.s1 + 40) u.tlat = STRIP; if (u.s >= u.exitS - 70) { u.mode = 'return'; const cp = { x: P(u.s, u.lat).x, y: P(u.s, u.lat).y }, bp = backPath(gateU(u.sp.base), u.exitS); let rp = [cp].concat(bp.pts); if (u.type === 'tow') { if (u.load) { u.slot = wsPick(u); rp = rp.concat(yardToSpot(u.slot)); } else rp = rp.concat(yardToBay(u.fleet.bay)); } u.path = mkPath(rp); u.pd = 0; u.x = cp.x; u.y = cp.y; u.a = P(u.s, u.lat).a; } }
+}
+/* ===== Hof & Werkstatt ===== */
+function wsPick(u) { let best = 0, bs = 1e9; G.ws.forEach((w, i) => { const sc = (w.cur ? 1 : 0) + w.q.length; if (sc < bs) { bs = sc; best = i; } }); G.ws[best].q.push(u); return best; }
+function startUnload(u) {
+  const w = G.ws[u.slot], L = u.load, ys = YD.ws[u.slot], bed = towBedPos(u), d = { x: Math.cos(u.a), y: Math.sin(u.a) };
+  const b1 = { x: bed.x - d.x * 34, y: bed.y - d.y * 34 }, c1 = { x: b1.x - d.x * 30, y: b1.y - d.y * 30 }, tgt = yp(ys.s, ys.lat), c2 = yp(ys.s, ys.lat - 52);
+  const r = { slot: u.slot, load: L, path: mkPath([{ x: bed.x, y: bed.y }, b1].concat(bez(b1, c1, c2, tgt, 16))), pd: 0, st: 'in', prog: 0, t: 0, dur: 9 + L.len * .22 + (L.rig ? 10 : 0), tow: u, sc: Math.min(1, 44 / Math.max(L.len, 1)) };
+  w.cur = r; w.q.shift(); G.reps.push(r); u.load = null; u.mode = 'unload'; addLog('unload_' + u.id, u.fleet.name + ' lädt in der Werkstatt ab'); toast(u.fleet.name + ' liefert das Fahrzeug in der Werkstatt ab', 'good');
+}
+function stepRepairs(dt) {
+  for (const r of G.reps.slice()) {
+    if (r.st === 'in') {
+      r.pd = Math.min(r.path.len, r.pd + 30 * dt); const p = follow(r.path, r.pd); r.x = p.x; r.y = p.y; r.a = p.a + Math.PI;
+      if (r.tow && r.pd > r.path.len * .72) { const u = r.tow; r.tow = null; u.mode = 'return'; u.homing = true; u.path = mkPath(spotToBay(r.slot, u.fleet.bay)); u.pd = 0; }
+      if (r.pd >= r.path.len) { r.st = 'fix'; if (r.tow) { const u = r.tow; r.tow = null; u.mode = 'return'; u.homing = true; u.path = mkPath(spotToBay(r.slot, u.fleet.bay)); u.pd = 0; } addLog('repair_' + r.slot + '_' + Math.round(G.t), 'Werkstatt: Reparatur beginnt (Platz ' + (r.slot + 1) + ')'); }
+    } else if (r.st === 'fix') {
+      r.t += dt; r.prog = clamp(r.t / r.dur, 0, 1);
+      if (Math.random() < dt * 9) { const p = yp(YD.ws[r.slot].s + rnd(-8, 8), YD.ws[r.slot].lat + rnd(-10, 10)); part(G, p.x, p.y, 'spark'); }
+      if (r.prog >= 1) {
+        r.st = 'out'; G.ws[r.slot].cur = null; const k = RAMPS.findIndex(q => q.s - 90 > YD.gateS + 60), L = r.load, kd = L.rig ? L.kind : L.kind;
+        G.det.push({ id: ++G.uid, path: mkPath(wsOutPts(r.slot).concat(Lseg(YD.gateS, RAMPS[k].s - 90), rampConn(k))), pd: 0, v: 0, vd: rnd(46, 56), len: L.len, wid: L.wid, kind: kd, col: L.col, col2: L.col2, k });
+        G.fixed = (G.fixed || 0) + 1; toast('Werkstatt: ' + (L.rig ? 'Lkw' : 'Fahrzeug') + ' repariert und zurück auf der Autobahn', 'good'); G.reps = G.reps.filter(x => x !== r);
+      }
+    }
+  }
 }
 const fireOn = () => G.fire && G.fire.on && G.t >= G.fire.t0;
 function towLoadInfo(w) { if (w.kind === 'veh') { const v = w.veh; return { kind: v.kind, col: v.col, col2: v.col2, len: v.len, wid: v.wid, need: w.need }; } return { kind: w.rigKind, col: '#c8453b', col2: '#e8e8e4', len: w.rigKind === 'semi' ? 70 : w.rigKind === 'truck' ? 42 : 28, wid: 13, need: w.need, rig: true }; }
@@ -794,10 +933,13 @@ function stepUnits(dt) {
       u.pd += u.sp.vLoc * dt; const p = lanePos(follow(u.path, u.pd)); u.x = p.x; u.y = p.y; u.a = p.a;
       if (u.pd >= u.path.len) {
         if (u.mode === 'local') { u.mode = 'hw'; u.s = ms; u.lat = STRIP; u.v = u.sp.vLoc * .5; if (u.type !== 'pol') { u.want = u.sp.tlat; u.tlat = stripLane(u); if (G.jam.active && u.s >= G.jam.tail - 260 - G.jam.growth * 8) { u.strip = true; u.want = null; } } else u.tlat = STRIP3; }
+        else if (u.type === 'tow' && u.load && !u.homing) { u.mode = 'wsWait'; }
         else { G.units = G.units.filter(x => x !== u); if (u.type === 'tow') { u.fleet.state = 'depot'; const j = G.jobs.find(x => x.u === u); if (j) j.done = true; addLog('towBack_' + u.fleet.id, u.fleet.name + ' zurück im Depot'); toast(u.fleet.name + ' ist zurück im Depot', 'good'); } }
       }
       continue;
     }
+    if (u.mode === 'wsWait') { const w = G.ws[u.slot]; if (w.q[0] === u && !w.cur) startUnload(u); continue; }
+    if (u.mode === 'unload') continue;
     if (u.mode === 'hw' || u.mode === 'depart') stepHW(u, dt);
     if (u.mode === 'hw' && u.site) {
       u.wt += dt;
@@ -830,13 +972,13 @@ const cposAcc = () => G.acc ? P(G.acc.mid, 40) : { x: 0, y: 0 };
 function step(dt) {
   G.t += dt; G.shake = Math.max(0, G.shake - dt * .9);
   for (const s of G.sched.slice()) if (G.t >= s.t) { G.sched = G.sched.filter(x => x !== s); s.fn(); }
-  updateCrash(dt); stepTraffic(dt); stepDet(dt); stepUnits(dt); stepAmb(dt);
+  updateCrash(dt); stepTraffic(dt); stepDet(dt); stepUnits(dt); stepRepairs(dt); stepAmb(dt);
   G.jamT -= dt; if (G.jamT <= 0) { G.jamT = .25; updateJam(); }
   G.slowT -= dt; if (G.slowT <= 0 && G.phase !== 'select') { G.slowT = rnd(35, 80); slowEvent(); }
   if (G.fire && G.fire.on && G.t >= G.fire.t0) G.fire.int = Math.min(1, G.fire.int + dt / (G.units.some(u => u.type === 'fw' && u.site) ? 1e9 : 9));
   G.parts = G.parts.filter(p => { p.l -= dt; p.x += (p.vx || 0) * dt; p.y += (p.vy || 0) * dt; if (p.k === 'smoke') p.vy -= 2 * dt; if (p.k === 'fire') p.vy -= 30 * dt; return p.l > 0; });
   if (G.acc && !G.acc.cleared && Math.random() < dt * 4 && !fireOn()) { const w = cposAcc(); part(G, w.x + rnd(-10, 10), w.y + rnd(-6, 6), 'smoke', { l: 2.6, vy: -12 }); }
-  if (G.acc && G.acc.cleared && !G.results && (G.t - G.clearAt > 4 && !G.jam.active && !G.units.length || G.t - G.clearAt > 70)) buildResults();
+  if (G.acc && G.acc.cleared && !G.results && (G.t - G.clearAt > 4 && !G.jam.active && !G.units.length && !G.reps.length || G.t - G.clearAt > 200)) buildResults();
 }
 function buildResults() {
   const e = G.ev, j = G.jam, jobs = G.jobs;
@@ -848,7 +990,7 @@ function buildResults() {
 }
 /* ===== Kamera, Zeichnen, Minimap ===== */
 const cv = $('#cv'), ctx = cv.getContext('2d'), mini = $('#mini'), mctx = mini.getContext('2d'); let K = 1;
-const CAM = { x: 1500, y: 850, z: .62 }, ZMIN = Math.max(W / WW, H / WH) + .001, ZMAX = 2.2;
+const CAM = { x: 3000, y: 1700, z: .62 }, ZMIN = Math.max(W / WW, H / WH) + .001, ZMAX = 2.2;
 function fit() { const r = cv.getBoundingClientRect(), d = Math.min(2, window.devicePixelRatio || 1); cv.width = Math.max(2, Math.round(r.width * d)); cv.height = Math.max(2, Math.round(r.width * H / W * d)); K = cv.width / W; mini.width = 240 * 2; mini.height = Math.round(240 * WH / WW) * 2; }
 function clampCam() { CAM.z = clamp(CAM.z, ZMIN, ZMAX); CAM.x = clamp(CAM.x, W / 2 / CAM.z, WW - W / 2 / CAM.z); CAM.y = clamp(CAM.y, H / 2 / CAM.z, WH - H / 2 / CAM.z); }
 function camTarget() {
@@ -862,7 +1004,7 @@ function chipAt(g, x, y, txt, bg, fg = '#fff', size = 9) { LBL.push({ x, y, txt,
 function glow(g, x, y, r, col) { g.save(); g.globalCompositeOperation = 'lighter'; const rg = g.createRadialGradient(x, y, 0, x, y, r); rg.addColorStop(0, col); rg.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = rg; g.beginPath(); g.arc(x, y, r, 0, 7); g.fill(); g.restore(); }
 const wreckOf = v => G.wrecks.find(w => w.veh === v);
 const bedLenOf = u => (TOWSP[u.tt].L - TOWSP[u.tt].cab) * .56;
-function towBedPos(u) { const off = -(TOWSP[u.tt].cab * .56) / 2 - .56, c = Math.cos(u.a), s = Math.sin(u.a); return { x: u.dx + c * off, y: u.dy + s * off }; }
+function towBedPos(u) { const off = -(TOWSP[u.tt].cab * .56) / 2 - .56, c = Math.cos(u.a), s = Math.sin(u.a); return { x: (u.dx ?? u.x) + c * off, y: (u.dy ?? u.y) + s * off }; }
 const lerpA = (a, b, t) => { let d = ((b - a + Math.PI) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2) - Math.PI; return a + d * t; };
 /* Kran-Animation: Haken anschlagen → anheben → herüberschwenken → absetzen → sichern */
 function craneAnim(w) {
@@ -943,7 +1085,7 @@ function draw() {
   const shk = G.shake > 0 ? G.shake * 5 : 0, sx = shk ? rnd(-shk, shk) : 0, sy = shk ? rnd(-shk, shk) : 0;
   g.setTransform(1, 0, 0, 1, 0, 0); g.fillStyle = '#b9d596'; g.fillRect(0, 0, cv.width, cv.height);
   g.setTransform(sc, 0, 0, sc, -vx * sc + sx * K, -vy * sc + sy * K);
-  g.drawImage(BG, vx * SBG, vy * SBG, (W / z) * SBG, (H / z) * SBG, vx, vy, W / z, H / z);
+  drawBGWorld(g, vx, vy, W / z, H / z, z);
   const j = G.jam;
   G.zones.forEach(zn => drawZone(g, zn, now, vw));
   // Bremsspuren
@@ -954,8 +1096,9 @@ function draw() {
     band(CORR - 7.5, CORR + 7.5, `rgba(47,191,113,${a * .5})`); band(CORR2 - 7, CORR2 + 7, `rgba(255,150,40,${a * .42})`);
     for (const l of [CORR, CORR2]) { g.beginPath(); for (let s = j.tail; s <= G.acc.s1; s += 8) { const q = P(s, l); s === j.tail ? g.moveTo(q.x, q.y) : g.lineTo(q.x, q.y); } g.strokeStyle = `rgba(255,255,255,${a + .2})`; g.lineWidth = 1.4; g.setLineDash([6, 9]); g.lineDashOffset = -now * 24; g.stroke(); g.setLineDash([]); }
   }
-  // Depot: wartende Abschleppwagen
-  G.fleet.forEach((f, i) => { if (f.state !== 'depot') return; const p = P(BASES.depot.u - 52 + (i % 3) * 38, LATL + 24 + (i / 3 | 0) * 22), T = TOWSP[f.type]; g.save(); g.translate(p.x, p.y); g.rotate(p.a); g.scale(.62, .62); g.fillStyle = 'rgba(0,0,0,.25)'; rr(g, -T.L / 2 + 3, -T.W / 2 + 5, T.L, T.W, 4); g.fill(); drawTow(g, f.type, {}); g.restore(); });
+  // Hof: geparkte Abschleppwagen + Werkstatt
+  G.fleet.forEach((f, i) => { if (f.state !== 'depot') return; const p = bayPose(f.bay), T = TOWSP[f.type]; if (p.x < vw.x0 - 60 || p.x > vw.x1 + 60 || p.y < vw.y0 - 60 || p.y > vw.y1 + 60) return; g.save(); g.translate(p.x, p.y); g.rotate(p.a); g.scale(.56, .56); g.fillStyle = 'rgba(0,0,0,.25)'; rr(g, -T.L / 2 + 3, -T.W / 2 + 5, T.L, T.W, 4); g.fill(); drawTow(g, f.type, {}); g.restore(); });
+  drawRepairs(g, now, vw);
   drawFireAndFx(g, now);
   if (G.crash && (G.phase === 'crash' || G.acc)) { const rw = G.wrecks[0]; if (!rw || !rw.done) drawRig(g, G, now, 0, rw ? craneAnim(rw) : null); }
   G.west.forEach(v => drawTrafficVeh(g, v, -1, now, vw));
@@ -964,7 +1107,7 @@ function draw() {
   // Einsatzkräfte
   G.units.forEach(u => {
     if (u.mode === 'alarm') return; let x, y, a;
-    if (u.mode === 'local' || u.mode === 'return') { x = u.x; y = u.y; a = u.a; } else { const p = P(u.s, u.lat), yaw = Math.atan2(u.ly || 0, Math.max(u.v, 20)); x = p.x; y = p.y; a = p.a + yaw; }
+    if (u.mode === 'local' || u.mode === 'return' || u.mode === 'wsWait' || u.mode === 'unload') { x = u.x; y = u.y; a = u.a; } else { const p = P(u.s, u.lat), yaw = Math.atan2(u.ly || 0, Math.max(u.v, 20)); x = p.x; y = p.y; a = p.a + yaw; }
     u.dx = x; u.dy = y; u.a = a;
     if (x < vw.x0 - 90 || x > vw.x1 + 90 || y < vw.y0 - 90 || y > vw.y1 + 90) return;
     g.save(); g.globalAlpha = u.fade; g.translate(x, y); g.rotate(a); drawEm(g, u, now); g.restore();
@@ -1009,17 +1152,30 @@ function drawTowLoad(g, u, now) {
   g.save(); g.globalAlpha = u.fade; g.translate(bed.x, bed.y); g.rotate(u.a); g.scale(sc, sc); drawVeh(g, { len: L.len, wid: L.wid, kind: L.kind, col: L.col, col2: L.col2, wreck: true }, now); g.restore();
   g.save(); g.translate(bed.x, bed.y); g.rotate(u.a); g.strokeStyle = '#ffb020'; g.lineWidth = 1.1; for (const k of [-.28, .28]) { g.beginPath(); g.moveTo(k * bedLenOf(u), -5.5); g.lineTo(k * bedLenOf(u), 5.5); g.stroke(); } g.restore();
 }
+function drawRepairs(g, now, vw) {
+  for (const r of G.reps) {
+    if (r.x == null) continue; if (r.x < vw.x0 - 60 || r.x > vw.x1 + 60 || r.y < vw.y0 - 60 || r.y > vw.y1 + 60) continue;
+    const L = r.load, dmg = r.st === 'fix' ? 1 - r.prog : 1;
+    g.save(); g.translate(r.x, r.y); g.rotate(r.a); g.scale(r.sc, r.sc); drawVeh(g, { len: L.len, wid: L.wid, kind: L.kind, col: L.col, col2: L.col2, wreck: dmg > .5, braking: false }, now); g.restore();
+    if (r.st === 'fix') {
+      const ws = YD.ws[r.slot], p = yp(ws.s, ws.lat);
+      if (Math.sin(now * 14 + r.slot) > .3) { g.fillStyle = 'rgba(255,230,140,.9)'; g.beginPath(); g.arc(p.x + Math.sin(now * 9) * 8, p.y + Math.cos(now * 7) * 6, 2.2, 0, 7); g.fill(); g.fillStyle = 'rgba(160,220,255,.5)'; g.beginPath(); g.arc(p.x + Math.sin(now * 9) * 8, p.y + Math.cos(now * 7) * 6, 6, 0, 7); g.fill(); }
+      const q = yp(ws.s, YD.wsBox.l0 - 4); chipAt(g, q.x, q.y - 4, '🔧 ' + Math.round(r.prog * 100) + ' %', '#1d1d1b', '#FF7A00', 10);
+    }
+  }
+  G.ws.forEach((w, i) => { if (!w.q.length) return; const q = yp(wsStop(i) + 14, YD.ws[i].spot - 22); if (q.x < vw.x0 - 60 || q.x > vw.x1 + 60 || q.y < vw.y0 - 60 || q.y > vw.y1 + 60) return; chipAt(g, q.x, q.y, 'wartet ' + w.q.length, '#5a5d65', '#fff', 9); });
+}
 /* ----- Minimap ----- */
 let MINIBG = null;
 function drawMini(now) {
   const g = mctx, mw = mini.width, mh = mini.height, k = mw / WW; if (!MINIBG) { MINIBG = document.createElement('canvas'); MINIBG.width = mw; MINIBG.height = mh; MINIBG.getContext('2d').drawImage(BG, 0, 0, mw, mh); }
   g.setTransform(1, 0, 0, 1, 0, 0); g.drawImage(MINIBG, 0, 0); g.setTransform(k, 0, 0, k, 0, 0);
-  G.zones.forEach(z => { g.strokeStyle = '#f2b705'; g.lineWidth = 14; g.beginPath(); for (let s = z.s0; s <= z.s1; s += 30) { const p = P(s, 50); s === z.s0 ? g.moveTo(p.x, p.y) : g.lineTo(p.x, p.y); } g.stroke(); });
-  if (G.jam.active && G.acc) { g.strokeStyle = 'rgba(229,72,63,.9)'; g.lineWidth = 16; g.beginPath(); for (let s = G.jam.tail; s <= G.acc.front; s += 30) { const p = P(s, 35); s === G.jam.tail ? g.moveTo(p.x, p.y) : g.lineTo(p.x, p.y); } g.stroke(); }
+  G.zones.forEach(z => { g.strokeStyle = '#f2b705'; g.lineWidth = 26; g.beginPath(); for (let s = z.s0; s <= z.s1; s += 30) { const p = P(s, 50); s === z.s0 ? g.moveTo(p.x, p.y) : g.lineTo(p.x, p.y); } g.stroke(); });
+  if (G.jam.active && G.acc) { g.strokeStyle = 'rgba(229,72,63,.9)'; g.lineWidth = 30; g.beginPath(); for (let s = G.jam.tail; s <= G.acc.front; s += 30) { const p = P(s, 35); s === G.jam.tail ? g.moveTo(p.x, p.y) : g.lineTo(p.x, p.y); } g.stroke(); }
   const dot = (x, y, r, c) => { g.fillStyle = c; g.beginPath(); g.arc(x, y, r, 0, 7); g.fill(); };
-  if (G.acc && !G.acc.cleared) { const p = P(G.acc.mid, 30); dot(p.x, p.y, 28 + 8 * Math.sin(now * 5), '#e5483f'); }
-  G.units.forEach(u => { if (u.mode === 'alarm' || u.dx == null) return; dot(u.dx, u.dy, 18, u.sp.col); });
-  const hr = G.traf.find(v => v.hero); if (hr) { const p = P(hr.s, hr.lat); dot(p.x, p.y, 20, '#FF7A00'); }
+  if (G.acc && !G.acc.cleared) { const p = P(G.acc.mid, 30); dot(p.x, p.y, 52 + 14 * Math.sin(now * 5), '#e5483f'); }
+  G.units.forEach(u => { if (u.mode === 'alarm' || u.dx == null) return; dot(u.dx, u.dy, 32, u.sp.col); });
+  const hr = G.traf.find(v => v.hero); if (hr) { const p = P(hr.s, hr.lat); dot(p.x, p.y, 36, '#FF7A00'); }
   g.setTransform(1, 0, 0, 1, 0, 0); g.strokeStyle = '#fff'; g.lineWidth = 2.5; g.strokeRect((CAM.x - W / 2 / CAM.z) * k, (CAM.y - H / 2 / CAM.z) * k, W / CAM.z * k, H / CAM.z * k);
 }
 /* ===== Hauptschleife ===== */
@@ -1030,7 +1186,7 @@ function frame(ts) {
   camStep(dt); draw(); hudT -= dt; if (hudT <= 0) { hudT = .12; updateHud(); } liveTick(dt);
   requestAnimationFrame(frame);
 }
-function warm(sec) { for (let i = 0; i < sec * 20; i++) step(.05); G.t = 0; G.units = []; G.parts = []; }
+function warm(sec) { for (let i = 0; i < sec * 10; i++) step(.1); G.t = 0; G.units = []; G.parts = []; }
 /* ===== Oberfläche ===== */
 const panel = $('#panel'); let lastSig = '';
 const fmtLoc = () => 'A7 · Fahrtrichtung Hamburg · km ' + kmOf(G.acc ? G.acc.mid : G.crash ? G.crash.s0 : 1000);
@@ -1042,7 +1198,8 @@ function uStat(t) {
   const u = us.slice().sort((a, b) => (a.site ? 1 : 0) - (b.site ? 1 : 0))[0], n = us.length > 1 ? ' ×' + us.length : '';
   if (u.mode === 'alarm') return (u.waiting ? 'wartet auf Hauptwrack' : 'alarmiert · rückt aus') + n; if (u.mode === 'local') return 'Anfahrt · Landstraße' + n;
   if (u.mode === 'hw') return (u.site ? (t === 'tow' ? (u.rel ? 'Bergung läuft' : 'wartet auf Freigabe') : t === 'pol' ? 'sichert Unfallstelle' : u.done ? 'fertig · wartet auf freie Fahrbahn' : t === 'fw' && fireOn() ? 'löscht' : 'im Einsatz') : (G.jam.active && u.s > G.jam.tail ? 'Anfahrt · Rettungsgasse' : 'Anfahrt · A7')) + n;
-  return 'Rückfahrt zur Wache' + n;
+  if (u.mode === 'wsWait') return 'wartet auf Werkstattplatz' + n; if (u.mode === 'unload') return 'liefert in Werkstatt ab' + n; if (u.homing) return 'fährt zum Stellplatz' + n;
+  return (t === 'tow' ? (u.load ? 'Rückfahrt mit Fahrzeug zum Hof' : 'Rückfahrt zum Hof') : 'Rückfahrt zur Wache') + n;
 }
 function uEta(t) { const us = unitsOf(t); if (!us.length) return '–'; const u = us.slice().sort((a, b) => (unitEta(b) ?? 0) - (unitEta(a) ?? 0)).reverse().find(x => !x.site && ['alarm', 'local', 'hw'].includes(x.mode)); if (!u) return us.every(x => x.mode === 'depart' || x.mode === 'return') ? '↩' : 'vor Ort'; const e = unitEta(u); return e == null ? '…' : minTx(e); }
 function unitRow(t) {
@@ -1103,7 +1260,7 @@ function tracking() {
 /* --- Disponent --- */
 const curWreck = () => G.wrecks.find(w => w.id === G.selWreck) || G.wrecks.find(w => !w.done && !w.tow) || G.wrecks[0];
 const routeList = () => G.acc ? RAMPS.filter(r => r.s + 70 < G.acc.front - 130).slice(-4) : [];
-function fleetBack(f) { const u = G.units.find(x => x.fleet === f); if (!u) return null; if (u.mode === 'return') return (u.path.len - u.pd) / u.sp.vLoc; if (u.mode === 'depart') return Math.max(0, ((u.exitS || EXIT.s) - u.s) / 60) + backPath(BASES.depot.u, u.exitS).len / 80; return null; }
+function fleetBack(f) { const u = G.units.find(x => x.fleet === f); if (!u) return null; if (u.mode === 'return') return (u.path.len - u.pd) / u.sp.vLoc; if (u.mode === 'depart') return Math.max(0, ((u.exitS || EXIT.s) - u.s) / 60) + backPath(gateU('depot'), u.exitS).len / 80; return null; }
 function dispatchPanel() {
   if (!G.acc) return `<div class="card" style="display:flex;gap:12px;align-items:center"><div class="spin"></div><div><b>Leitstelle bereit</b><small style="display:block;color:#9a9a93">${G.phase === 'select' ? 'Wechsle zum Fahrer und starte ein Szenario.' : 'Verkehr normal – warte auf Meldungen …'}</small></div></div>`;
   const r = G.report, W = curWreck(), nW = G.wrecks.length, dW = G.wrecks.filter(w => w.done).length;
@@ -1125,11 +1282,12 @@ function dispatchPanel() {
     <button class="btn grn big" data-act="accept" ${r && G.towSel && !(W.kind !== 'rig' && rigOpen() && !rigOpen().tow) ? '' : 'disabled'}>${ic('chk')} Auftrag annehmen &amp; losschicken</button>${!r ? '<div style="color:#9a9a93;font-size:12px;text-align:center">Erst nach Eingang der Fahrer-Meldung möglich.</div>' : (W.kind !== 'rig' && rigOpen() && !rigOpen().tow) ? '<div style="color:#ffb020;font-size:12px;text-align:center;font-weight:700">Zuerst das Hauptwrack disponieren – es blockiert die Fahrbahn.</div>' : ''}`;
   }
   if (G.jobs.length) h += `<div class="h"><span>Abschleppdienste im Einsatz</span></div>${unitRow('tow')}`;
+  if (G.reps.length || G.fixed || G.ws.some(w => w.q.length)) h += `<div class="h"><span>Werkstatt (Hof)</span><span>${G.fixed} repariert</span></div>` + G.ws.map((w, i) => { const r = w.cur; return `<div class="pk off" style="cursor:default;opacity:1"><div class="ti dk" style="font-size:20px">🔧</div><div><span class="nm">Platz ${i + 1}</span><small>${r ? (r.st === 'in' ? 'Fahrzeug wird eingefahren' : (r.load.rig ? 'Lkw' : 'Fahrzeug') + ' in Reparatur') : 'frei'}${w.q.length ? ' · ' + w.q.length + ' wartet' : ''}</small></div><div class="go" style="font-size:12px">${r && r.st === 'fix' ? Math.round(r.prog * 100) + ' %' : '–'}</div></div>`; }).join('');
   h += `<div class="h">Ablauf</div>${timelineHTML()}<button class="btn ghost" data-act="newSim">${ic('plus')} Neue Simulation</button>`;
   return h;
 }
 function sigNow() {
-  return [G.view, G.phase, G.step, !!G.report, G.alertSeen, G.towSel, G.jobs.length, G.selWreck, G.wrecks.filter(w => w.done).length, G.wrecks.filter(w => w.tow).length, G.acc && G.acc.cleared, G.fire && G.fire.on, G.units.map(u => u.type + u.mode + (u.site ? 1 : 0) + (u.rel ? 1 : 0)).join(','), G.fleet.map(f => f.state).join(''), !!G.rec, G.log.length, G.err, G.form && G.form.photos.length, G.form && !!G.form.memo, G.play && G.play.key, G.scen].join('|');
+  return [G.view, G.phase, G.step, !!G.report, G.alertSeen, G.towSel, G.jobs.length, G.selWreck, G.wrecks.filter(w => w.done).length, G.wrecks.filter(w => w.tow).length, G.acc && G.acc.cleared, G.fire && G.fire.on, G.units.map(u => u.type + u.mode + (u.site ? 1 : 0) + (u.rel ? 1 : 0)).join(','), G.fleet.map(f => f.state).join(''), G.reps.map(r => r.st + Math.round(r.prog * 10)).join(), G.ws.map(w => w.q.length).join(), G.fixed, !!G.rec, G.log.length, G.err, G.form && G.form.photos.length, G.form && !!G.form.memo, G.play && G.play.key, G.scen].join('|');
 }
 function renderPanel(force) {
   const s = sigNow(); if (!force && s === lastSig) return; lastSig = s;
@@ -1255,7 +1413,7 @@ let mdrag = false; mini.addEventListener('pointerdown', e => { mdrag = true; min
 $('#bZin').onclick = () => { CAM.z *= 1.25; G.camFollow = G.camFollow; clampCam(); }; $('#bZout').onclick = () => { CAM.z /= 1.25; clampCam(); };
 $('#bCtr').onclick = () => { G.camFollow = G.acc ? 'acc' : G.phase === 'drive' || G.phase === 'crash' ? 'hero' : null; if (!G.camFollow) { const p = P(2300, 0); CAM.x = p.x; CAM.y = p.y; } };
 /* ===== Start ===== */
-BG = buildBG(); fit(); genZones(); warm(150); CAM.x = P(2300, 0).x; CAM.y = P(2300, 0).y; clampCam(); G.slowT = 30; G.phase = 'select'; renderPanel(true); showOverlay('intro'); requestAnimationFrame(frame);
+BG = buildBG(); fit(); genZones(); warm(150); CAM.x = P(1500, 120).x; CAM.y = P(1500, 120).y; CAM.z = .7; clampCam(); G.slowT = 30; G.phase = 'select'; renderPanel(true); showOverlay('intro'); requestAnimationFrame(frame);
 </script>
 </body>
 </html>
