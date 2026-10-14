@@ -2572,6 +2572,7 @@ function drawMini(now) {
   SJ.list.forEach(j => { if (j.state === 'done' || j.state === 'fail') return; const p = j.rd.pos(j.veh.s, j.veh.lat); g.fillStyle = '#FF7A00'; g.beginPath(); g.arc(p.x, p.y, 34 + 12 * Math.sin(now * 5 + j.id), 0, 7); g.fill(); });
   if (G.jam.active && G.acc) { g.strokeStyle = 'rgba(229,72,63,.9)'; g.lineWidth = 30; g.beginPath(); for (let s = G.jam.tail; s <= G.acc.front; s += 30) { const p = P(s, 35); s === G.jam.tail ? g.moveTo(p.x, p.y) : g.lineTo(p.x, p.y); } g.stroke(); }
   const dot = (x, y, r, c) => { g.fillStyle = c; g.beginPath(); g.arc(x, y, r, 0, 7); g.fill(); };
+  CALLS.list.forEach(c => { if (c.st === 'wait' || !c.pos) return; const act = c.st !== 'done'; if (act) { g.strokeStyle = 'rgba(255,122,0,.9)'; g.lineWidth = 8; g.beginPath(); g.arc(c.pos.x, c.pos.y, 50 + (now * 60 % 60), 0, 7); g.stroke(); } dot(c.pos.x, c.pos.y, 34, act ? '#FF7A00' : '#2fbf71'); });
   if (G.acc && !G.acc.cleared) { const p = P(G.acc.mid, 30); dot(p.x, p.y, 52 + 14 * Math.sin(now * 5), '#e5483f'); }
   G.units.forEach(u => { if (u.mode === 'alarm' || u.dx == null) return; dot(u.dx, u.dy, 32, u.sp.col); });
   const hr = G.traf.find(v => v.hero); if (hr) { const p = P(hr.s, hr.lat); dot(p.x, p.y, 36, '#FF7A00'); }
