@@ -1385,10 +1385,11 @@ function stepTraffic(dt) {
 const _dp = {}; function detPath(xi, rk) { const key = xi + '_' + rk; if (_dp[key]) return _dp[key]; const pts = offConn(OFFS[xi].s); for (let u = OFFS[xi].s + 120; u < RAMPS[rk].s - 110; u += 10) pts.push(Lpt(u)); return _dp[key] = mkPath(pts.concat(rampConn(rk))); }
 const lanePos = (p, o = 4.5) => ({ x: p.x - Math.sin(p.a) * o, y: p.y + Math.cos(p.a) * o, a: p.a });
 function pathVehAhead(x, y, a, len, self) {
+  pathVehAhead.last = null;
   const test = (ox, oy, ol, oa) => { if (Math.cos(oa - a) < .3) return false; const dx = ox - x, dy = oy - y, d = Math.hypot(dx, dy); if (d > 60 || d < .01) return false; const fw = (dx * Math.cos(a) + dy * Math.sin(a)); return fw > 0 && fw < (len + ol) / 2 + 8 && Math.abs(-dx * Math.sin(a) + dy * Math.cos(a)) < 6; };
   if (!self.type) for (const d of G.det) if (d !== self) { const p = lanePos(follow(d.path, d.pd), d.lo ?? 4.5); if (test(p.x, p.y, d.len, p.a)) return true; }
   for (const u of G.units) if (u !== self && (u.mode === 'local' || u.mode === 'return') && u.x) { if (test(u.x, u.y, u.len, u.a)) return true; }
-  if (!self.ns) for (const r of NS.svc) for (const o of r.veh) if (o.px && test(o.px.x, o.px.y, o.len, o.px.a)) return true;
+  if (!self.ns) for (const r of NS.svc) for (const o of r.veh) if (o.px && test(o.px.x, o.px.y, o.len, o.px.a)) { pathVehAhead.last = o; return true; }
   for (const am of G.amb) { const p = follow(CPATH[am.i], am.pd); if (test(p.x - Math.sin(p.a) * 5 * am.dir * -1, p.y + Math.cos(p.a) * 5 * am.dir, am.len, p.a + (am.dir < 0 ? Math.PI : 0))) return true; }
   return false;
 }
@@ -1583,7 +1584,7 @@ function startUnitRoute(u) {
   u.ramp = i; u.path = lpath(u.sp.base, i, u.fleet ? u.fleet.bay : null); u.pd = 0; u.mode = 'local'; u.alarmEta = b && b.ok ? b.total : null;
   if (!G.ev['out_' + u.type]) addLog('out_' + u.type, (USP[u.type] ? USP[u.type].label : 'Abschleppdienst') + ' rückt aus über ' + RAMPS[i].name);
 }
-function mergeFree(u, s) { return !G.units.some(o => o !== u && (o.mode === 'hw' || o.mode === 'depart') && Math.abs(o.s - s) < (o.len + u.len) / 2 + 8 && Math.abs(o.lat - STRIP) < 14) && !G.traf.some(v => Math.abs(v.s - s) < (v.len + u.len) / 2 + 4 && Math.abs(v.lat - STRIP) < (v.wid + u.wid) / 2 - .4); }
+function mergeFree(u, s) { return !G.units.some(o => o !== u && (o.mode === 'hw' || o.mode === 'depart') && Math.abs(o.s - s) < (o.len + u.len) / 2 + 8 && Math.abs(o.lat - SHD) < 14) && !G.traf.some(v => Math.abs(v.s - s) < (v.len + u.len) / 2 + 4 && Math.abs(v.lat - SHD) < (v.wid + u.wid) / 2 - 2.5); }
 function stepHW(u, dt) {
   const sp = u.sp;
   // In die Rettungsgasse wechseln nur bei freier Querung und weit vor dem Stauende – sonst bleibt das Fahrzeug auf dem Rettungsweg
@@ -1608,7 +1609,7 @@ function stepHW(u, dt) {
   } else u.wedgeT = 0;
   const old = u.lat, nl = u.lat + clamp(u.tlat - u.lat, -36 * dt, 36 * dt); if (nl !== u.lat && !latBlocked(u, nl)) u.lat = nl;
   // Querung blockiert → zurück auf die Auffahrt und neu versuchen (nie auf Standstreifen weiterfahren)
-  if (u.crossing && u.lat > gl + 9 && u.lat < 70) { u.blockT = (u.blockT || 0) + (u.v < 3 && latBlocked(u, u.lat - 1) ? dt : 0); if (u.blockT > 5) { u.crossing = false; u.tlat = STRIP; u.blockT = 0; u.entW = 0; } } else u.blockT = 0;
+  if (u.crossing && u.lat > gl + 9 && u.lat < 70) { u.blockT = (u.blockT || 0) + (u.v < 3 && latBlocked(u, u.lat - 1) ? dt : 0); if (u.blockT > 5) { u.crossing = false; u.tlat = STRIP; u.blockT = 0; u.entW = 0; u.shd = true; } } else u.blockT = 0;
   let gap = 1e9, rear = 1e9;
   const nb = (o, r) => { if (o !== u && o.s > u.s && latOv(u, o)) { const g = r - (u.s + u.len / 2); if (g < gap) { gap = g; rear = r; } } };
   G.traf.forEach(o => nb(o, o.s - o.len / 2)); G.units.forEach(o => { if (o.mode === 'hw' || o.mode === 'depart') nb(o, o.s - o.len / 2); });
@@ -1616,7 +1617,7 @@ function stepHW(u, dt) {
   let vt = sp.vFree * (1 - (1 - envWf()) * .6); const j = G.jam;
   for (const z of G.zones) if (u.s > z.s0 - 60 && u.s < z.s1) vt = Math.min(vt, z.vmax * 1.7);
   if (j.active && u.s > j.tail - 40 && u.s < G.acc.front + 5) vt = Math.min(vt, sp.vJam);
-  if (u.mode === 'hw') { const gT = stageFrontFor(sp, u.wreck) - (u.s + u.len / 2); vt = Math.min(vt, Math.max(0, gT / .5)); if (u.lat > 62 && !u.crossing && !u.shd) vt = 0; }
+  if (u.mode === 'hw') { const gT = stageFrontFor(sp, u.wreck) - (u.s + u.len / 2); vt = Math.min(vt, Math.max(0, gT / .5)); if (u.lat > 62 && !u.crossing && !u.shd) { vt = 0; u.shW = (u.shW || 0) + dt; if (u.shW > 5) u.shd = true; } else u.shW = 0; }
   if (gap < 1e8) vt = Math.min(vt, Math.max(0, (gap - 4) / .7));
   u.v = clamp(vt, u.v - 320 * dt, u.v + 70 * dt); let ns = u.s + u.v * dt; if (gap < 1e8) ns = Math.min(ns, rear - u.len / 2 - 1.5); u.s = Math.max(u.s, ns); u.ly = (u.lat - old) / dt;
   u.stillT = u.v < 2.5 ? (u.stillT || 0) + dt : 0;
@@ -1676,7 +1677,7 @@ function stepUnits(dt) {
       const nearDet = G.det.some(d => { const q = lanePos(follow(d.path, d.pd), 4.5), dx = q.x - fp.x, dy = q.y - fp.y, fw = dx * Math.cos(fp.a) + dy * Math.sin(fp.a), lt = -dx * Math.sin(fp.a) + dy * Math.cos(fp.a); return Math.cos(q.a - fp.a) > .3 && fw > -(u.len + d.len) / 2 - 8 && fw < 90 && Math.abs(lt) < 14; });
       u.lo = (u.lo ?? 4.5) + clamp((nearDet ? -4.5 : 4.5) - (u.lo ?? 4.5), -14 * dt, 14 * dt);
       }
-      if (u.x && pathVehAhead(u.x, u.y, u.a, u.len, u)) continue;
+      if (u.x && pathVehAhead(u.x, u.y, u.a, u.len, u)) { u.pbT = (u.pbT || 0) + dt; const bo = pathVehAhead.last; if (bo && u.pbT > 2.5) bo.ygo = 6; if (u.pbT < 9) continue; } else u.pbT = 0;
       u.pd += u.sp.vLoc * dt; const fp = follow(u.path, u.pd);
       const p = lanePos(fp, u.lo); u.x = p.x; u.y = p.y; u.a = p.a;
       if (u.pd >= u.path.len) {
@@ -1937,7 +1938,7 @@ function nsStepRoad(r, dt, WF, HWF) {
     if (take) { const tl = take.link; if (dTk < 220) vt = Math.min(vt, tl.vmax + (dTk / 220) * 20); if (mot && v.ln !== take.ln) { if (dTk < 45) { v.take = null; } else if (dTk < 190) vt = Math.min(vt, 34 + dTk * .1); } }
     if (gap < 1e8) vt = Math.min(vt, Math.max(0, (gap - 4.5) / (.85 * HWF * v.pr.hw * (lead && lead.braking && lead.v < v.v ? 1.3 : 1) * (1 - (TRF.aggr - .5) * .4))));
     // Legacy-Fahrzeuge (Einsatzkräfte, Werkstatt-Rückfahrer) und Blaulicht
-    let yld = false; if (needPos && !mot) { v.px = r.pos(v.s, v.lat); const pa = v.px; if (pathVehAhead(pa.x, pa.y, pa.a, v.len, { type: 0, ns: 1 })) vt = 0; yld = G.units.some(u => u.siren && u.type !== 'tow' && (u.mode === 'local' || u.mode === 'return') && u.x && Math.cos(u.a - pa.a) > .3 && (() => { const dx = pa.x - u.x, dy = pa.y - u.y, fw = dx * Math.cos(u.a) + dy * Math.sin(u.a), lt = -dx * Math.sin(u.a) + dy * Math.cos(u.a); return fw > -6 && fw < 260 && Math.abs(lt) < 18; })()); if (yld) vt = 0; }
+    if (v.ygo > 0) v.ygo -= dt; let yld = false; if (needPos && !mot) { v.px = r.pos(v.s, v.lat); const pa = v.px; if (pathVehAhead(pa.x, pa.y, pa.a, v.len, { type: 0, ns: 1 })) vt = 0; yld = !(v.ygo > 0) && G.units.some(u => u.siren && u.type !== 'tow' && (u.mode === 'local' || u.mode === 'return') && u.x && Math.cos(u.a - pa.a) > .3 && (() => { const dx = pa.x - u.x, dy = pa.y - u.y, fw = dx * Math.cos(u.a) + dy * Math.sin(u.a), lt = -dx * Math.sin(u.a) + dy * Math.cos(u.a); return fw > -6 && fw < 260 && Math.abs(lt) < 18; })()); if (yld) vt = 0; }
     if (v.tow && v.goal) { const gl = v.goal; if (r === gl.rd && !v.hold) { const d = gl.s - v.s; if (gl.end) { if (d < 2) { v.dead = 1; v.arrived = 1; } } else { if (d < 120) vt = Math.min(vt, Math.max(0, (d - 2) * .9 + 3)); if (d < 90) v.slide = 1; if (d < 3 && v.v < 3.5) { v.hold = 1; NS.arr.push(v); } } } }
     if (v.broken) { vt = Math.max(0, v.v - 24 * dt); v.slide = 1; } if (v.hold) vt = 0;
     let sbY = false, sbT = null; if (tws && !v.tow) for (const t of tws) { const d = v.s - t.s; if (d > -2 && d < (CAR.up.siren ? 270 : 180) && (mot ? t.ln === v.ln : true)) { sbY = true; sbT = t; break; } }
