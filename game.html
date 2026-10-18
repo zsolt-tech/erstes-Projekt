@@ -137,7 +137,7 @@ input{font:inherit}
  body{font-size:14px;overscroll-behavior-y:none}
  .top-in{padding:6px 10px;gap:8px;flex-wrap:nowrap}
  .logo{gap:8px;min-width:0}.logo-mark{width:34px;height:34px;border-radius:9px}.logo b{font-size:14px;letter-spacing:.03em}.logo small{display:none}
- .toplink{display:none}.logo b{display:none}.carchip{flex-shrink:0}.top-in{justify-content:space-between}
+ .toplink{display:none}.logo{display:none}.carchip{flex-shrink:0}.top-in{justify-content:space-between}
  .seg{padding:3px}.seg button{padding:8px 11px;font-size:13px;gap:6px}
  .wrap{padding:0;gap:0;display:block}
  #stage{position:sticky;top:50px;z-index:20;aspect-ratio:auto;height:52vh;height:52dvh;min-height:300px;border-radius:0 0 18px 18px;box-shadow:0 6px 20px rgba(0,0,0,.5)}
@@ -1661,7 +1661,7 @@ function step(dt) {
 }
 function buildResults() {
   const e = G.ev, j = G.jam, jobs = G.jobs;
-  const d = (a, b) => (e[a] != null && e[b] != null) ? e[a] - e[b] : null;
+  const d = (a, b) => (e[a] != null && e[b] != null) ? Math.max(0, e[a] - e[b]) : null;
   const fit = jobs.length && jobs.every(x => x.f.type >= x.w.need && x.f.type <= x.w.need + 1);
   const stars = [d('dispatch', 'report') != null && d('dispatch', 'report') <= 25, fit, d('cleared', 'accident') != null && d('cleared', 'accident') <= 60 + 35 * G.wrecks.length].filter(Boolean).length;
   const jm = j.max || 0, bonus = Math.max(0, stars * 220 - Math.round(jm * 2 / 25)), repD = (stars - 1) * 2.2 - clamp(jm * 2 / 2500, 0, 1.5); carEarn(bonus, 'Einsatz-Bonus (' + stars + ' ★)', 25 + stars * 20); carRep(repD); CAR.main++; CAR.best = Math.max(CAR.best || 0, stars); carSave(); achCheck();
@@ -2586,7 +2586,7 @@ function frame(ts) {
   camStep(dt); if (!G.paused) envStep(dt * G.speed); draw(); hudT -= dt; if (hudT <= 0) { hudT = .12; updateHud(); } liveTick(dt);
   requestAnimationFrame(frame);
 }
-function warm(sec) { if (MOB) sec = Math.min(sec, 110); for (let i = 0; i < sec * 10; i++) step(.1); G.t = 0; G.units = []; G.parts = []; }
+function warm(sec) { if (MOB) sec = Math.min(sec, 110); for (let i = 0; i < sec * 10; i++) step(.1); G.t = 0; G.units = []; G.parts = []; sjReset(); NS.t = 0; }
 /* ===== Oberfläche ===== */
 const panel = $('#panel'); let lastSig = '';
 const fmtLoc = () => 'A7 · Fahrtrichtung Hamburg · km ' + kmOf(G.acc ? G.acc.mid : G.crash ? G.crash.s0 : 1000);
