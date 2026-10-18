@@ -263,7 +263,7 @@ const C = []; let Lh = 0;
 })();
 function at(s) { s = clamp(s, 0, Lh); const f = s / 2, i = Math.min(C.length - 2, f | 0), k = f - i, a = C[i], b = C[i + 1]; return { x: lerp(a.x, b.x, k), y: lerp(a.y, b.y, k), tx: lerp(a.tx, b.tx, k), ty: lerp(a.ty, b.ty, k) }; }
 function P(s, lat) { const c = at(s); return { x: c.x - c.ty * lat, y: c.y + c.tx * lat, a: Math.atan2(c.ty, c.tx) }; }
-const MED = 7, LAT = [49.5, 32.5, 15.5], SH = 66, STRIP = 66, STRIP2 = 100, STRIP3 = 116, CORR = 24.8, CORR2 = 24.8, SHIFT = [3, 7, -5.5], SHIFTN = [3, 7, -5.5], GC1 = 24.8, GS = 5.5, LATL = 190;   // Spur 0 = rechts, 2 = links; Gasse innen (CORR) Blaulicht, außen (CORR2) Abschleppdienst
+const MED = 7, LAT = [49.5, 32.5, 15.5], SH = 66, STRIP = 66, SHD = 68.5, STRIP2 = 100, STRIP3 = 116, CORR = 24.8, CORR2 = 24.8, SHIFT = [3, 7, -5.5], SHIFTN = [3, 7, -5.5], GC1 = 24.8, GS = 5.5, LATL = 190;   // Spur 0 = rechts, 2 = links; Gasse innen (CORR) Blaulicht, außen (CORR2) Abschleppdienst
 const kmOf = s => (140 + s / 500).toFixed(1).replace('.', ',');
 const RN = ['AS Nord', 'AS Wald', 'AS Mitte', 'AS Süd', 'AS Hafen', 'AS Ost', 'AS Berg', 'AS Tal', 'AS Feld', 'AS Dorf', 'AS Stadt', 'AS See', 'AS Park', 'AS Mühle'];
 const KS = (() => { for (let i = 0; i < C.length; i++) if (C[i].x >= 3300) return i * 2; return 3455; })(), KZ0 = KS - 560, KZ1 = KS + 560;   // Autobahnkreuz A7/A1
@@ -275,10 +275,15 @@ const CN = ['B27', 'K12', 'L35', 'B3', 'K41', 'L8', 'B14'];
 const CROSS = [650, 1950, 4800, 6000].map((s, i) => ({ s, name: CN[i % CN.length] }));
 /* Hof & Werkstatt (im (s,lat)-Koordinatensystem der Landstraße) */
 const DU = BASES.depot.u;
+/* Hof & Flotte (einstellbar im Admin-Menü, gespeichert im Browser) */
+const YCFG = (() => {
+  const d = { bays: 9, ws: 3, tow: [3, 3, 3], n: { pol: 0, rd: 0, fw: 0 } }, cl = (v, a, b, f) => isFinite(v) ? Math.max(a, Math.min(b, Math.round(v))) : f;
+  try { const o = JSON.parse(localStorage.getItem('tr_yard') || '{}'); d.bays = cl(o.bays, 4, 18, 9); d.ws = cl(o.ws, 1, 5, 3); if (Array.isArray(o.tow)) d.tow = [0, 1, 2].map(k => cl(o.tow[k], 0, 8, 3)); if (o.n) for (const k of ['pol', 'rd', 'fw']) d.n[k] = cl(o.n[k], 0, 4, 0); } catch (_) { }
+  if (d.tow.reduce((a, b) => a + b, 0) < 1) d.tow = [1, 1, 1]; d.bays = Math.max(d.bays, d.tow.reduce((a, b) => a + b, 0)); return d;
+})();
 const YD = { s0: DU - 215, s1: DU + 330, l0: 214, l1: 376, gateS: DU - 200, aisle: 254 };
-YD.bays = []; for (let i = 0; i < 9; i++) YD.bays.push(i < 5 ? { s: DU - 170 + 52 * i, lat: 234 } : { s: DU - 170 + 52 * (i - 5), lat: 274 });
-YD.ws = [0, 1, 2].map(i => ({ s: DU + 110 + 72 * i, lat: 328, spot: 274 }));
-YD.wsBox = { s0: DU + 80, s1: DU + 290, l0: 296, l1: 372 };
+YD.cols = Math.ceil(YCFG.bays / 2); YD.bays = []; for (let i = 0; i < YCFG.bays; i++) YD.bays.push(i < YD.cols ? { s: DU - 170 + 52 * i, lat: 234 } : { s: DU - 170 + 52 * (i - YD.cols), lat: 274 });
+{ const w0 = DU - 170 + 52 * YD.cols - 10; YD.ws = Array.from({ length: YCFG.ws }, (_, i) => ({ s: w0 + 30 + 72 * i, lat: 328, spot: 274 })); YD.wsBox = { s0: w0, s1: w0 + 30 + 72 * (YCFG.ws - 1) + 36, l0: 296, l1: 372 }; YD.s1 = YD.wsBox.s1 + 40; }
 function bez(a, b, c, d, n) { const o = []; for (let i = 0; i <= n; i++) { const t = i / n, u = 1 - t; o.push({ x: u * u * u * a.x + 3 * u * u * t * b.x + 3 * u * t * t * c.x + t * t * t * d.x, y: u * u * u * a.y + 3 * u * u * t * b.y + 3 * u * t * t * c.y + t * t * t * d.y }); } return o; }
 const ssm = t => { t = clamp(t, 0, 1); return t * t * (3 - 2 * t); };
 const LATB = u => LATL + 330 * (ssm((u - 2576) / 500) - ssm((u - 3836) / 500));   // Landstraße weicht dem Kleeblatt aus
@@ -440,16 +445,19 @@ function mkAS(Fc, tag) {
 mkAS(FEED[1], 'AS2'); mkAS(FEED[2], 'AS3');
 /* Brücken: höherrangige Straße führt über die niedrigere (Feeder × Landstraße = ebenerdige Kreuzung) */
 const BT = [{ id: 'A1', cv: A1C, w: 78, rank: 6, mot: 1 }, { id: 'A9', cv: A9C, w: 78, rank: 4, mot: 1 }, { id: 'A7', cv: CV7, w: 84, rank: 3, mot: 1 }, { id: 'LS', cv: LSC, w: 11, rank: 1 }, { id: 'LN', cv: LNC, w: 11, rank: 1 }].concat(FEED.map(f => ({ id: f.id, cv: f.cv, w: 11, rank: 5 })));
+/* Keine Brücken mehr: die Straßen kreuzen flach, die untere Straße läuft unter der oberen hindurch (Fahrzeuge dort unsichtbar) */
+const LAYER = t => t.id === 'A7' ? 3 : t.id === 'A1' ? 2 : t.id === 'A9' ? 1 : t.id[0] === 'F' ? 0 : -1;
+NET.under = [];
 (function () {
   for (const U of BT) for (const Lw of BT) {
     if (U.rank <= Lw.rank) continue; if (U.rank === 5 && Lw.rank === 1) continue;
     for (const c of crossCV(U.cv, Lw.cv, 200)) {
-      const a = kat(U.cv, c.sA), b = kat(Lw.cv, c.sB), sn = Math.max(.35, Math.abs(a.tx * b.ty - a.ty * b.tx));
-      const R = U.id === 'A1' && Lw.id === 'A7' ? 94 : (Lw.w + 30) / sn + 14;
-      NET.bridges.push({ U, L: Lw, sU: c.sA, sL: c.sB, x: c.x, y: c.y, R });
+      const a = kat(U.cv, c.sA), b = kat(Lw.cv, c.sB), sn = Math.max(.35, Math.abs(a.tx * b.ty - a.ty * b.tx)), upTop = LAYER(U) > LAYER(Lw), top = upTop ? U : Lw, bot = upTop ? Lw : U;
+      NET.under.push({ top, bot, sBot: upTop ? c.sB : c.sA, x: c.x, y: c.y, half: (top.w + 10) / sn + 6 });
     }
   }
 })();
+
 
 /* ===== Statischer Hintergrund: Kacheln (grob komplett + fein bei Bedarf) ===== */
 let BG = null;                       // grobe Gesamtkarte
@@ -740,7 +748,7 @@ function paintLandmarks(g, T, V, R0, road) {
 }
 /* ===== Hof + Werkstatt (3D) ===== */
 function paintYard(g, T, V) {
-  const c = P(DU, 295); if (!V(c.x, c.y, 360)) return;
+  const c = P((YD.s0 + YD.s1) / 2, 295); if (!V(c.x, c.y, (YD.s1 - YD.s0) / 2 + 80)) return;
   const qd = (s0, s1, l0, l1) => { const a = P(s0, l0), b = P(s1, l0), d = P(s1, l1), e = P(s0, l1); g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(b.x, b.y); g.lineTo(d.x, d.y); g.lineTo(e.x, e.y); g.closePath(); };
   const ln = (s0, l0, s1, l1, col, w, dash) => { const a = P(s0, l0), b = P(s1, l1); g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(b.x, b.y); g.strokeStyle = col; g.lineWidth = w; g.setLineDash(dash || []); g.stroke(); g.setLineDash([]); };
   const y = YD;
@@ -808,8 +816,8 @@ function paintMot2(g, c, T) {
 const _pr = (pts, w, col, g) => { g.lineCap = 'round'; g.lineJoin = 'round'; g.beginPath(); pts.forEach((p, i) => i ? g.lineTo(p.x, p.y) : g.moveTo(p.x, p.y)); g.strokeStyle = col; g.lineWidth = w; g.stroke(); };
 function paintRoadCV(g, cv, w, T, dash, edge) { const [s0, s1] = cvRange(cv, T, 200); if (s1 < s0) return; const pts = []; for (let s = s0; s <= s1; s += 12) { const p = kat(cv, s); pts.push({ x: p.x, y: p.y }); } _pr(pts, w + 5, '#d6d1c2', g); _pr(pts, w, '#4a4d53', g); if (dash) { g.setLineDash([10, 10]); _pr(pts, 1.6, 'rgba(240,238,225,.7)', g); g.setLineDash([]); } }
 function paintNetBase(g, T, V) {
-  paintMot2(g, A9, T);
   FEED.forEach(f => paintRoadCV(g, f.cv, 16, T, true));
+  paintMot2(g, A9, T);
   paintMot2(g, A1, T);
 }
 /* Rampen der A7 (Ost: Süd-Landstraße, West: 180°-gedreht zur Nord-Landstraße) und des Kreuzes */
@@ -1229,8 +1237,8 @@ const G = {
   traf: [], west: [], amb: [], det: [], zones: [], zobs: [], slowT: 40, units: [], parts: [], obs: [], acc: null, crash: null, sched: [], alarmed: {}, ev: {}, log: [],
   spawn: [0, 0, 0], wspawn: [0, 0, 0], jam: { active: false, tail: 0, len: 0, count: 0, gasse: 0, growth: 0, hist: [] }, jamT: 0,
   form: null, step: 1, report: null, towSel: null, routeSel: null, routeManual: false, alertSeen: true, results: null, rec: null, play: null, clearAt: 0, idleT: 0,
-  fleet: [[0, 'Abschlepper 1'], [0, 'Abschlepper 2'], [0, 'Abschlepper 3'], [1, 'Plateau 1'], [1, 'Plateau 2'], [1, 'Plateau 3'], [2, 'Schwerlast 1'], [2, 'Schwerlast 2'], [2, 'Schwerlast 3']].map(([t, n], i) => ({ id: 'T' + (i + 1), type: t, name: n, state: 'depot', bay: i })),
-  ws: [0, 1, 2].map(() => ({ cur: null, q: [] })), reps: [], fixed: 0, wrecks: [], jobs: [], returns: [], fire: null, skids: [], cones: 0, shake: 0, selWreck: null, camFollow: null,
+  fleet: [].concat(...YCFG.tow.map((n, t) => Array.from({ length: n }, (_, k) => [t, ['Abschlepper', 'Plateau', 'Schwerlast'][t] + ' ' + (k + 1)]))).map(([t, n], i) => ({ id: 'T' + (i + 1), type: t, name: n, state: 'depot', bay: i })),
+  ws: YD.ws.map(() => ({ cur: null, q: [] })), reps: [], fixed: 0, wrecks: [], jobs: [], returns: [], fire: null, skids: [], cones: 0, shake: 0, selWreck: null, camFollow: null,
 };
 const toast = (m, c = '') => { const d = document.createElement('div'); d.className = 'toast ' + c; d.textContent = m; const b = $('#toasts'); b.appendChild(d); while (b.children.length > 4) b.firstChild.remove(); setTimeout(() => d.remove(), 4200); };
 const addLog = (k, txt) => { G.ev[k] = G.t; G.log.push({ t: G.t, txt, k }); };
@@ -1306,7 +1314,7 @@ function stepTraffic(dt) {
   const yielders = new Map(); for (const z of T) if (z.zwait && z.zip) { let y = null; for (const o of T) if (o.lane === 1 && !o.wreck && o.s < z.s - z.len / 2 - 2 && z.s - o.s < 150 && (!y || o.s > y.s)) y = o; if (y) yielders.set(y, z); }
   // Ausweich-Ausfahrt für diesen Moment: letzte Ausfahrt vor dem Stauende, Wiedereinfahrt hinter der Unfallstelle
   let dv = null; if (G.acc && !G.acc.cleared && G.jam.active) { const ex = OFFS.filter(o => o.s < G.jam.tail - 60).pop(), rk = RAMPS.findIndex(r => r.s > G.acc.s1 + 90); if (ex && rk >= 0) dv = { ex, rk }; }
-  const mpts = []; for (const d of G.det) if (d.pd >= d.path.len - 60) mpts.push(RAMPS[d.k].s + 70); for (const u of G.units) if (u.mode === 'hw' && u.lat > 62 && !u.crossing) mpts.push(u.s); for (const m of NS.mergers) if (m.wait) mpts.push(m.long ? m.hl + 36 : -(m.hl + 36));
+  const mpts = []; for (const d of G.det) if (d.pd >= d.path.len - 60) mpts.push(RAMPS[d.k].s + 70); for (const u of G.units) if (u.mode === 'hw' && u.lat > 62 && !u.crossing && !u.shd) mpts.push(u.s); for (const m of NS.mergers) if (m.wait) mpts.push(m.long ? m.hl + 36 : -(m.hl + 36));
   const dvz = G.zones.filter(z => z.kind !== 'jam').map(z => { const ex = OFFS.filter(o => o.s < z.s0 - 320 && o.s > z.s0 - 1300).pop(), rk = RAMPS.findIndex(r => r.s > z.s1 + 140); return ex && rk >= 0 ? { ex, rk, z } : null; });
   for (const v of T) {
     if (v.wreck) { v.v = 0; v.braking = false; v.stopT += dt; v.shT = SHIFT[v.lane]; const tl = LAT[v.lane] + v.shT, nl = v.lat + clamp(tl - v.lat, -26 * dt, 26 * dt); if (nl !== v.lat && !latBlocked(v, nl)) v.lat = nl; continue; }
@@ -1443,7 +1451,7 @@ function updateJam() {
 /* ===== Szenario starten, Unfall abspielen ===== */
 function startScenario(k) {
   G.scen = k; G.phase = 'drive'; G.sched = []; G.units = []; G.parts = []; G.obs = []; G.acc = null; G.alarmed = {}; G.ev = {}; G.log = []; G.report = null; G.jobs = []; G.returns = []; G.wrecks = []; G.fire = null; G.skids = []; G.cones = 0; G.selWreck = null; G.results = null; G.jam = { active: false, tail: 0, len: 0, count: 0, gasse: 0, growth: 0, hist: [] };
-  G.fleet.forEach(f => f.state = 'depot'); G.ws = [0, 1, 2].map(() => ({ cur: null, q: [] })); G.reps = []; G.fixed = 0; G.step = 1; G.towSel = null; G.routeSel = null; G.routeManual = false; G.alertSeen = true; G.t = 0;
+  G.fleet.forEach(f => f.state = 'depot'); G.ws = YD.ws.map(() => ({ cur: null, q: [] })); G.reps = []; G.fixed = 0; G.step = 1; G.towSel = null; G.routeSel = null; G.routeManual = false; G.alertSeen = true; G.t = 0;
   // Unfallort: weit stromabwärts, nicht in/an Baustellen oder Auffahrten
   let sAcc = 2500;
   for (let i = 0; i < 120; i++) { const c = rnd(760, Lh - 640); if (G.zones.every(z => c < z.s0 - 120 || c > z.s1 + 80) && RAMPS.every(r => c < r.s - 600 || c > r.s + 340) && (c < KZ0 - 320 || c > KZ1 + 320) && CROSS.every(x => Math.abs(x.s - c) > 120)) { sAcc = c; break; } }
@@ -1534,7 +1542,7 @@ function newUnit(type, tt) {
 }
 const unitsOf = t => G.units.filter(u => u.type === t);
 function alarm(type, why, n) {
-  if (!G.acc) return; n = n || 1; let made = 0;
+  if (!G.acc) return; n = (YCFG.n[type] || n || 1); let made = 0;
   for (let i = 0; i < n; i++) { const key = type + '#' + i; if (G.alarmed[key]) continue; G.alarmed[key] = G.t; if (!G.alarmed[type]) G.alarmed[type] = G.t; const u = newUnit(type); u.delay += i * 3; G.units.push(u); made++; }
   if (!made) return; addLog('alarm_' + type, USP[type].label + (n > 1 ? ' ×' + n : '') + ' alarmiert' + (why === 'report' ? ' (nach Fahrer-Meldung)' : ' (automatisch)'));
   toast(USP[type].label + (n > 1 ? ' ×' + n : '') + ' alarmiert' + (why === 'report' ? ' – nach Meldung' : ' – automatisch'), 'blu'); tone(740, .12, 'triangle', .06);
@@ -1586,8 +1594,9 @@ function stepHW(u, dt) {
       const busy = corr || G.traf.some(o => o.lat > 28 && o.lat < 80 && Math.abs(o.s - u.s) < (o.len + u.len) / 2 + 12) || G.units.some(o => o !== u && o.mode === 'hw' && o.lat > 30 && o.lat < 80 && Math.abs(o.s - u.s) < (o.len + u.len) / 2 + 8);
       u.entW = busy ? (u.entW || 0) + dt : 0;
       if (!busy) { u.crossing = true; u.blockT = 0; }
-      else if (u.entW > 3 && !corr) { u.lat = gl; u.entW = 0; u.fade = .15; u.crossing = false; }
-      else u.tlat = STRIP;
+      else if (u.entW > 3 && !corr && !u.shd) { u.lat = gl; u.entW = 0; u.fade = .15; u.crossing = false; }
+      else u.tlat = u.shd ? SHD : STRIP;
+      if (busy && u.entW > (u.type === 'pol' ? 1.5 : 3.5)) u.shd = true;   // Gasse nicht erreichbar → über den Standstreifen weiterfahren
     }
     if (u.crossing) { u.tlat = gl; if (u.lat <= gl + 9) u.crossing = false; }
     else if (u.lat <= 62) u.tlat = gl;
@@ -1607,13 +1616,13 @@ function stepHW(u, dt) {
   let vt = sp.vFree * (1 - (1 - envWf()) * .6); const j = G.jam;
   for (const z of G.zones) if (u.s > z.s0 - 60 && u.s < z.s1) vt = Math.min(vt, z.vmax * 1.7);
   if (j.active && u.s > j.tail - 40 && u.s < G.acc.front + 5) vt = Math.min(vt, sp.vJam);
-  if (u.mode === 'hw') { const gT = stageFrontFor(sp, u.wreck) - (u.s + u.len / 2); vt = Math.min(vt, Math.max(0, gT / .5)); if (u.lat > 62 && !u.crossing) vt = 0; }
+  if (u.mode === 'hw') { const gT = stageFrontFor(sp, u.wreck) - (u.s + u.len / 2); vt = Math.min(vt, Math.max(0, gT / .5)); if (u.lat > 62 && !u.crossing && !u.shd) vt = 0; }
   if (gap < 1e8) vt = Math.min(vt, Math.max(0, (gap - 4) / .7));
   u.v = clamp(vt, u.v - 320 * dt, u.v + 70 * dt); let ns = u.s + u.v * dt; if (gap < 1e8) ns = Math.min(ns, rear - u.len / 2 - 1.5); u.s = Math.max(u.s, ns); u.ly = (u.lat - old) / dt;
   u.stillT = u.v < 2.5 ? (u.stillT || 0) + dt : 0;
   if (u.mode === 'hw' && !u.site) {
     const tgt = stageFrontFor(sp, u.wreck), dFront = G.acc.front - u.s, exact = Math.abs(tgt - (u.s + u.len / 2)) < 7 && u.v < 1.5, fallback = u.stillT > 1.8 && (u.type === 'tow' ? Math.abs(tgt - (u.s + u.len / 2)) < (u.stillT > 6 ? 330 : 150) : dFront < 280);
-    if ((exact || fallback) && u.lat <= 62) { u.site = true; u.wt = 0; const nm = USP[u.type] ? USP[u.type].label : 'Abschleppdienst'; if (!G.ev['arr_' + u.type]) { G.ev['arr_' + u.type] = G.t; addLog('arr_' + u.type, nm + ' vor Ort'); } toast(nm + ' ist vor Ort', 'good'); }
+    if ((exact || fallback) && (u.lat <= 62 || u.shd)) { u.site = true; u.wt = 0; const nm = USP[u.type] ? USP[u.type].label : 'Abschleppdienst'; if (!G.ev['arr_' + u.type]) { G.ev['arr_' + u.type] = G.t; addLog('arr_' + u.type, nm + ' vor Ort'); } toast(nm + ' ist vor Ort', 'good'); }
   }
   if (u.mode === 'depart') { if (!u.exitS) { const nx = OFFS.find(o => o.s - 70 > u.s + 220); u.exitS = nx && nx.s < EXIT.s ? nx.s : EXIT.s; } if (u.s > G.acc.s1 + 40 && u.s >= u.exitS - 420) u.tlat = STRIP; if (u.s >= u.exitS - 70) { u.mode = 'return'; const cp = { x: P(u.s, u.lat).x, y: P(u.s, u.lat).y }, bp = backPath(gateU(u.sp.base), u.exitS); let rp = [cp].concat(bp.pts); if (u.type === 'tow') { if (u.load) { u.slot = wsPick(u); rp = rp.concat(yardToSpot(u.slot)); } else rp = rp.concat(yardToBay(u.fleet.bay)); } u.path = mkPath(rp); u.pd = 0; u.x = cp.x; u.y = cp.y; u.a = P(u.s, u.lat).a; } }
 }
@@ -1941,9 +1950,9 @@ function nsStepRoad(r, dt, WF, HWF) {
       if (dist < 130) {
         const t = dist / Math.max(v.v, 8) + .3, ok = (r.legTo ? nsLegGap(v, tn, t) : nsGapT(T, tn, r.to.ln, v, t)) && nsSibOk(r, v, dist);
         const frc = v.wm > (r.legTo ? 8 : 6) && (r.legTo ? nsLegFree0(v, tn) : nsFree0(T, tn, r.to.ln, v));
-        if (!ok && !frc) vt = Math.min(vt, Math.max(0, (dist - 14) / .9));
-        if (r.legTo) NS.mergers.push({ s: tn, hl: tn - v.len / 2 - 10, wait: v.v < 6 && dist < 40, long: v.wm > 5, near: dist < 230 });
-        if (!ok) { if (dist < 60 && v.v < 8) { v.wm += dt; if (v.wm > 2.5 && !r.legTo) T.ym = { s: tn, hl: tn - v.len / 2 - 10, ln: r.to.ln, t: NS.t }; } } else v.wm = Math.max(0, v.wm - dt);
+        const hl = r.legTo ? 58 : 30; if (!ok && !frc) vt = Math.min(vt, Math.max(0, (dist - hl) / .9));
+        if (r.legTo) NS.mergers.push({ s: tn, hl: tn - v.len / 2 - 10, wait: v.v < 6 && dist < 80, long: v.wm > 5, near: dist < 230 });
+        if (!ok) { if (dist < hl + 30 && v.v < 8) { v.wm += dt; if (v.wm > 2.5 && !r.legTo) T.ym = { s: tn, hl: tn - v.len / 2 - 10, ln: r.to.ln, t: NS.t }; } } else v.wm = Math.max(0, v.wm - dt);
       }
     }
     // --- Bewegung
@@ -2020,7 +2029,7 @@ function nsInit() {
   // Decks (Brücken) je Straße
   nsRebuildZones();
   for (const r of NET.roads) r.decks = [];
-  for (const b of NET.bridges) for (const r of NET.roads) if (r.cv === b.U.cv) { const c = r.dir > 0 ? b.sU : r.cv.L - b.sU; r.decks.push({ a: c - b.R, b: c + b.R }); }
+  for (const u of NET.under) for (const r of NET.roads) if (r.cv === u.bot.cv) { const c = r.dir > 0 ? u.sBot : r.cv.L - u.sBot; r.decks.push({ a: c - u.half, b: c + u.half }); }
 }
 function nsJunc(dt) {
   const eu = G.units.filter(u => (u.mode === 'local' || u.mode === 'return') && u.x != null); for (const r of NS.svc) for (const v of r.veh) if (v.tow && !v.hold) { const p = r.pos(v.s, v.lat); eu.push({ x: p.x, y: p.y, a: p.a }); }
@@ -2047,13 +2056,15 @@ function nsStep(dt) {
 }
 function nsWarm(sec) { for (let i = 0; i < sec * 10; i++) nsStep(.1); }
 /* --- Zeichnen --- */
-const nsElev = (r, s) => { let e = 0; for (const d of r.decks) { const m = Math.min(s - d.a, d.b - s) / 34; if (m > 0) e = Math.max(e, Math.min(1, m)); } return e; };
+const nsElev0 = (r, s) => { let e = 0; for (const d of r.decks) { const m = Math.min(s - d.a, d.b - s) / 34; if (m > 0) e = Math.max(e, Math.min(1, m)); } return e; };
 function nsBlink(g, v, now) { if (!v.sg || Math.floor(now * 3.2) % 2) return; g.fillStyle = '#ffb21a'; for (const x of [v.len / 2 - 2.5, -v.len / 2 + 2.5]) { g.beginPath(); g.arc(x, v.sg * (v.wid / 2 - .6), 1.9, 0, 7); g.fill(); } g.globalAlpha = .35; g.beginPath(); g.arc(v.len / 2 - 2.5, v.sg * (v.wid / 2 - .6), 4, 0, 7); g.fill(); g.globalAlpha = 1; }
+const nsElev = () => 0;
+const nsUnder = (r, s) => { for (const d of r.decks) if (s > d.a && s < d.b) return true; return false; };
 function nsDraw(g, vw, now, pass) {
   for (const r of NET.roads) {
     if (!r.veh.length) continue; const hasD = r.decks.length > 0;
     for (const v of r.veh) {
-      const e = hasD ? nsElev(r, v.s) : 0; if ((e > 0) !== (pass === 1)) continue;
+      const e = 0; if (pass === 1 || (hasD && nsUnder(r, v.s))) continue;
       const p = r.pos(v.s, v.lat); if (p.x < vw.x0 - 90 || p.x > vw.x1 + 90 || p.y < vw.y0 - 90 || p.y > vw.y1 + 90) continue;
       g.save(); g.translate(p.x, p.y - 10 * e); g.rotate(p.a + v.yaw); if (r.ring) g.scale(.8, .8); drawVeh(g, v, now); nsBlink(g, v, now);
       if (v.load && v.load.len < 38) { g.save(); g.translate(-v.len * .1, -4); g.scale(.52, .52); drawVeh(g, { len: v.load.len, wid: v.load.wid, kind: v.load.kind, col: v.load.col, col2: v.load.col2, wreck: true }, now); g.restore(); }
@@ -2080,23 +2091,7 @@ function nsSignals(g, vw, now) {
 }
 /* Brücken: Decks über den Fahrzeugen der unteren Straße */
 function stripO(g, cv, l0, l1, s0, s1, col, dy) { g.save(); g.translate(0, dy); strip(g, cv, l0, l1, s0, s1, col, 6); g.restore(); }
-function nsDecks(g, vw, now) {
-  for (const b of NET.bridges) {
-    if (b.x < vw.x0 - 200 || b.x > vw.x1 + 200 || b.y < vw.y0 - 200 || b.y > vw.y1 + 200) continue;
-    const U = b.U, cv = U.cv, s0 = Math.max(0, b.sU - b.R), s1 = Math.min(cv.L, b.sU + b.R), car = U.mot ? [[7, 62], [-62, -7]] : [[-U.w - 3, U.w + 3]];
-    g.save(); g.translate(13, 19); for (const [l0, l1] of car) strip(g, cv, l0, l1, s0, s1, 'rgba(12,22,6,.28)', 6); g.restore();
-    for (const [l0, l1] of car) {
-      for (let d = 0; d <= 9; d += 3) stripO(g, cv, l0, l1, s0, s1, d < 9 ? '#6d6a63' : '#9a978d', -d);
-      stripO(g, cv, l0 + 3, l1 - 3, s0, s1, '#4a4d53', -10);
-      if (U.mot) { const sg = l1 > 0 ? 1 : -1; for (const l of [sg * 24, sg * 41]) { g.save(); g.translate(0, -10); lineAt(g, cv, l, s0, s1, l === sg * 41 ? '#f4f2ea' : 'rgba(244,242,234,.8)', l === sg * 41 ? 2 : 1.6, l === sg * 41 ? null : [12, 14]); g.restore(); } }
-      else { g.save(); g.translate(0, -10); lineAt(g, cv, 0, s0, s1, 'rgba(240,238,225,.75)', 1.4, [9, 9]); g.restore(); }
-      for (const l of [l0 + 1, l1 - 1]) { g.save(); g.translate(0, -12.5); lineAt(g, cv, l, s0, s1, '#e6e3da', 1.5); g.restore(); g.save(); g.translate(0, -10); lineAt(g, cv, l, s0, s1, '#9d9a90', 1.2); g.restore(); }
-    }
-    // Pfeiler
-    for (const sx of [s0 + 6, s1 - 6]) for (const [l0, l1] of car) for (const l of [l0 + 4, l1 - 4]) { const p = kpos(cv, sx, l); g.fillStyle = '#7d8087'; g.fillRect(p.x - 3, p.y - 8, 6, 9); g.fillStyle = 'rgba(0,0,0,.25)'; g.fillRect(p.x + 3, p.y - 8, 2, 9); }
-  }
-  nsDraw(g, vw, now, 1);
-}
+function nsDecks(g, vw, now) { }
 function NPCLIGHTS(lit) { for (const r of NET.roads) for (const v of r.veh) { const p = r.pos(v.s, v.lat); lit(p.x, p.y, p.a + v.yaw, v.len); } }
 /* ===== Belebung: Stadtring, Traktoren, Fußgänger, Boote, Vögel ===== */
 KIND.tractor = { len: 27, wid: 12, v: [14, 18] };
@@ -2827,7 +2822,7 @@ const admEl = () => document.getElementById('adm');
 const admRow = (lab, inner) => `<div class="arow"><span>${lab}</span>${inner}</div>`;
 const admSlider = (id, v, mn, mx, st, lab, unit) => `<div class="asl"><div class="al"><span>${lab}</span><b id="av_${id}">${unit(v)}</b></div><input type="range" id="a_${id}" min="${mn}" max="${mx}" step="${st}" value="${v}"></div>`;
 function admHtml() {
-  const t = ADM.tab, tabs = [['wx', '☀️ Wetter'], ['work', '🚧 Baustellen'], ['jam', '🚗 Stau'], ['trf', '🚦 Verkehr'], ['acc', '💥 Unfall']];
+  const t = ADM.tab, tabs = [['wx', '☀️ Wetter'], ['work', '🚧 Baustellen'], ['jam', '🚗 Stau'], ['trf', '🚦 Verkehr'], ['yard', '🏭 Hof'], ['acc', '💥 Unfall']];
   let h = `<div class="ahd"><b>⚙ Admin</b><button class="ax" data-adm="close" aria-label="Schließen">✕</button></div><div class="atabs">${tabs.map(([k, n]) => `<button class="${t === k ? 'on' : ''}" data-adm="tab" data-k="${k}">${n}</button>`).join('')}</div><div class="abody">`;
   if (t === 'wx') {
     h += `<div class="ah">Wetter</div><div class="wxg">${Object.entries(WX).map(([k, w]) => `<button class="${ENV.weather === k ? 'on' : ''}" data-adm="wx" data-k="${k}"><span>${w.ic}</span>${w.n}</button>`).join('')}</div>`;
@@ -2850,6 +2845,14 @@ function admHtml() {
     h += `<div class="ah">Verkehr</div>` + admSlider('dens', Math.round(TRF.dens * 100), 30, 250, 5, 'Verkehrsdichte', v => v + ' %') + admSlider('trucks', Math.round(TRF.trucks * 100), 40, 250, 10, 'Lkw-Anteil', v => v + ' %') + admSlider('aggr', Math.round(TRF.aggr * 100), 0, 100, 5, 'Fahrstil (vorsichtig ↔ aggressiv)', v => v + ' %') + admSlider('divert', Math.round(TRF.divert * 100), 0, 60, 5, 'Umleiter bei Baustellen', v => v + ' %');
     h += `<label class="achk"><input type="checkbox" id="a_slow" ${TRF.slow ? 'checked' : ''}> Zufällige Schleicher / Pannen im Verkehr</label><label class="achk"><input type="checkbox" id="a_sj" ${TRF.sj ? 'checked' : ''}> Pannenhilfe-Aufträge im ganzen Netz</label>`;
     h += `<div class="anote">Gilt sofort für alle Fahrzeuge auf der Karte.</div>`;
+  } else if (t === 'yard') {
+    const c = ADM.yc || (ADM.yc = JSON.parse(JSON.stringify(YCFG))), tot = c.tow[0] + c.tow[1] + c.tow[2], nm = v => v ? v + '×' : 'Auto';
+    h += `<div class="ah">Hof &amp; Flotte</div><div class="anote">Größe des Hofs und Zahl der verfügbaren Fahrzeuge. Änderungen werden gespeichert; zum Übernehmen lädt das Spiel neu (laufender Einsatz geht verloren).</div>`;
+    h += `<div class="ah">Hof</div>` + admSlider('yb', c.bays, 4, 18, 1, 'Stellplätze', v => v) + admSlider('yw', c.ws, 1, 5, 1, 'Werkstattplätze', v => v);
+    h += `<div class="ah">Abschleppflotte</div>` + admSlider('yt0', c.tow[0], 0, 8, 1, 'Abschlepper (klein)', v => v) + admSlider('yt1', c.tow[1], 0, 8, 1, 'Plateau-Wagen (mittel)', v => v) + admSlider('yt2', c.tow[2], 0, 8, 1, 'Schwerlast (groß)', v => v);
+    h += `<div class="anote" id="a_ysum">Gesamt: ${tot} Abschleppwagen${tot > c.bays ? ' – Stellplätze werden auf ' + tot + ' erhöht' : ''}.</div>`;
+    h += `<div class="ah">Einsatzkräfte je Alarm</div>` + admSlider('ypol', c.n.pol, 0, 4, 1, 'Polizei', nm) + admSlider('yrd', c.n.rd, 0, 4, 1, 'Rettungsdienst', nm) + admSlider('yfw', c.n.fw, 0, 4, 1, 'Feuerwehr', nm);
+    h += `<div class="abtns"><button class="abtn" data-adm="yapply">✔ Übernehmen &amp; neu laden</button><button class="abtn ghost" data-adm="yreset">Standard</button></div>`;
   } else {
     h += `<div class="ah">Unfall auslösen</div><div class="anote">Wähle ein Szenario – Fahrer-Profil meldet, Disponent koordiniert.</div>` + Object.entries(SCEN).map(([k, s]) => `<button class="abtn ghost left" data-adm="scen" data-k="${k}"><b>${k}</b> · ${esc(s.title || s.name || 'Szenario')}</button>`).join('') + `<button class="abtn red" data-adm="reset">Simulation neu starten</button>`;
   }
@@ -2871,12 +2874,15 @@ function admInit() {
     else if (a === 'zoom') { const z = allZ().find(z => z.id === +b.dataset.id); if (z) { admCenter((z.s0 + z.s1) / 2, z.rd); if (MOB) e.classList.add('peek'); } }
     else if (a === 'scen') { admOpen(false); try { newSim(); startScenario(k); G.view = 'driver'; renderPanel(true); } catch (er) { console.error(er); } }
     else if (a === 'reset') { admOpen(false); newSim(); renderPanel(true); }
+    else if (a === 'yapply' || a === 'yreset') { const c = a === 'yreset' ? { bays: 9, ws: 3, tow: [3, 3, 3], n: { pol: 0, rd: 0, fw: 0 } } : ADM.yc; if (c) { c.bays = Math.max(c.bays, c.tow[0] + c.tow[1] + c.tow[2], 4); if (c.tow[0] + c.tow[1] + c.tow[2] < 1) c.tow = [1, 1, 1]; try { localStorage.setItem('tr_yard', JSON.stringify(c)); } catch (_) { } ADM.yc = null; toast('Hof wird neu aufgebaut …', 'good'); setTimeout(() => location.reload(), 350); } }
   });
   e.addEventListener('input', ev => {
     const t = ev.target, id = t.id || ''; if (!id.startsWith('a_')) return; const k = id.slice(2), v = +t.value, lab = document.getElementById('av_' + k), set = txt => { if (lab) lab.textContent = txt; };
     if (k === 'wint') { ENV.int = v / 100; set(v + ' %'); } else if (k === 'hour') { ENV.hour = v; set(hh(v)); } else if (k === 'tspd') { ENV.tspd = v; set('×' + v); }
     else if (k === 'dens') { TRF.dens = v / 100; set(v + ' %'); } else if (k === 'trucks') { TRF.trucks = v / 100; set(v + ' %'); } else if (k === 'aggr') { TRF.aggr = v / 100; set(v + ' %'); } else if (k === 'divert') { TRF.divert = v / 100; set(v + ' %'); }
     else if (k === 'plen' && ADM.pend) { ADM.pend.len = v; set(v + ' m'); } else if (k === 'pv' && ADM.pend) { ADM.pend.kmh = v; set(v + ' km/h'); }
+    else if (k[0] === 'y' && ADM.yc) { const c = ADM.yc, nm = x => x ? x + '×' : 'Auto'; if (k === 'yb') { c.bays = v; set(v); } else if (k === 'yw') { c.ws = v; set(v); } else if (k[1] === 't') { c.tow[+k[2]] = v; set(v); } else { c.n[k.slice(1)] = v; set(nm(v)); }
+      const tot = c.tow[0] + c.tow[1] + c.tow[2], su = document.getElementById('a_ysum'); if (su) su.textContent = 'Gesamt: ' + tot + ' Abschleppwagen' + (tot > c.bays ? ' – Stellplätze werden auf ' + tot + ' erhöht' : '') + '.'; }
     else if (k[0] === 'z') { const z = allZ().find(z => z.id === +k.slice(1)); if (z) { z.s1 = z.s0 + v; set(v + ' m'); rebuildZobs(); } }
   });
   e.addEventListener('change', ev => {
@@ -2908,7 +2914,7 @@ function nsZoneOk(r, s0, s1) {
   for (const o of r.out) if (o.link && s1 > o.s - 200 && s0 < o.s + 60) return 'Überschneidet eine Ausfahrt/Abbiegespur.';
   for (const q of r.inn) if (s1 > q.s - 160 && s0 < q.s + 340) return 'Überschneidet eine Einfädelspur.';
   for (const sx of r.sigs) if (s1 > sx.s - 140 && s0 < sx.s + 90) return 'Zu nah an einer Ampelkreuzung.';
-  for (const d of r.decks) if (s1 > d.a - 30 && s0 < d.b + 30) return 'Auf der Brücke nicht möglich.';
+  for (const d of r.decks) if (s1 > d.a - 30 && s0 < d.b + 30) return 'In der Unterführung nicht möglich.';
   return null;
 }
 function nsAddZone(kind, rid, s0, len, kmh) {
