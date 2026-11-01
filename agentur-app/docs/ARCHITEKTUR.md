@@ -106,22 +106,26 @@ Alle anderen Einstellungen (Erinnerungsfristen, Schwellenwerte, Drive-Ordnername
 
 **Berechtigungen (Scopes):** Drive (vollständig, damit die App auch Dateien sieht, die du selbst in den Final-Ordner hochlädst), Calendar (Termine lesen und schreiben), Gmail nur Senden (für das Briefing per E-Mail). Die Tokens liegen verschlüsselt in der lokalen Datenbank.
 
-**Drive-Ordnerstruktur** (Namen in den Einstellungen änderbar):
+**Drive-Ordnerstruktur** (an deine bisherige Ablage angelehnt, Namen in den Einstellungen änderbar):
 
 ```
-Kunden/                         Stammordner, frei wählbar
-  Pizzeria Roma/                beim Anlegen des Kunden
-    2026/                       beim ersten Projekt des Jahres
-      2026-11 Reels November/   beim Anlegen des Projekts
-        01_Rohmaterial
-        02_Schnitt
-        03_Final
-        04_Freigabe
+Kunden/                              Stammordner für neue Kunden, frei wählbar
+  Hamacher/                          beim Anlegen des Kunden
+    Scripts/                         Kundenebene, wie bisher
+    Sonstiges/                       Kundenebene, wie bisher
+    2026/                            beim ersten Projekt des Jahres
+      2026-11 Reels November/        beim Anlegen des Projekts
+        01 Rohmaterial
+        02 Entwürfe                  (= Schnitt)
+        03 Fertige Videos            (= Final, wird für die Upload-Erkennung geprüft)
+        04 Freigabe
 ```
 
+- Bestandsaufnahme vom 01.11.2026: Deine Kundenordner liegen direkt in „Meine Ablage“ und enthalten meist Rohmaterial, Entwürfe, Fertige Videos, Scripts und Sonstiges. Die Standardnamen übernehmen diese Begriffe; die Nummern halten die Reihenfolge der Phasen.
+- Bestehende Kunden: Statt einen neuen Ordner anzulegen, kann ein vorhandener Drive-Ordner per Link verknüpft werden. Die App verschiebt und löscht nichts.
 - Interessenten bekommen erst bei der Umwandlung in einen Kunden einen Ordner, damit Drive nicht mit Absagen zugemüllt wird.
 - Ohne Internet oder ohne Google-Verbindung funktioniert die App vollständig weiter; die Ordner werden über die Warteschlange angelegt, sobald die Verbindung steht.
-- Final-Erkennung: Die App zählt die Dateien in `03_Final`. Liegt dort mindestens eine Datei, wird der Checkpunkt "Dateien im Final-Ordner" automatisch abgehakt. Zusätzlich gibt es einen Knopf "Jetzt prüfen".
+- Final-Erkennung: Die App zählt die Dateien in `03 Fertige Videos`. Liegt dort mindestens eine Datei, wird der Checkpunkt "Dateien im Final-Ordner" automatisch abgehakt. Zusätzlich gibt es einen Knopf "Jetzt prüfen".
 
 **Kalender, Zwei-Wege-Sync:**
 

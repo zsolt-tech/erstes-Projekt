@@ -312,7 +312,7 @@ export const DEFAULT_SETTINGS: Settings = {
   agency_name: 'Agentur',
   approval_reminder_days: 3,
   drive_root_folder: 'Kunden',
-  drive_subfolders: ['01_Rohmaterial', '02_Schnitt', '03_Final', '04_Freigabe'],
+  drive_subfolders: ['01 Rohmaterial', '02 Entwürfe', '03 Fertige Videos', '04 Freigabe'],
   briefing_email_enabled: false,
   briefing_email_to: '',
 };
