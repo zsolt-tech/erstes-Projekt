@@ -140,7 +140,7 @@ function ChecklistRow({ item }: { item: ChecklistItem }) {
               </span>
             ) : null}
             {item.auto_key === 'final_files_present' && !item.is_done ? (
-              <span className="ml-2 text-xs text-subtle">wird ab Etappe 3 automatisch aus Drive erkannt</span>
+              <span className="ml-2 text-xs text-subtle">wird automatisch aus Drive erkannt</span>
             ) : null}
           </span>
           {!item.is_system && (

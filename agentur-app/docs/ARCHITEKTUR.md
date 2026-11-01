@@ -16,7 +16,7 @@ Rahmen: Einzelnutzer (Inhaber arbeitet allein), App liegt im Ordner `agentur-app
 | Kalender | FullCalendar (freie MIT-Module), deutsche Lokalisierung | Tag-, Wochen- und Monatsansicht, Termine verschiebbar. |
 | Live-Updates | Server-Sent Events (SSE) | Der Server meldet Änderungen, Dashboard und Listen aktualisieren sich ohne Neuladen. Einfacher als WebSockets, Einweg-Kommunikation genügt. |
 | Zeitplaner | eigener Minuten-Takt, Zeitzone Europe/Berlin | Prüft jede Minute, welche Aufgaben fällig sind. Dadurch werden verpasste Läufe automatisch nachgeholt, wenn der Rechner aus war oder geschlafen hat. |
-| Google | offizielle `googleapis`-Bibliothek, OAuth 2.0 | Drive, Calendar, Gmail (für den E-Mail-Versand des Briefings). |
+| Google | OAuth 2.0 und direkte REST-Aufrufe | Drive, Calendar, Gmail (für den E-Mail-Versand des Briefings). Ohne die rund 100 MB große `googleapis`-Bibliothek; Drive und Calendar sind schlichte Web-Schnittstellen. Tokens verschlüsselt (AES-256-GCM) in der Datenbank. |
 | Benachrichtigungen | node-notifier | Native Desktop-Hinweise unter macOS und Windows, Klick öffnet die App. |
 | Export | PDFKit (PDF), CSV mit Semikolon und UTF-8-BOM | CSV öffnet sich in deutschem Excel ohne Umlaut- und Spaltenfehler. |
 | Validierung | zod | Gemeinsame Prüfregeln für Formulare und Server. |

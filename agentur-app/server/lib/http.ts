@@ -55,6 +55,11 @@ export function errorHandler(err: unknown, _req: Request, res: Response, _next: 
     res.status(err.status).json({ error: err.message, details: err.details });
     return;
   }
+  // Fehler mit eigener, für Nutzer verständlicher Meldung (z. B. Google-Anbindung)
+  if (err instanceof Error && typeof (err as { httpStatus?: unknown }).httpStatus === 'number') {
+    res.status((err as unknown as { httpStatus: number }).httpStatus).json({ error: err.message });
+    return;
+  }
   if (err && typeof err === 'object' && (err as { type?: string }).type === 'entity.parse.failed') {
     res.status(400).json({ error: 'Ungültige Anfrage (JSON)' });
     return;

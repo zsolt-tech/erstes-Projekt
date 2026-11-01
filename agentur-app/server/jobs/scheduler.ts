@@ -4,6 +4,7 @@ import type { Database } from '../db/database.ts';
 import type { AppConfig } from '../env.ts';
 import { events } from '../lib/events.ts';
 import { isBackupDue, runBackup } from '../services/backup.ts';
+import type { Services } from '../google/index.ts';
 
 interface Job {
   name: string;
@@ -11,8 +12,25 @@ interface Job {
   run: () => void | Promise<void>;
 }
 
-export function startScheduler(db: Database, config: AppConfig) {
+export function startScheduler(db: Database, config: AppConfig, services: Services) {
+  let lastFinalCheck = 0;
   const jobs: Job[] = [
+    {
+      name: 'Google-Warteschlange',
+      isDue: () => services.google.connected,
+      run: async () => {
+        await services.queue.process();
+      },
+    },
+    {
+      // Alle 15 Minuten: liegen Dateien im Ordner "Fertige Videos"?
+      name: 'Drive: Fertige Videos prüfen',
+      isDue: () => services.google.connected && Date.now() - lastFinalCheck > 15 * 60 * 1000,
+      run: async () => {
+        lastFinalCheck = Date.now();
+        await services.drive.checkAllFinal();
+      },
+    },
     {
       name: 'Datensicherung',
       isDue: () => isBackupDue(db),

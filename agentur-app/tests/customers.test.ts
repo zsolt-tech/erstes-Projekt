@@ -142,3 +142,13 @@ test('Einstellungen lesen und ändern', async () => {
   const bad = await t.request('PUT', '/api/settings', { approval_reminder_days: 0 });
   assert.equal(bad.status, 400);
 });
+
+test('Nur Aufrufe über localhost werden angenommen', async () => {
+  const http = await import('node:http');
+  const status = await new Promise<number>((resolve) => {
+    const req = http.request(`${t.url}/api/health`, { headers: { Host: 'angreifer.example:3000' } }, (res) => resolve(res.statusCode ?? 0));
+    req.end();
+  });
+  assert.equal(status, 403);
+  assert.equal((await t.request('GET', '/api/health')).status, 200);
+});

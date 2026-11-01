@@ -62,19 +62,17 @@ Bereiche (Scopes) musst du nicht eintragen; die App fragt sie bei der Anmeldung 
 7. Es erscheint ein Fenster mit **Client-ID** und **Clientschlüssel** (Client Secret).
    **Wichtig:** Den Clientschlüssel zeigt Google nur in diesem Moment vollständig an. Klicke auf **JSON herunterladen** und bewahre die Datei sicher auf, oder kopiere beide Werte sofort.
 
-## Schritt 5: Werte in die App eintragen
+## Schritt 5: Zugangsdaten in die App übernehmen
 
-1. Öffne im Ordner `agentur-app` die Datei `.env` mit einem Texteditor (macOS: TextEdit, Rechtsklick > Öffnen mit; Windows: Editor).
-   *Die Datei beginnt mit einem Punkt und ist deshalb manchmal unsichtbar. macOS Finder: `Cmd + Shift + .` blendet sie ein. Windows Explorer: Ansicht > Einblenden > Ausgeblendete Elemente.*
-2. Die beiden Zeilen ausfüllen:
+**Empfohlen, ohne Datei-Bearbeitung:**
 
-   ```
-   GOOGLE_CLIENT_ID=1234567890-abc...apps.googleusercontent.com
-   GOOGLE_CLIENT_SECRET=GOCSPX-...
-   ```
+1. App starten (`npm start`) und links unten **Einstellungen** öffnen.
+2. Im Bereich **Google-Verbindung** auf **JSON-Datei auswählen** klicken und die in Schritt 4 heruntergeladene Datei `client_secret_....json` auswählen (meist im Ordner „Downloads“).
+3. Die App trägt Client-ID und Clientschlüssel selbst in die `.env` ein und meldet „Zugangsdaten gespeichert“.
+4. Auf **Mit Google verbinden** klicken, das Workspace-Konto wählen und den Zugriff erlauben. Danach steht dort „Verbunden mit …“.
+5. Die heruntergeladene JSON-Datei danach löschen (die Werte stehen jetzt in der `.env`).
 
-3. Speichern, App neu starten (`Strg + C`, dann `npm start`).
-4. Ab Etappe 3: In der App unter **Einstellungen > Google-Verbindung** auf **Mit Google verbinden** klicken, dein Konto wählen und den Zugriff erlauben.
+**Alternativ von Hand:** Die Datei `.env` im Ordner `agentur-app` mit einem Texteditor öffnen (sie beginnt mit einem Punkt und ist manchmal ausgeblendet; macOS Finder: `Cmd + Shift + .`), die Zeilen `GOOGLE_CLIENT_ID=` und `GOOGLE_CLIENT_SECRET=` ausfüllen, speichern und die App neu starten.
 
 **Sicherheit:** Client-ID und Clientschlüssel gehören nur in die `.env` auf deinem Rechner. Bitte nicht per E-Mail oder Chat verschicken. Die `.env` wird nie ins Git übertragen.
 

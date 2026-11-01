@@ -23,7 +23,16 @@ export interface AppConfig {
   backupExtraDir: string | null;
   backupKeepDays: number;
   clientDist: string;
-  google: { clientId: string; clientSecret: string; redirectUri: string };
+  envFile: string;
+  google: {
+    clientId: string;
+    clientSecret: string;
+    redirectUri: string;
+    authUrl: string;
+    tokenUrl: string;
+    revokeUrl: string;
+    apiBase: string;
+  };
 }
 
 export function loadConfig(overrides: Partial<AppConfig> = {}): AppConfig {
@@ -41,10 +50,15 @@ export function loadConfig(overrides: Partial<AppConfig> = {}): AppConfig {
     backupExtraDir: extra ? resolveDir(extra, extra) : null,
     backupKeepDays: Math.max(1, Number(process.env.BACKUP_KEEP_DAYS) || 30),
     clientDist: path.join(APP_ROOT, 'dist', 'client'),
+    envFile: path.join(APP_ROOT, '.env'),
     google: {
-      clientId: process.env.GOOGLE_CLIENT_ID || '',
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
+      clientId: (process.env.GOOGLE_CLIENT_ID || '').trim(),
+      clientSecret: (process.env.GOOGLE_CLIENT_SECRET || '').trim(),
       redirectUri: process.env.GOOGLE_REDIRECT_URI || `http://localhost:${port}/api/google/callback`,
+      authUrl: 'https://accounts.google.com/o/oauth2/v2/auth',
+      tokenUrl: 'https://oauth2.googleapis.com/token',
+      revokeUrl: 'https://oauth2.googleapis.com/revoke',
+      apiBase: 'https://www.googleapis.com',
     },
   };
   return { ...config, ...overrides };

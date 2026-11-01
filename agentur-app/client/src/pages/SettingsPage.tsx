@@ -14,6 +14,7 @@ import {
 } from '../api/hooks';
 import { Badge, Button, Card, ErrorBox, Field, IconButton, Input, PageHeader, Segmented, Spinner } from '../components/ui';
 import { useToast } from '../components/feedback';
+import { GoogleSettings } from '../components/GoogleSettings';
 import { useTheme } from '../lib/theme';
 import { formatBytes, formatDateTime } from '../lib/format';
 import type { DeliverableType, TeamMember, Theme } from '../../../shared/schemas';
@@ -353,16 +354,12 @@ export function SettingsPage() {
       <PageHeader title="Einstellungen" />
       <div className="grid gap-5">
         <GeneralSettings />
+        <GoogleSettings />
         <div className="grid gap-5 lg:grid-cols-2">
           <DeliverableTypes />
           <Team />
         </div>
         <Backups />
-        <Card title="Google-Verbindung">
-          <p className="text-sm text-subtle">
-            Die Anbindung an Google Drive und Google Calendar wird in Etappe 3 und 4 eingerichtet.
-          </p>
-        </Card>
       </div>
     </>
   );

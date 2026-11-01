@@ -8,6 +8,7 @@ import { Badge, Button, Card, ErrorBox, IconButton, PageHeader, ProgressBar, Seg
 import { useProjects, useTasks } from '../api/projects';
 import { ProjectTable } from './ProjectsPage';
 import { TaskDialog, TaskQuickAdd, TaskRow } from '../components/Tasks';
+import { CustomerDriveCard } from '../components/Drive';
 import { ConfirmDialog, useToast } from '../components/feedback';
 import { CustomerStatusBadge } from '../components/labels';
 import { currentMonth, displayUrl, formatDate, formatEuro, formatMonth, shiftMonth, telHref, today } from '../lib/format';
@@ -329,7 +330,7 @@ export function CustomerDetailPage() {
             )}
           </Card>
 
-          <Upcoming title="Google Drive" stage={3} />
+          <CustomerDriveCard customerId={id} isLead={c.status === 'interessent'} />
         </div>
       </div>
 

@@ -6,6 +6,7 @@ import { migrate } from './db/migrate.ts';
 import { seed } from './db/seed.ts';
 import { createApp } from './app.ts';
 import { startScheduler } from './jobs/scheduler.ts';
+import { createServices } from './google/index.ts';
 
 const config = loadConfig();
 fs.mkdirSync(config.dataDir, { recursive: true });
@@ -15,8 +16,9 @@ const applied = migrate(db);
 if (applied.length) console.log(`[Datenbank] Migration(en) eingespielt: ${applied.join(', ')}`);
 seed(db);
 
-const app = createApp(db, config);
-const scheduler = startScheduler(db, config);
+const services = createServices(db, config);
+const app = createApp(db, config, services);
+const scheduler = startScheduler(db, config, services);
 
 const server = app.listen(config.port, config.host, () => {
   console.log(`[Server] Agentur-Verwaltung läuft unter http://localhost:${config.port}`);
@@ -37,6 +39,7 @@ function shutdown() {
   stopping = true;
   console.log('[Server] wird beendet ...');
   scheduler.stop();
+  void services.queue.stop();
   server.close();
   // Offene Live-Verbindungen (Server-Sent Events) nicht abwarten
   server.closeAllConnections();

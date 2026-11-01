@@ -17,7 +17,13 @@ export function useLiveUpdates(): boolean {
     source.onmessage = (msg) => {
       try {
         const event = JSON.parse(msg.data) as ChangeEvent;
-        if (event.type === 'changed') qc.invalidateQueries({ queryKey: [event.entity] });
+        if (event.type !== 'changed') return;
+        qc.invalidateQueries({ queryKey: [event.entity] });
+        // Warteschlange betrifft den Drive-Stand von Kunden und Projekten
+        if (event.entity === 'sync' || event.entity === 'google') {
+          qc.invalidateQueries({ queryKey: ['customers', 'drive'] });
+          qc.invalidateQueries({ queryKey: ['projects', 'drive'] });
+        }
       } catch {
         /* ungültige Nachricht ignorieren */
       }

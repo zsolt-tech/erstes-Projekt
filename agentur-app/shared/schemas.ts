@@ -297,8 +297,11 @@ export interface TeamMember {
 export const settingsSchema = z.object({
   agency_name: z.string().trim().min(1, 'Name der Agentur fehlt').max(100),
   approval_reminder_days: z.number().int().min(1).max(60),
-  drive_root_folder: z.string().trim().min(1).max(200),
-  drive_subfolders: z.array(z.string().trim().min(1).max(100)).min(1).max(10),
+  // Leer = direkt in „Meine Ablage“
+  drive_root_folder: z.string().trim().max(200),
+  // Reihenfolge: Rohmaterial, Schnitt, Final, Freigabe
+  drive_subfolders: z.array(z.string().trim().min(1, 'Ordnername fehlt').max(100)).length(4),
+  drive_customer_subfolders: z.array(z.string().trim().min(1).max(100)).max(10),
   briefing_email_enabled: z.boolean(),
   briefing_email_to: z
     .string()
@@ -313,6 +316,7 @@ export const DEFAULT_SETTINGS: Settings = {
   approval_reminder_days: 3,
   drive_root_folder: 'Kunden',
   drive_subfolders: ['01 Rohmaterial', '02 Entwürfe', '03 Fertige Videos', '04 Freigabe'],
+  drive_customer_subfolders: ['Scripts', 'Sonstiges'],
   briefing_email_enabled: false,
   briefing_email_to: '',
 };
@@ -341,6 +345,8 @@ export interface BackupOverview {
 // ---------------------------------------------------------------------
 
 export type ChangeEntity =
+  | 'google'
+  | 'sync'
   | 'customers'
   | 'projects'
   | 'tasks'
@@ -668,4 +674,79 @@ export interface ProjectTemplate {
   phase_offsets: Partial<Record<Phase, number>>;
   description: string | null;
   items: { phase: Phase; kind: ChecklistKind; label: string; is_gate: number }[];
+}
+
+// ---------------------------------------------------------------------
+// Google und Drive (Etappe 3)
+// ---------------------------------------------------------------------
+
+export interface GoogleStatus {
+  configured: boolean;
+  connected: boolean;
+  email: string | null;
+  connected_at: string | null;
+  redirect_uri: string;
+  missing_scopes: string[];
+}
+
+export const DRIVE_ROLES = ['kunde', 'jahr', 'projekt', 'rohmaterial', 'schnitt', 'final', 'freigabe'] as const;
+export type DriveRole = (typeof DRIVE_ROLES)[number];
+export const DRIVE_ROLE_LABELS: Record<DriveRole, string> = {
+  kunde: 'Kundenordner',
+  jahr: 'Jahresordner',
+  projekt: 'Projektordner',
+  rohmaterial: 'Rohmaterial',
+  schnitt: 'Schnitt / Entwürfe',
+  final: 'Fertige Videos',
+  freigabe: 'Freigabe',
+};
+
+export interface DriveFolder {
+  id: number;
+  role: DriveRole;
+  year: number | null;
+  name: string | null;
+  google_folder_id: string;
+  web_url: string;
+  origin: 'angelegt' | 'verknuepft';
+}
+
+export interface DriveFile {
+  name: string;
+  url: string;
+  modified_at: string | null;
+}
+
+export type DriveState = 'nicht_verbunden' | 'fehlt' | 'wartet' | 'fehler' | 'bereit';
+
+export interface CustomerDrive {
+  state: DriveState;
+  folder: DriveFolder | null;
+  error: string | null;
+}
+
+export interface ProjectDrive {
+  state: DriveState;
+  customer_folder: DriveFolder | null;
+  folders: DriveFolder[];
+  error: string | null;
+  final_file_count: number | null;
+  final_checked_at: string | null;
+  final_files: DriveFile[];
+}
+
+export const driveLinkInput = z.object({
+  url: z.string().trim().min(1, 'Link zum Ordner einfügen'),
+});
+
+export interface SyncJob {
+  id: number;
+  job_type: string;
+  label: string;
+  status: 'wartend' | 'laeuft' | 'fertig' | 'fehler';
+  attempts: number;
+  last_error: string | null;
+  run_after: string;
+  created_at: string;
+  updated_at: string;
 }

@@ -13,6 +13,8 @@ import {
 } from '../services/customers.ts';
 import { backupOverview, runBackup } from '../services/backup.ts';
 import { projectRouter } from './projects.ts';
+import { googleRouter } from './google.ts';
+import type { Services } from '../google/index.ts';
 import { getSettings, updateSettings } from '../services/settings.ts';
 import {
   createDeliverableType,
@@ -32,7 +34,7 @@ import {
   type CustomerStatus,
 } from '../../shared/schemas.ts';
 
-export function apiRouter(db: Database, config: AppConfig): Router {
+export function apiRouter(db: Database, config: AppConfig, services: Services): Router {
   const r = Router();
 
   r.get('/health', handle(() => ({ ok: true, app: 'agentur-verwaltung' })));
@@ -83,6 +85,8 @@ export function apiRouter(db: Database, config: AppConfig): Router {
     handle((req, res) => {
       const customer = createCustomer(db, parse(customerInput, req.body));
       events.changed('customers', customer.id);
+      // Drive-Ordner automatisch, aber nicht für Interessenten
+      if (customer.status !== 'interessent') services.drive.onCustomerBecameClient(customer.id);
       res.status(201);
       return customer;
     }),
@@ -91,8 +95,12 @@ export function apiRouter(db: Database, config: AppConfig): Router {
   r.put(
     '/customers/:id',
     handle((req) => {
-      const customer = updateCustomer(db, parseId(req.params.id), parse(customerInput, req.body));
+      const id = parseId(req.params.id);
+      const before = getCustomer(db, id);
+      const customer = updateCustomer(db, id, parse(customerInput, req.body));
       events.changed('customers', customer.id);
+      // Interessent wurde zum Kunden: jetzt den Drive-Ordner anlegen
+      if (before.status === 'interessent' && customer.status !== 'interessent') services.drive.onCustomerBecameClient(customer.id);
       return customer;
     }),
   );
@@ -178,7 +186,8 @@ export function apiRouter(db: Database, config: AppConfig): Router {
     }),
   );
 
-  r.use(projectRouter(db));
+  r.use(projectRouter(db, services));
+  r.use(googleRouter(services));
 
   r.use(() => {
     throw new HttpError(404, 'Unbekannte API-Adresse');

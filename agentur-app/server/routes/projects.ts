@@ -6,6 +6,7 @@ import { events } from '../lib/events.ts';
 import { handle, HttpError, parse, parseId } from '../lib/http.ts';
 import * as projects from '../services/projects.ts';
 import * as tasks from '../services/tasks.ts';
+import type { Services } from '../google/index.ts';
 import {
   approvalDecisionInput,
   approvalRequestInput,
@@ -26,7 +27,7 @@ import {
 
 const optionalId = (v: unknown) => (typeof v === 'string' && v ? parseId(v) : undefined);
 
-export function projectRouter(db: Database): Router {
+export function projectRouter(db: Database, services: Services): Router {
   const r = Router();
 
   // Projektänderungen betreffen auch Paketverbrauch (Kunden) und Aufgaben
@@ -59,7 +60,9 @@ export function projectRouter(db: Database): Router {
     '/projects',
     handle((req, res) => {
       res.status(201);
-      return changed(projects.createProject(db, parse(projectCreateInput, req.body)));
+      const p = changed(projects.createProject(db, parse(projectCreateInput, req.body)));
+      services.drive.onProjectCreated(p.id);
+      return p;
     }),
   );
 

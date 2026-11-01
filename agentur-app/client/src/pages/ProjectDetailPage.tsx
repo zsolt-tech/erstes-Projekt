@@ -14,6 +14,7 @@ import {
   useRun,
 } from '../components/ProjectPhases';
 import { TaskDialog, TaskQuickAdd, TaskRow } from '../components/Tasks';
+import { ProjectDrivePanel } from '../components/Drive';
 import { ConfirmDialog } from '../components/feedback';
 import { PriorityBadge, ProjectStatusBadge } from '../components/labels';
 import { Button, Card, ErrorBox, Field, Input, PageHeader, ProgressBar, Segmented, Spinner } from '../components/ui';
@@ -210,11 +211,7 @@ export function ProjectDetailPage() {
             <div className="grid gap-6">
               <PhaseMeta key={`meta-${phase}`} project={project} phase={phase} />
               {phase === 1 && <ShootDetails project={project} />}
-              {phase === 3 && (
-                <div className="rounded-md border border-line bg-surface-2 px-3 py-2.5 text-[13px] text-muted">
-                  Verknüpfung mit dem Drive-Ordner und automatische Erkennung der Dateien in „03 Fertige Videos“ folgen in Etappe 3.
-                </div>
-              )}
+              {phase === 3 && <ProjectDrivePanel projectId={project.id} customerId={project.customer_id} />}
               {phase === 4 && <ApprovalPanel project={project} />}
               {phase === 5 && <PublicationsPanel project={project} />}
               <PhaseChecklists project={project} phase={phase} />

@@ -3,9 +3,10 @@
 Lokale Web-App zur Verwaltung von Kunden, Projekten und Aufgaben für Videoproduktion und Social-Media-Betreuung.
 Läuft auf deinem Rechner unter `http://localhost:3000`, die Daten liegen in einer lokalen Datei.
 
-Aktueller Stand: **Etappe 2**
+Aktueller Stand: **Etappe 3**
 - Etappe 1: Grundgerüst, Kunden, Einstellungen, Hell-/Dunkelmodus, tägliche Datensicherung
 - Etappe 2: Projekte mit fünf Phasen, Kanban-Board und Liste, Checklisten mit Sperre, Drehtag, Freigaberunden, Veröffentlichungen, Fortschritt, Vorlagen je Kundentyp, Rechnungsstatus, Aufgaben
+- Etappe 3: Google-Anmeldung, automatische Drive-Ordner für Kunden und Projekte, Verknüpfung bestehender Ordner, Erkennung fertiger Videos
 
 Weitere Dokumente:
 - Architektur und Datenmodell: [docs/ARCHITEKTUR.md](docs/ARCHITEKTUR.md)
@@ -146,6 +147,25 @@ Nach dem Update auf Etappe 2 einmal `npm install` ausführen (neues Paket für D
 10. **Liste:** Projekte > Liste zeigt auch abgeschlossene und abgebrochene Projekte.
 
 Die mitgelieferten Vorlagen (Standard, Restaurant, Handwerk, Arztpraxis, Fahrschule) lassen sich ab Etappe 7 in der App bearbeiten. Bis dahin passt du Checklisten direkt im Projekt an.
+
+---
+
+## Etappe 3 testen (Google Drive)
+
+Voraussetzung: Google-Zugang nach [docs/GOOGLE-EINRICHTUNG.md](docs/GOOGLE-EINRICHTUNG.md) eingerichtet (Schritte 1 bis 4).
+
+1. **Verbinden:** Einstellungen > Google-Verbindung > „JSON-Datei auswählen“ (Datei von Google), dann „Mit Google verbinden“. Nach der Anmeldung steht dort „Verbunden mit …“.
+2. **Ordnerstruktur prüfen:** Einstellungen > Drive-Ordnerstruktur. Vorgabe: Stammordner „Kunden“, je Kunde „Scripts“ und „Sonstiges“, je Projekt „01 Rohmaterial“, „02 Entwürfe“, „03 Fertige Videos“, „04 Freigabe“. Die Vorschau zeigt den Pfad. Änderungen gelten für neu angelegte Ordner.
+3. **Neuer Kunde:** Einen Testkunden mit Status „Aktiver Kunde“ anlegen. Auf der Kundenseite zeigt „Google Drive“ kurz „Ordner wird angelegt …“ und dann den Ordner. Klick öffnet ihn in Drive: `Kunden / Testkunde` mit `Scripts` und `Sonstiges`.
+4. **Interessent:** Einen Interessenten anlegen. Es entsteht kein Ordner. Status auf „Aktiver Kunde“ ändern: Jetzt wird der Ordner angelegt.
+5. **Neues Projekt:** Für den Testkunden ein Projekt anlegen. In Drive erscheint `Kunden / Testkunde / 2026 / 2026-11 Projekttitel` mit den vier Unterordnern. Auf der Projektseite stehen die Ordner unter Phase 3 „Upload“.
+6. **Upload-Erkennung:** Eine beliebige Datei in Drive in „03 Fertige Videos“ legen. Auf der Projektseite (Phase Upload) „Jetzt prüfen“: Die Datei erscheint, und „Dateien im Ordner Fertige Videos“ ist abgehakt. Ohne Klick passiert das automatisch innerhalb von 15 Minuten.
+7. **Bestandskunde verknüpfen:** Für einen bestehenden Kunden auf der Kundenseite „Bestehenden verknüpfen“ wählen und den Link des vorhandenen Kundenordners aus der Browserzeile von Drive einfügen. Es wird kein neuer Ordner angelegt. Für ein laufendes Projekt auf der Projektseite (Phase Upload) „Bestehenden Ordner verknüpfen“: Unterordner wie „Rohmaterial“, „Entwürfe“ und „Fertige Videos“ werden erkannt, auch ohne Nummern.
+8. **Ohne Internet:** WLAN aus, Kunden anlegen. Der Ordner zeigt „wird angelegt“, unter Einstellungen > Google-Aufträge steht der Auftrag. WLAN an: Der Ordner wird nachgeholt (spätestens nach 1 bis 5 Minuten, sonst „Jetzt erneut“).
+
+Die App legt in Drive nur Ordner an. Sie verschiebt, ändert und löscht nichts. „Verknüpfung lösen“ entfernt nur die Zuordnung in der App.
+
+Bestehende Kunden und Projekte aus der Zeit vor der Google-Verbindung bekommen nicht automatisch Ordner, damit keine Doppelungen zu deinen vorhandenen Ordnern entstehen. Dort wählst du jeweils „Ordner anlegen“ oder „Bestehenden verknüpfen“.
 
 ---
 
