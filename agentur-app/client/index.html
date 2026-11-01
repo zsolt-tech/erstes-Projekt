@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Agentur-Verwaltung</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232f54c9'/%3E%3Cpath d='M11 9.5v13l11-6.5z' fill='white'/%3E%3C/svg%3E" />
+    <script>
+      // Farbschema vor dem ersten Zeichnen setzen, damit nichts aufblitzt
+      (function () {
+        var theme = 'system';
+        try { theme = localStorage.getItem('theme') || 'system'; } catch (e) {}
+        var dark = theme === 'dunkel' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        document.documentElement.classList.toggle('dark', dark);
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

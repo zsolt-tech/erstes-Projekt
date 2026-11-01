@@ -1,24 +1,26 @@
 # Agentur-Verwaltung: Architekturübersicht
 
-Stand: Entwurf zur Abstimmung. Das vollständige Datenbankschema liegt in `datenbankschema.sql`.
+Stand: bestätigt, Umsetzung läuft in Etappen. Das vollständige Datenbankschema liegt in `server/db/migrations/001_init.sql`.
+
+Rahmen: Einzelnutzer (Inhaber arbeitet allein), App liegt im Ordner `agentur-app/` auf dem Branch `claude/agentur-verwaltung`.
 
 ## 1. Technik-Stack und Begründung
 
 | Baustein | Wahl | Warum |
 |---|---|---|
 | Server | Node.js 22 LTS + Express, TypeScript | Die App braucht einen dauerhaft laufenden Prozess mit Zeitplaner (Briefing 9:00, Backups, Sync alle 5 Minuten, Desktop-Benachrichtigungen). Express ist genau das: ein schlichter, langlebiger Prozess. Next.js ist auf Web-Hosting und Serverless ausgelegt, Hintergrund-Jobs passen dort schlecht hinein. |
-| Datenbank | SQLite über `better-sqlite3` | Eine einzige Datei, kein Datenbankserver, sehr schnell, eingebaute Online-Backup-Funktion. |
+| Datenbank | SQLite, in Node.js eingebaut (`node:sqlite`) | Eine einzige Datei, kein Datenbankserver, sehr schnell. Gegenüber dem Zusatzpaket `better-sqlite3` muss bei der Installation nichts kompiliert werden; das vermeidet die häufigsten Installationsprobleme unter Windows und macOS. Voraussetzung: Node.js ab 22.13. |
 | Oberfläche | React 18 + Vite, Tailwind CSS | Schnelle, saubere Oberfläche, Hell-/Dunkelmodus über CSS-Klassen. |
 | Datenabruf | TanStack Query | Zwischenspeicher im Browser, automatische Aktualisierung nach Änderungen. |
 | Kanban | dnd-kit | Drag-and-Drop, auch per Tastatur bedienbar. |
 | Kalender | FullCalendar (freie MIT-Module), deutsche Lokalisierung | Tag-, Wochen- und Monatsansicht, Termine verschiebbar. |
 | Live-Updates | Server-Sent Events (SSE) | Der Server meldet Änderungen, Dashboard und Listen aktualisieren sich ohne Neuladen. Einfacher als WebSockets, Einweg-Kommunikation genügt. |
-| Zeitplaner | node-cron, Zeitzone Europe/Berlin | Plus Nachhol-Logik, falls der Rechner um 9:00 aus war oder geschlafen hat. |
+| Zeitplaner | eigener Minuten-Takt, Zeitzone Europe/Berlin | Prüft jede Minute, welche Aufgaben fällig sind. Dadurch werden verpasste Läufe automatisch nachgeholt, wenn der Rechner aus war oder geschlafen hat. |
 | Google | offizielle `googleapis`-Bibliothek, OAuth 2.0 | Drive, Calendar, Gmail (für den E-Mail-Versand des Briefings). |
 | Benachrichtigungen | node-notifier | Native Desktop-Hinweise unter macOS und Windows, Klick öffnet die App. |
 | Export | PDFKit (PDF), CSV mit Semikolon und UTF-8-BOM | CSV öffnet sich in deutschem Excel ohne Umlaut- und Spaltenfehler. |
 | Validierung | zod | Gemeinsame Prüfregeln für Formulare und Server. |
-| Datum/Zeit | date-fns + date-fns-tz | Korrekte Sommer-/Winterzeit, deutsche Formate. |
+| Datum/Zeit | `Intl`-Funktionen von JavaScript, Zeitzone Europe/Berlin | Korrekte Sommer-/Winterzeit, deutsche Formate, ohne Zusatzpaket. |
 
 Kein Login: Der Server lauscht ausschließlich auf `127.0.0.1` und ist damit nur vom eigenen Rechner erreichbar.
 
@@ -50,14 +52,17 @@ agentur-app/
   package.json            ein Paket, Start mit "npm start"
   .env.example            Vorlage für Zugangsdaten (die echte .env wird nie eingecheckt)
   server/
-    index.ts              Start, Auslieferung der Oberfläche
+    index.ts              Start
+    app.ts                Express-Anwendung, Auslieferung der Oberfläche
     db/                   Verbindung, Migrationen, Startdaten (Vorlagen, Leistungsarten)
-    routes/               REST-Endpunkte je Bereich
+    routes/               REST-Endpunkte
     services/             Fachlogik und Google-Anbindung
     jobs/                 Zeitplaner
+  shared/                 Prüfregeln, Typen und deutsche Bezeichnungen für Server und Oberfläche
   client/src/
-    pages/ components/ api/ hooks/
-  scripts/                Autostart macOS/Windows, Backup-Wiederherstellung
+    pages/ components/ api/ lib/
+  tests/                  automatische Tests
+  scripts/                Start, Backup-Wiederherstellung, Autostart macOS/Windows
   data/                   Datenbank (nicht im Git)
   backups/                Backups (nicht im Git)
   docs/                   Anleitungen
@@ -90,7 +95,7 @@ Alle anderen Einstellungen (Erinnerungsfristen, Schwellenwerte, Drive-Ordnername
 |---|---|
 | täglich 09:00 | Briefing erzeugen, Desktop-Benachrichtigung, optional E-Mail |
 | jede Minute | Nachhol-Prüfung: Ist es nach 9:00 und gibt es noch kein Briefing für heute, wird es sofort erzeugt (Rechner war aus oder im Ruhezustand) |
-| täglich 02:30 und beim Start, falls letztes Backup älter als 24 h | Datenbank-Backup, Aufbewahrung 30 Tagesstände und 12 Monatsstände |
+| täglich ab 02:30, sonst kurz nach dem Start | Datenbank-Backup (ein Stand pro Tag, spätestens nach 24 h), Aufbewahrung 30 Tagesstände und 12 Monatsstände |
 | täglich 06:00 und beim Start | Wiederkehrende Projekte und Aufgaben anlegen |
 | stündlich | Freigabe-Erinnerungen, Engpass-Prüfung |
 | alle 5 Minuten | Google-Calendar-Sync in beide Richtungen |

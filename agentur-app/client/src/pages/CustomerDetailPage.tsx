@@ -1,0 +1,292 @@
+// Kundendetailseite: Stammdaten, Ansprechpartner, Kanäle, Paketverbrauch.
+// Projekte, Aufgaben, Termine und Drive-Links folgen in den nächsten Etappen.
+import { useState } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Archive, ArchiveRestore, ArrowLeft, ChevronLeft, ChevronRight, ExternalLink, Globe, Mail, MapPin, Pencil, Phone } from 'lucide-react';
+import { useArchiveCustomer, useCustomer } from '../api/hooks';
+import { Badge, Button, Card, ErrorBox, IconButton, PageHeader, ProgressBar, Spinner, type Tone } from '../components/ui';
+import { ConfirmDialog, useToast } from '../components/feedback';
+import { CustomerStatusBadge } from '../components/labels';
+import { currentMonth, displayUrl, formatDate, formatEuro, formatMonth, shiftMonth, telHref, today } from '../lib/format';
+import { CUSTOMER_TYPE_LABELS, PLATFORM_LABELS, type PackageUsage } from '../../../shared/schemas';
+
+function UsageRow({ item }: { item: PackageUsage }) {
+  const over = item.used > item.quantity;
+  const full = item.used === item.quantity;
+  const tone: Tone = over ? 'warning' : full ? 'success' : 'accent';
+  return (
+    <div>
+      <div className="mb-1.5 flex items-baseline justify-between gap-3 text-sm">
+        <span className="font-medium text-fg">{item.deliverable_type_name}</span>
+        <span className="tabular text-muted">
+          <span className="font-semibold text-fg">{item.used}</span> von {item.quantity}
+          {item.completed > 0 && <> · {item.completed} abgeschlossen</>}
+        </span>
+      </div>
+      <ProgressBar value={item.used} max={item.quantity} tone={tone} />
+      {over && <p className="mt-1 text-xs text-warning">{item.used - item.quantity} über dem gebuchten Paket</p>}
+    </div>
+  );
+}
+
+function Upcoming({ title, stage }: { title: string; stage: number }) {
+  return (
+    <Card title={title}>
+      <p className="text-sm text-subtle">Wird in Etappe {stage} ergänzt.</p>
+    </Card>
+  );
+}
+
+export function CustomerDetailPage() {
+  const id = Number(useParams().id);
+  const [month, setMonth] = useState(currentMonth());
+  const { data: c, isLoading, error } = useCustomer(id, month);
+  const archive = useArchiveCustomer();
+  const toast = useToast();
+  const navigate = useNavigate();
+  const [confirmArchive, setConfirmArchive] = useState(false);
+
+  if (isLoading) return <Spinner />;
+  if (error || !c) return <ErrorBox error={error || new Error('Kunde nicht gefunden')} />;
+
+  const address = [c.street, [c.postal_code, c.city].filter(Boolean).join(' '), c.country !== 'Deutschland' ? c.country : null]
+    .filter(Boolean)
+    .join(', ');
+
+  async function toggleArchive() {
+    try {
+      await archive.mutateAsync({ id, archived: !c!.archived_at });
+      toast.success(c!.archived_at ? 'Kunde wiederhergestellt' : 'Kunde archiviert');
+      setConfirmArchive(false);
+    } catch (err) {
+      toast.error(err);
+    }
+  }
+
+  const activePackage = c.package_items.filter((p) => {
+    const t = today();
+    return p.valid_from <= t && (!p.valid_until || p.valid_until >= t);
+  });
+  const monthlyTotal = activePackage.reduce((sum, p) => sum + (p.monthly_price_cents ?? 0), 0);
+
+  return (
+    <>
+      <PageHeader
+        back={
+          <Link to="/kunden" className="inline-flex items-center gap-1 text-[13px] text-muted hover:text-fg">
+            <ArrowLeft className="size-3.5" />
+            Kunden
+          </Link>
+        }
+        title={c.company_name}
+        subtitle={
+          <span className="flex flex-wrap items-center gap-2">
+            <CustomerStatusBadge status={c.status} stage={c.pipeline_stage} />
+            {c.archived_at && <Badge tone="danger">Archiviert</Badge>}
+            <span>{[c.industry, CUSTOMER_TYPE_LABELS[c.customer_type]].filter(Boolean).join(' · ')}</span>
+          </span>
+        }
+        actions={
+          <>
+            <Button
+              icon={c.archived_at ? <ArchiveRestore className="size-4" /> : <Archive className="size-4" />}
+              onClick={() => (c.archived_at ? toggleArchive() : setConfirmArchive(true))}
+              loading={archive.isPending}
+            >
+              {c.archived_at ? 'Wiederherstellen' : 'Archivieren'}
+            </Button>
+            <Button variant="primary" icon={<Pencil className="size-4" />} onClick={() => navigate(`/kunden/${id}/bearbeiten`)}>
+              Bearbeiten
+            </Button>
+          </>
+        }
+      />
+
+      <div className="grid gap-5 lg:grid-cols-3">
+        <div className="grid content-start gap-5 lg:col-span-2">
+          <Card
+            title={`Paketverbrauch ${formatMonth(month)}`}
+            actions={
+              <>
+                <IconButton label="Vormonat" onClick={() => setMonth(shiftMonth(month, -1))}>
+                  <ChevronLeft className="size-4" />
+                </IconButton>
+                {month !== currentMonth() && (
+                  <Button size="sm" variant="ghost" onClick={() => setMonth(currentMonth())}>
+                    Aktuell
+                  </Button>
+                )}
+                <IconButton label="Folgemonat" onClick={() => setMonth(shiftMonth(month, 1))}>
+                  <ChevronRight className="size-4" />
+                </IconButton>
+              </>
+            }
+          >
+            {c.package_usage.items.length === 0 ? (
+              <p className="text-sm text-muted">
+                Für diesen Monat ist kein Paket gebucht.{' '}
+                <Link to={`/kunden/${id}/bearbeiten`} className="text-accent hover:underline">
+                  Paket hinterlegen
+                </Link>
+              </p>
+            ) : (
+              <div className="grid gap-4">
+                {c.package_usage.items.map((item) => (
+                  <UsageRow key={item.deliverable_type_id} item={item} />
+                ))}
+                <p className="text-xs text-subtle">
+                  Gezählt werden alle Projekte mit diesem Leistungsmonat, die nicht abgebrochen sind.
+                </p>
+              </div>
+            )}
+          </Card>
+
+          <Upcoming title="Projekte" stage={2} />
+          <Upcoming title="Aufgaben" stage={2} />
+          <Upcoming title="Termine" stage={4} />
+
+          <Card title="Notizen">
+            {c.notes ? (
+              <p className="text-sm whitespace-pre-wrap text-fg">{c.notes}</p>
+            ) : (
+              <p className="text-sm text-subtle">Keine Notizen.</p>
+            )}
+          </Card>
+        </div>
+
+        <div className="grid content-start gap-5">
+          <Card title="Kontaktdaten">
+            <dl className="grid gap-3 text-sm">
+              <div className="flex gap-2.5">
+                <MapPin className="mt-0.5 size-4 shrink-0 text-subtle" />
+                <span className={address ? 'text-fg' : 'text-subtle'}>{address || 'Keine Adresse'}</span>
+              </div>
+              <div className="flex gap-2.5">
+                <Globe className="mt-0.5 size-4 shrink-0 text-subtle" />
+                {c.website ? (
+                  <a href={c.website} target="_blank" rel="noreferrer" className="break-all text-accent hover:underline">
+                    {displayUrl(c.website)}
+                  </a>
+                ) : (
+                  <span className="text-subtle">Keine Website</span>
+                )}
+              </div>
+            </dl>
+          </Card>
+
+          <Card title="Ansprechpartner">
+            {c.contacts.length === 0 ? (
+              <p className="text-sm text-subtle">Kein Ansprechpartner erfasst.</p>
+            ) : (
+              <ul className="grid gap-4">
+                {c.contacts.map((p) => (
+                  <li key={p.id} className="text-sm">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-fg">{p.name}</span>
+                      {p.is_primary ? <Badge tone="accent">Hauptkontakt</Badge> : null}
+                    </div>
+                    {p.role && <div className="text-xs text-muted">{p.role}</div>}
+                    <div className="mt-1 grid gap-0.5">
+                      {p.phone && (
+                        <a href={telHref(p.phone)} className="inline-flex items-center gap-1.5 text-muted hover:text-accent">
+                          <Phone className="size-3.5" />
+                          <span className="tabular">{p.phone}</span>
+                        </a>
+                      )}
+                      {p.email && (
+                        <a href={`mailto:${p.email}`} className="inline-flex items-center gap-1.5 break-all text-muted hover:text-accent">
+                          <Mail className="size-3.5 shrink-0" />
+                          {p.email}
+                        </a>
+                      )}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Card>
+
+          <Card title="Social Media">
+            {c.social_channels.length === 0 ? (
+              <p className="text-sm text-subtle">Keine Kanäle erfasst.</p>
+            ) : (
+              <ul className="grid gap-2 text-sm">
+                {c.social_channels.map((s) => (
+                  <li key={s.id} className="flex items-center justify-between gap-3">
+                    <span className="text-muted">{PLATFORM_LABELS[s.platform]}</span>
+                    {s.url ? (
+                      <a
+                        href={s.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex min-w-0 items-center gap-1 text-accent hover:underline"
+                      >
+                        <span className="truncate">{s.handle || displayUrl(s.url)}</span>
+                        <ExternalLink className="size-3 shrink-0" />
+                      </a>
+                    ) : (
+                      <span className="truncate text-fg">{s.handle}</span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Card>
+
+          <Card title="Gebuchtes Paket">
+            {c.package_items.length === 0 ? (
+              <p className="text-sm text-subtle">Kein Paket gebucht.</p>
+            ) : (
+              <ul className="grid gap-2.5 text-sm">
+                {c.package_items.map((p) => {
+                  const t = today();
+                  const active = p.valid_from <= t && (!p.valid_until || p.valid_until >= t);
+                  return (
+                    <li key={p.id} className={active ? '' : 'opacity-60'}>
+                      <div className="flex justify-between gap-3">
+                        <span className="text-fg">
+                          {p.quantity_per_month} × {p.deliverable_type_name} pro Monat
+                        </span>
+                        {p.monthly_price_cents !== null && (
+                          <span className="tabular text-muted">{formatEuro(p.monthly_price_cents)}</span>
+                        )}
+                      </div>
+                      <div className="text-xs text-subtle">
+                        ab {formatDate(p.valid_from)}
+                        {p.valid_until ? ` bis ${formatDate(p.valid_until)}` : ''}
+                        {!active && ' (nicht aktiv)'}
+                      </div>
+                    </li>
+                  );
+                })}
+                {monthlyTotal > 0 && (
+                  <li className="mt-1 flex justify-between border-t border-line pt-2.5 font-medium">
+                    <span>Summe aktiv</span>
+                    <span className="tabular">{formatEuro(monthlyTotal)}</span>
+                  </li>
+                )}
+              </ul>
+            )}
+          </Card>
+
+          <Upcoming title="Google Drive" stage={3} />
+        </div>
+      </div>
+
+      <ConfirmDialog
+        open={confirmArchive}
+        title="Kunden archivieren?"
+        text={
+          <>
+            <strong className="text-fg">{c.company_name}</strong> wird aus der Kundenliste ausgeblendet. Alle Daten bleiben
+            erhalten und der Kunde kann jederzeit über „Archiv anzeigen“ wiederhergestellt werden.
+          </>
+        }
+        confirmLabel="Archivieren"
+        onConfirm={toggleArchive}
+        onCancel={() => setConfirmArchive(false)}
+        loading={archive.isPending}
+      />
+    </>
+  );
+}

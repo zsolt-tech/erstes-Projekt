@@ -1,6 +1,5 @@
 -- =====================================================================
--- Agentur-Verwaltung: Datenbankschema (SQLite)
--- Entwurf zur Abstimmung, wird nach Bestätigung zur ersten Migration.
+-- Agentur-Verwaltung: Datenbankschema (SQLite), Migration 001
 --
 -- Konventionen
 --   Zeitpunkte      TEXT, ISO 8601 in UTC        2026-11-01T08:00:00.000Z
@@ -13,16 +12,9 @@
 --                   4 Freigabe, 5 Veröffentlichung
 -- =====================================================================
 
-PRAGMA foreign_keys = ON;
-
 -- ---------------------------------------------------------------------
 -- Verwaltung
 -- ---------------------------------------------------------------------
-
-CREATE TABLE schema_migrations (
-  version     INTEGER PRIMARY KEY,
-  applied_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
-);
 
 -- Einstellungen als Schlüssel/Wert (Wert als JSON)
 -- Beispiele: approval_reminder_days, phase_max_days, briefing_email_to,
