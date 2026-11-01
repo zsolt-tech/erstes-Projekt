@@ -110,7 +110,7 @@ Alle anderen Einstellungen (Erinnerungsfristen, Schwellenwerte, Drive-Ordnername
 
 ```
 Kunden/                              Stammordner für neue Kunden, frei wählbar
-  Hamacher/                          beim Anlegen des Kunden
+  Pizzeria Roma/                     beim Anlegen des Kunden
     Scripts/                         Kundenebene, wie bisher
     Sonstiges/                       Kundenebene, wie bisher
     2026/                            beim ersten Projekt des Jahres

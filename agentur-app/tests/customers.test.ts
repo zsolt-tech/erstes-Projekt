@@ -97,7 +97,7 @@ test('Interessent bekommt Pipeline-Stufe, Umwandlung setzt gewonnen', async () =
 });
 
 test('Archivieren blendet Kunden aus der Liste aus', async () => {
-  const c = await t.request('POST', '/api/customers', { company_name: 'Praxis Dr. Weber', customer_type: 'arztpraxis' });
+  const c = await t.request('POST', '/api/customers', { company_name: 'Praxis Dr. Neumann', customer_type: 'arztpraxis' });
   await t.request('POST', `/api/customers/${c.body.id}/archive`);
   const active = await t.request('GET', '/api/customers');
   assert.ok(!active.body.some((x: any) => x.id === c.body.id));
@@ -136,8 +136,8 @@ test('Validierung liefert deutsche Fehlermeldungen', async () => {
 test('Einstellungen lesen und ändern', async () => {
   const s = await t.request('GET', '/api/settings');
   assert.equal(s.body.approval_reminder_days, 3);
-  const u = await t.request('PUT', '/api/settings', { agency_name: 'Kiss Media', approval_reminder_days: 4 });
-  assert.equal(u.body.agency_name, 'Kiss Media');
+  const u = await t.request('PUT', '/api/settings', { agency_name: 'Agentur Muster', approval_reminder_days: 4 });
+  assert.equal(u.body.agency_name, 'Agentur Muster');
   assert.equal(u.body.approval_reminder_days, 4);
   const bad = await t.request('PUT', '/api/settings', { approval_reminder_days: 0 });
   assert.equal(bad.status, 400);
