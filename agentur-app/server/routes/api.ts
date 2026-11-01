@@ -12,6 +12,7 @@ import {
   updateCustomer,
 } from '../services/customers.ts';
 import { backupOverview, runBackup } from '../services/backup.ts';
+import { projectRouter } from './projects.ts';
 import { getSettings, updateSettings } from '../services/settings.ts';
 import {
   createDeliverableType,
@@ -176,6 +177,8 @@ export function apiRouter(db: Database, config: AppConfig): Router {
       return result;
     }),
   );
+
+  r.use(projectRouter(db));
 
   r.use(() => {
     throw new HttpError(404, 'Unbekannte API-Adresse');

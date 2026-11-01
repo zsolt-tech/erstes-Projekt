@@ -3,8 +3,13 @@
 Lokale Web-App zur Verwaltung von Kunden, Projekten und Aufgaben für Videoproduktion und Social-Media-Betreuung.
 Läuft auf deinem Rechner unter `http://localhost:3000`, die Daten liegen in einer lokalen Datei.
 
-Aktueller Stand: **Etappe 1** (Grundgerüst, Kunden, Einstellungen, Hell-/Dunkelmodus, tägliche Datensicherung).
-Architektur und Datenmodell: [docs/ARCHITEKTUR.md](docs/ARCHITEKTUR.md).
+Aktueller Stand: **Etappe 2**
+- Etappe 1: Grundgerüst, Kunden, Einstellungen, Hell-/Dunkelmodus, tägliche Datensicherung
+- Etappe 2: Projekte mit fünf Phasen, Kanban-Board und Liste, Checklisten mit Sperre, Drehtag, Freigaberunden, Veröffentlichungen, Fortschritt, Vorlagen je Kundentyp, Rechnungsstatus, Aufgaben
+
+Weitere Dokumente:
+- Architektur und Datenmodell: [docs/ARCHITEKTUR.md](docs/ARCHITEKTUR.md)
+- Google-Zugang einrichten (für Etappe 3): [docs/GOOGLE-EINRICHTUNG.md](docs/GOOGLE-EINRICHTUNG.md)
 
 ---
 
@@ -116,6 +121,31 @@ Diese Ordner und die `.env` werden nie ins Git übertragen.
 9. **Hell/Dunkel:** Links unten „Darstellung“ anklicken (Wie System, Hell, Dunkel).
 10. **Datensicherung:** Einstellungen > Datensicherung > „Jetzt sichern“. Die Datei erscheint in der Liste und im Ordner `backups`. Kurz nach jedem Start prüft die App, ob die Tagessicherung fällig ist, und legt sie bei Bedarf an.
 11. **Wiederherstellen:** App beenden, `npm run restore` und danach eine der Dateien wie oben beschrieben zurückspielen.
+
+---
+
+## Etappe 2 testen
+
+Nach dem Update auf Etappe 2 einmal `npm install` ausführen (neues Paket für Drag-and-Drop), dann `npm start`.
+
+1. **Projekt anlegen:** Auf einer Kundenseite „Neues Projekt“ (oder Projekte > „Neues Projekt“).
+   - Die Vorlage passt sich dem Kundentyp an (z. B. „Restaurant / Gastronomie“ mit Food-Shotlist). Darunter steht, wie viele Checklistenpunkte sie mitbringt.
+   - Leistung und Anzahl kommen aus der Vorlage. Der Leistungsmonat folgt dem Drehdatum.
+   - Titel leer lassen: Die App schlägt „Reel · November 2026“ vor.
+   - Drehdatum, Uhrzeit und Ort eintragen und anlegen. Die Fälligkeiten aller Phasen werden aus dem Drehdatum berechnet.
+2. **Phase Drehtag:** Auf der Projektseite stehen Drehtag-Details sowie drei Listen: Checkliste, Equipment, Shotlist. Punkte abhaken, eigene ergänzen, umbenennen und löschen (Stift- und Papierkorb-Symbol erscheinen beim Darüberfahren). Der Fortschritt steigt anteilig.
+3. **Kanban-Board:** Projekte > Board. Eine Karte von „Drehtag“ nach „Bearbeitung“ ziehen. Ein Hinweis bestätigt die Verschiebung.
+4. **Sperre Clip-Qualitätsprüfung:** Dieselbe Karte nach „Upload“ ziehen. Die App lehnt ab und nennt den Grund. Die Karte zeigt „QS offen“. Auf der Projektseite „Clip-Qualitätsprüfung abgeschlossen“ abhaken: Jetzt geht „Weiter zu Upload“.
+5. **Freigabe:** Projekt in „Freigabe“ schieben. Eine Freigaberunde startet mit dem heutigen Datum. Das Anfragedatum kannst du ändern; die Wartezeit erscheint auf der Karte („wartet 4 Tage“).
+   - „Korrektur nötig“: Rückmeldung eintragen. Das Projekt geht zurück in die Bearbeitung, der Zähler steigt, die Qualitätsprüfung muss erneut abgehakt werden.
+   - „Kunde hat freigegeben“: Das Projekt rückt in die Veröffentlichung.
+6. **Veröffentlichung:** Plattform und Datum planen. Sobald für alle geplanten Veröffentlichungen ein Link eingetragen ist, wird das Projekt automatisch abgeschlossen (100 %). „Wieder öffnen“ macht das rückgängig.
+7. **Paketverbrauch:** Auf der Kundenseite zählt „Paketverbrauch“ jetzt die Projekte des Leistungsmonats, zum Beispiel „4 von 4“. Ein auf „Abgebrochen“ gesetztes Projekt zählt nicht mehr.
+8. **Rechnung:** Auf der Projektseite Status „Gestellt“ wählen, Nummer und Betrag eintragen. Das Datum wird automatisch gesetzt. In der Projektliste erscheint der Rechnungsstatus.
+9. **Aufgaben:** Unter „Aufgaben“, auf Kundenseiten und auf Projektseiten Aufgaben erfassen. Die Übersicht gruppiert nach Überfällig, Heute, Nächste 7 Tage, Später. Klick auf den Titel öffnet die Bearbeitung.
+10. **Liste:** Projekte > Liste zeigt auch abgeschlossene und abgebrochene Projekte.
+
+Die mitgelieferten Vorlagen (Standard, Restaurant, Handwerk, Arztpraxis, Fahrschule) lassen sich ab Etappe 7 in der App bearbeiten. Bis dahin passt du Checklisten direkt im Projekt an.
 
 ---
 

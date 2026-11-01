@@ -2,8 +2,9 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { Plus } from 'lucide-react';
 import { useCustomers, useSettings } from '../api/hooks';
+import { useProjects, useTasks } from '../api/projects';
 import { Button, Card, PageHeader } from '../components/ui';
-import { formatLongDate } from '../lib/format';
+import { formatLongDate, today } from '../lib/format';
 
 function Stat({ label, value, to }: { label: string; value: number | string; to: string }) {
   return (
@@ -17,6 +18,10 @@ function Stat({ label, value, to }: { label: string; value: number | string; to:
 export function StartPage() {
   const { data: settings } = useSettings();
   const { data: customers = [] } = useCustomers({});
+  const { data: projects = [] } = useProjects({ scope: 'offen' });
+  const { data: tasks = [] } = useTasks({ status: 'offen' });
+  const overdueTasks = tasks.filter((t) => t.due_date && t.due_date < today()).length;
+  const waiting = projects.filter((p) => p.current_phase === 4 && p.status === 'aktiv').length;
   const navigate = useNavigate();
   const count = (s: string) => customers.filter((c) => c.status === s).length;
   const hour = new Date().getHours();
@@ -35,9 +40,9 @@ export function StartPage() {
       />
       <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Stat label="Aktive Kunden" value={count('aktiv')} to="/kunden" />
-        <Stat label="Interessenten" value={count('interessent')} to="/kunden" />
-        <Stat label="Pausiert" value={count('pausiert')} to="/kunden" />
-        <Stat label="Kunden gesamt" value={customers.length} to="/kunden" />
+        <Stat label="Laufende Projekte" value={projects.length} to="/projekte" />
+        <Stat label="Warten auf Freigabe" value={waiting} to="/projekte" />
+        <Stat label={overdueTasks ? `Offene Aufgaben, ${overdueTasks} überfällig` : 'Offene Aufgaben'} value={tasks.length} to="/aufgaben" />
       </div>
       <Card title="Tägliches Briefing">
         <p className="text-sm text-muted">

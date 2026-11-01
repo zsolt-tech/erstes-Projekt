@@ -70,3 +70,20 @@ export function monthRange(month: string): { start: string; end: string } {
   const last = new Date(Date.UTC(y, m, 0)).getUTCDate();
   return { start: `${month}-01`, end: `${month}-${pad(last)}` };
 }
+
+/** Datum (YYYY-MM-DD) plus n Tage */
+export function addDays(date: string, days: number): string {
+  const d = new Date(`${date}T12:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+/** Ganze Tage zwischen zwei Datumswerten (YYYY-MM-DD), b minus a */
+export function daysBetween(a: string, b: string): number {
+  return Math.round((Date.parse(`${b}T12:00:00Z`) - Date.parse(`${a}T12:00:00Z`)) / 86400000);
+}
+
+/** Berlin-Datum eines ISO-Zeitstempels */
+export function berlinDateOf(iso: string): string {
+  return todayBerlin(new Date(iso));
+}

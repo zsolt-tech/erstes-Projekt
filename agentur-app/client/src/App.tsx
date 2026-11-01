@@ -5,6 +5,10 @@ import { CustomersPage } from './pages/CustomersPage';
 import { CustomerDetailPage } from './pages/CustomerDetailPage';
 import { CustomerFormPage } from './pages/CustomerFormPage';
 import { SettingsPage } from './pages/SettingsPage';
+import { ProjectsPage } from './pages/ProjectsPage';
+import { ProjectDetailPage } from './pages/ProjectDetailPage';
+import { ProjectFormPage } from './pages/ProjectFormPage';
+import { TasksPage } from './pages/TasksPage';
 import { NotFoundPage, PlaceholderPage } from './pages/PlaceholderPage';
 
 export function App() {
@@ -37,20 +41,11 @@ export function App() {
             />
           }
         />
-        <Route
-          path="projekte"
-          element={
-            <PlaceholderPage
-              title="Projekte"
-              stage={2}
-              text="Kanban-Board und Liste mit den Phasen Drehtag, Bearbeitung, Upload, Freigabe und Veröffentlichung."
-            />
-          }
-        />
-        <Route
-          path="aufgaben"
-          element={<PlaceholderPage title="Aufgaben" stage={2} text="Aufgaben je Kunde und Projekt mit Fälligkeiten." />}
-        />
+        <Route path="projekte" element={<ProjectsPage />} />
+        <Route path="projekte/neu" element={<ProjectFormPage />} />
+        <Route path="projekte/:id" element={<ProjectDetailPage />} />
+        <Route path="projekte/:id/bearbeiten" element={<ProjectFormPage />} />
+        <Route path="aufgaben" element={<TasksPage />} />
         <Route
           path="kalender"
           element={

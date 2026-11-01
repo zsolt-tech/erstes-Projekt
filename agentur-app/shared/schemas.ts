@@ -340,9 +340,332 @@ export interface BackupOverview {
 // Live-Ereignisse
 // ---------------------------------------------------------------------
 
-export type ChangeEntity = 'customers' | 'settings' | 'team' | 'deliverable-types' | 'backups';
+export type ChangeEntity =
+  | 'customers'
+  | 'projects'
+  | 'tasks'
+  | 'settings'
+  | 'team'
+  | 'deliverable-types'
+  | 'templates'
+  | 'backups';
 export interface ChangeEvent {
   type: 'changed';
   entity: ChangeEntity;
   id?: number;
+}
+
+// ---------------------------------------------------------------------
+// Projekte und Workflow (Etappe 2)
+// ---------------------------------------------------------------------
+
+export const PHASES = [1, 2, 3, 4, 5] as const;
+export type Phase = (typeof PHASES)[number];
+export const PHASE_LABELS: Record<Phase, string> = {
+  1: 'Drehtag',
+  2: 'Bearbeitung',
+  3: 'Upload',
+  4: 'Freigabe',
+  5: 'Veröffentlichung',
+};
+
+export const PROJECT_STATUSES = ['aktiv', 'pausiert', 'abgeschlossen', 'abgebrochen'] as const;
+export type ProjectStatus = (typeof PROJECT_STATUSES)[number];
+export const PROJECT_STATUS_LABELS: Record<ProjectStatus, string> = {
+  aktiv: 'Aktiv',
+  pausiert: 'Pausiert',
+  abgeschlossen: 'Abgeschlossen',
+  abgebrochen: 'Abgebrochen',
+};
+
+export const PRIORITIES = ['niedrig', 'normal', 'hoch'] as const;
+export type Priority = (typeof PRIORITIES)[number];
+export const PRIORITY_LABELS: Record<Priority, string> = { niedrig: 'Niedrig', normal: 'Normal', hoch: 'Hoch' };
+
+export const INVOICE_STATUSES = ['offen', 'gestellt', 'bezahlt'] as const;
+export type InvoiceStatus = (typeof INVOICE_STATUSES)[number];
+export const INVOICE_STATUS_LABELS: Record<InvoiceStatus, string> = {
+  offen: 'Offen',
+  gestellt: 'Gestellt',
+  bezahlt: 'Bezahlt',
+};
+
+export const CHECKLIST_KINDS = ['standard', 'equipment', 'shot'] as const;
+export type ChecklistKind = (typeof CHECKLIST_KINDS)[number];
+export const CHECKLIST_KIND_LABELS: Record<ChecklistKind, string> = {
+  standard: 'Checkliste',
+  equipment: 'Equipment',
+  shot: 'Shotlist',
+};
+
+export const TASK_STATUSES = ['offen', 'in_arbeit', 'erledigt'] as const;
+export type TaskStatus = (typeof TASK_STATUSES)[number];
+export const TASK_STATUS_LABELS: Record<TaskStatus, string> = {
+  offen: 'Offen',
+  in_arbeit: 'In Arbeit',
+  erledigt: 'Erledigt',
+};
+
+const optTime = z
+  .union([z.string().regex(/^\d{2}:\d{2}$/, 'Uhrzeit im Format HH:MM'), z.literal('')])
+  .nullish()
+  .transform((v) => (v ? v : null));
+const month = z.string().regex(/^\d{4}-\d{2}$/, 'Monat im Format JJJJ-MM');
+const optId = id.nullish().transform((v) => v ?? null);
+const optCents = z.number().int().min(0).nullish().transform((v) => v ?? null);
+
+export const projectCreateInput = z.object({
+  customer_id: z.number({ invalid_type_error: 'Kunde auswählen' }).int().positive('Kunde auswählen'),
+  title: z.string().trim().min(1, 'Titel fehlt').max(200),
+  description: optText(5000),
+  template_id: optId,
+  deliverable_type_id: optId,
+  deliverable_count: z.number().int().min(1, 'Mindestens 1').max(999).nullish(),
+  service_month: month.nullish(),
+  priority: z.enum(PRIORITIES).default('normal'),
+  shoot_date: optDate,
+  start_time: optTime,
+  end_time: optTime,
+  location: optText(300),
+  notes: optText(20000),
+});
+export type ProjectCreateInput = z.input<typeof projectCreateInput>;
+
+export const projectUpdateInput = z.object({
+  title: z.string().trim().min(1, 'Titel fehlt').max(200),
+  description: optText(5000),
+  deliverable_type_id: optId,
+  deliverable_count: z.number({ invalid_type_error: 'Anzahl angeben' }).int().min(1, 'Mindestens 1').max(999),
+  service_month: month,
+  priority: z.enum(PRIORITIES),
+  status: z.enum(['aktiv', 'pausiert', 'abgebrochen']).optional(),
+  approval_reminder_days: z.number().int().min(1, 'Mindestens 1 Tag').max(60, 'Höchstens 60 Tage').nullish().transform((v) => v ?? null),
+  notes: optText(20000),
+});
+export type ProjectUpdateInput = z.input<typeof projectUpdateInput>;
+
+export const invoiceInput = z.object({
+  invoice_status: z.enum(INVOICE_STATUSES),
+  invoice_number: optText(100),
+  invoice_amount_cents: optCents,
+  invoice_date: optDate,
+  paid_date: optDate,
+});
+export type InvoiceInput = z.input<typeof invoiceInput>;
+
+export const phaseUpdateInput = z.object({
+  due_date: optDate,
+  assignee_id: optId,
+  notes: optText(20000),
+});
+
+export const shootInput = z
+  .object({
+    shoot_date: optDate,
+    start_time: optTime,
+    end_time: optTime,
+    location: optText(300),
+    location_notes: optText(2000),
+    shotlist_notes: optText(20000),
+  })
+  .refine((s) => !s.start_time || !s.end_time || s.end_time > s.start_time, {
+    message: 'Ende liegt vor dem Beginn',
+    path: ['end_time'],
+  });
+export type ShootInput = z.input<typeof shootInput>;
+
+export const checklistCreateInput = z.object({
+  phase: z.number().int().min(1).max(5),
+  kind: z.enum(CHECKLIST_KINDS).default('standard'),
+  label: z.string().trim().min(1, 'Bezeichnung fehlt').max(300),
+});
+
+export const checklistUpdateInput = z.object({
+  label: z.string().trim().min(1, 'Bezeichnung fehlt').max(300).optional(),
+  is_done: z.boolean().optional(),
+});
+
+export const moveInput = z.object({
+  to_phase: z.number().int().min(1).max(5),
+  reason: optText(500),
+});
+
+export const approvalDecisionInput = z.object({
+  result: z.enum(['freigegeben', 'korrektur']),
+  feedback: optText(5000),
+  back_to_editing: z.boolean().default(true),
+});
+
+export const approvalRequestInput = z.object({ requested_date: isoDate });
+
+export const publicationInput = z.object({
+  platform: z.enum(PLATFORMS),
+  planned_date: optDate,
+  planned_time: optTime,
+  caption: optText(5000),
+  post_url: optUrl,
+});
+export type PublicationInput = z.input<typeof publicationInput>;
+
+export const taskInput = z.object({
+  title: z.string().trim().min(1, 'Titel fehlt').max(300),
+  description: optText(10000),
+  customer_id: optId,
+  project_id: optId,
+  phase: z.number().int().min(1).max(5).nullish().transform((v) => v ?? null),
+  due_date: optDate,
+  due_time: optTime,
+  assignee_id: optId,
+  priority: z.enum(PRIORITIES).default('normal'),
+  status: z.enum(TASK_STATUSES).default('offen'),
+});
+export type TaskInput = z.input<typeof taskInput>;
+
+// Antworttypen
+
+export interface ProjectListItem {
+  id: number;
+  title: string;
+  customer_id: number;
+  customer_name: string;
+  current_phase: Phase;
+  status: ProjectStatus;
+  priority: Priority;
+  service_month: string;
+  deliverable_count: number;
+  deliverable_type_name: string | null;
+  invoice_status: InvoiceStatus;
+  phase_due_date: string | null;
+  phase_entered_at: string | null;
+  assignee_name: string | null;
+  assignee_color: string | null;
+  shoot_date: string | null;
+  start_time: string | null;
+  items_total: number;
+  items_done: number;
+  open_gates: number;
+  approval_requested_at: string | null;
+  correction_count: number;
+  next_publication_date: string | null;
+  completed_at: string | null;
+  updated_at: string;
+  progress: number;
+  overdue: boolean;
+  days_in_phase: number | null;
+  approval_waiting_days: number | null;
+}
+
+export interface ProjectPhase {
+  id: number;
+  phase: Phase;
+  due_date: string | null;
+  assignee_id: number | null;
+  notes: string | null;
+  entered_at: string | null;
+  completed_at: string | null;
+}
+
+export interface ChecklistItem {
+  id: number;
+  project_id: number;
+  phase: Phase;
+  kind: ChecklistKind;
+  label: string;
+  is_done: number;
+  done_at: string | null;
+  is_gate: number;
+  is_system: number;
+  auto_key: string | null;
+  sort_order: number;
+}
+
+export interface Shoot {
+  shoot_date: string | null;
+  start_time: string | null;
+  end_time: string | null;
+  location: string | null;
+  location_notes: string | null;
+  shotlist_notes: string | null;
+}
+
+export interface ApprovalRound {
+  id: number;
+  round_no: number;
+  requested_at: string;
+  responded_at: string | null;
+  result: 'freigegeben' | 'korrektur' | null;
+  feedback: string | null;
+  last_reminder_at: string | null;
+  reminder_count: number;
+}
+
+export interface Publication {
+  id: number;
+  project_id: number;
+  platform: Platform;
+  planned_date: string | null;
+  planned_time: string | null;
+  published_at: string | null;
+  post_url: string | null;
+  caption: string | null;
+  status: 'geplant' | 'veroeffentlicht';
+}
+
+export interface PhaseTransition {
+  id: number;
+  from_phase: Phase | null;
+  to_phase: Phase;
+  moved_at: string;
+  reason: string | null;
+}
+
+export interface Task {
+  id: number;
+  title: string;
+  description: string | null;
+  customer_id: number | null;
+  customer_name: string | null;
+  project_id: number | null;
+  project_title: string | null;
+  phase: Phase | null;
+  due_date: string | null;
+  due_time: string | null;
+  assignee_id: number | null;
+  assignee_name: string | null;
+  priority: Priority;
+  status: TaskStatus;
+  completed_at: string | null;
+  created_at: string;
+}
+
+export interface ProjectDetail extends ProjectListItem {
+  description: string | null;
+  template_id: number | null;
+  template_name: string | null;
+  deliverable_type_id: number | null;
+  invoice_number: string | null;
+  invoice_amount_cents: number | null;
+  invoice_date: string | null;
+  paid_date: string | null;
+  approval_reminder_days: number | null;
+  effective_reminder_days: number;
+  notes: string | null;
+  created_at: string;
+  phases: ProjectPhase[];
+  checklist: ChecklistItem[];
+  shoot: Shoot;
+  approval_rounds: ApprovalRound[];
+  publications: Publication[];
+  transitions: PhaseTransition[];
+}
+
+export interface ProjectTemplate {
+  id: number;
+  name: string;
+  customer_type: CustomerType | null;
+  deliverable_type_id: number | null;
+  default_deliverable_count: number;
+  phase_offsets: Partial<Record<Phase, number>>;
+  description: string | null;
+  items: { phase: Phase; kind: ChecklistKind; label: string; is_gate: number }[];
 }

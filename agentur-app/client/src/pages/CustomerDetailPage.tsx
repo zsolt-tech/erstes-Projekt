@@ -2,13 +2,16 @@
 // Projekte, Aufgaben, Termine und Drive-Links folgen in den nächsten Etappen.
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { Archive, ArchiveRestore, ArrowLeft, ChevronLeft, ChevronRight, ExternalLink, Globe, Mail, MapPin, Pencil, Phone } from 'lucide-react';
+import { Archive, ArchiveRestore, ArrowLeft, ChevronLeft, ChevronRight, ExternalLink, Globe, Mail, MapPin, Pencil, Phone, Plus } from 'lucide-react';
 import { useArchiveCustomer, useCustomer } from '../api/hooks';
-import { Badge, Button, Card, ErrorBox, IconButton, PageHeader, ProgressBar, Spinner, type Tone } from '../components/ui';
+import { Badge, Button, Card, ErrorBox, IconButton, PageHeader, ProgressBar, Segmented, Spinner, type Tone } from '../components/ui';
+import { useProjects, useTasks } from '../api/projects';
+import { ProjectTable } from './ProjectsPage';
+import { TaskDialog, TaskQuickAdd, TaskRow } from '../components/Tasks';
 import { ConfirmDialog, useToast } from '../components/feedback';
 import { CustomerStatusBadge } from '../components/labels';
 import { currentMonth, displayUrl, formatDate, formatEuro, formatMonth, shiftMonth, telHref, today } from '../lib/format';
-import { CUSTOMER_TYPE_LABELS, PLATFORM_LABELS, type PackageUsage } from '../../../shared/schemas';
+import { CUSTOMER_TYPE_LABELS, PLATFORM_LABELS, type PackageUsage, type Task } from '../../../shared/schemas';
 
 function UsageRow({ item }: { item: PackageUsage }) {
   const over = item.used > item.quantity;
@@ -26,6 +29,62 @@ function UsageRow({ item }: { item: PackageUsage }) {
       <ProgressBar value={item.used} max={item.quantity} tone={tone} />
       {over && <p className="mt-1 text-xs text-warning">{item.used - item.quantity} über dem gebuchten Paket</p>}
     </div>
+  );
+}
+
+function CustomerProjects({ customerId, archived }: { customerId: number; archived: boolean }) {
+  const [scope, setScope] = useState<'offen' | 'alle'>('offen');
+  const { data = [], isLoading } = useProjects({ customer_id: customerId, scope });
+  const navigate = useNavigate();
+  return (
+    <Card
+      title="Projekte"
+      padded={false}
+      actions={
+        <>
+          <Segmented
+            size="sm"
+            value={scope}
+            onChange={setScope}
+            options={[
+              { value: 'offen', label: 'Laufend' },
+              { value: 'alle', label: 'Alle' },
+            ]}
+          />
+          {!archived && (
+            <Button size="sm" variant="ghost" icon={<Plus className="size-4" />} onClick={() => navigate(`/projekte/neu?kunde=${customerId}`)}>
+              Neues Projekt
+            </Button>
+          )}
+        </>
+      }
+    >
+      {isLoading ? (
+        <Spinner />
+      ) : data.length === 0 ? (
+        <p className="px-4 py-4 text-sm text-subtle">{scope === 'offen' ? 'Keine laufenden Projekte.' : 'Noch keine Projekte.'}</p>
+      ) : (
+        <ProjectTable projects={data} showCustomer={false} />
+      )}
+    </Card>
+  );
+}
+
+function CustomerTasks({ customerId }: { customerId: number }) {
+  const { data = [] } = useTasks({ customer_id: customerId });
+  const [editing, setEditing] = useState<Task | null>(null);
+  return (
+    <Card title={`Offene Aufgaben${data.length ? ` (${data.length})` : ''}`}>
+      {data.length > 0 && (
+        <ul className="-mt-2.5 mb-3 divide-y divide-line">
+          {data.map((t) => (
+            <TaskRow key={t.id} task={t} onEdit={setEditing} />
+          ))}
+        </ul>
+      )}
+      <TaskQuickAdd customerId={customerId} />
+      <TaskDialog open={!!editing} task={editing} onClose={() => setEditing(null)} />
+    </Card>
   );
 }
 
@@ -103,7 +162,7 @@ export function CustomerDetailPage() {
       />
 
       <div className="grid gap-5 lg:grid-cols-3">
-        <div className="grid content-start gap-5 lg:col-span-2">
+        <div className="grid min-w-0 grid-cols-1 content-start gap-5 lg:col-span-2">
           <Card
             title={`Paketverbrauch ${formatMonth(month)}`}
             actions={
@@ -135,14 +194,15 @@ export function CustomerDetailPage() {
                   <UsageRow key={item.deliverable_type_id} item={item} />
                 ))}
                 <p className="text-xs text-subtle">
-                  Gezählt werden alle Projekte mit diesem Leistungsmonat, die nicht abgebrochen sind.
+                  Gezählt werden alle Projekte mit diesem Leistungsmonat, die nicht abgebrochen sind. „Abgeschlossen“ heißt
+                  veröffentlicht.
                 </p>
               </div>
             )}
           </Card>
 
-          <Upcoming title="Projekte" stage={2} />
-          <Upcoming title="Aufgaben" stage={2} />
+          <CustomerProjects customerId={id} archived={!!c.archived_at} />
+          <CustomerTasks customerId={id} />
           <Upcoming title="Termine" stage={4} />
 
           <Card title="Notizen">
@@ -154,7 +214,7 @@ export function CustomerDetailPage() {
           </Card>
         </div>
 
-        <div className="grid content-start gap-5">
+        <div className="grid min-w-0 grid-cols-1 content-start gap-5">
           <Card title="Kontaktdaten">
             <dl className="grid gap-3 text-sm">
               <div className="flex gap-2.5">

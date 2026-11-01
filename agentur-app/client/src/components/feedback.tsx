@@ -113,3 +113,55 @@ export function ConfirmDialog({
     </dialog>
   );
 }
+
+// --- Allgemeiner Dialog ---
+
+export function Dialog({
+  open,
+  title,
+  onClose,
+  children,
+  footer,
+  wide,
+}: {
+  open: boolean;
+  title: string;
+  onClose: () => void;
+  children: ReactNode;
+  footer?: ReactNode;
+  wide?: boolean;
+}) {
+  const ref = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    const d = ref.current;
+    if (!d) return;
+    if (open && !d.open) d.showModal();
+    if (!open && d.open) d.close();
+  }, [open]);
+  return (
+    <dialog
+      ref={ref}
+      onCancel={(e) => {
+        e.preventDefault();
+        onClose();
+      }}
+      className={cx(
+        'm-auto max-h-[calc(100vh-2rem)] rounded-lg border border-line bg-surface p-0 text-fg shadow-xl backdrop:bg-black/40',
+        wide ? 'w-[min(720px,calc(100vw-2rem))]' : 'w-[min(480px,calc(100vw-2rem))]',
+      )}
+    >
+      {open && (
+        <>
+          <div className="flex items-center justify-between border-b border-line px-5 py-3.5">
+            <h2 className="text-base font-semibold">{title}</h2>
+            <button type="button" aria-label="Schließen" onClick={onClose} className="text-subtle hover:text-fg">
+              <X className="size-4" />
+            </button>
+          </div>
+          <div className="max-h-[calc(100vh-10rem)] overflow-y-auto p-5">{children}</div>
+          {footer && <div className="flex justify-end gap-2 border-t border-line bg-surface-2 px-5 py-3">{footer}</div>}
+        </>
+      )}
+    </dialog>
+  );
+}

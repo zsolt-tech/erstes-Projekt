@@ -1,5 +1,6 @@
 // Startdaten, die beim ersten Start angelegt werden.
 import type { Database } from './database.ts';
+import { seedTemplates } from './templates.ts';
 
 const DEFAULT_DELIVERABLE_TYPES = ['Reel', 'Imagefilm', 'Post', 'Karussell', 'Story', 'Fotoshooting', 'Sonstiges'];
 
@@ -11,5 +12,6 @@ export function seed(db: Database): void {
         db.run('INSERT INTO deliverable_types (name, sort_order) VALUES (:name, :sort)', { name, sort: i * 10 });
       });
     }
+    seedTemplates(db);
   });
 }
