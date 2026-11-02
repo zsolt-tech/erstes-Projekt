@@ -63,10 +63,11 @@
   --sidebar-fg: #aab2c0;
   --sidebar-active: #1c212b;
   --cal-drehtag: #4f7fe8;
-  --cal-deadline: #d9822b;
+  --cal-deadline: #c97624;
   --cal-freigabe: #9470dc;
   --cal-veroeffentlichung: #3f9e57;
-  --cal-termin: #5d6575;
+  /* Google-Termine bewusst neutral (Kontext, immer mit Beschriftung); die vier Agentur-Farben sind auf Farbsehschwäche geprüft */
+  --cal-termin: #6b7385;
   color-scheme: dark;
 }
 

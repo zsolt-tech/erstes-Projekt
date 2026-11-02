@@ -11,6 +11,7 @@ import { ProjectDetailPage } from './pages/ProjectDetailPage';
 import { ProjectFormPage } from './pages/ProjectFormPage';
 import { TasksPage } from './pages/TasksPage';
 import { CalendarPage } from './pages/CalendarPage';
+import { DashboardPage } from './pages/DashboardPage';
 import { NotFoundPage, PlaceholderPage } from './pages/PlaceholderPage';
 
 /** Seite beim Wechsel auf einen anderen Datensatz neu aufbauen (keine Formularwerte des vorherigen) */
@@ -29,16 +30,7 @@ export function App() {
         <Route path="kunden/:id" element={<Keyed><CustomerDetailPage /></Keyed>} />
         <Route path="kunden/:id/bearbeiten" element={<Keyed><CustomerFormPage /></Keyed>} />
         <Route path="einstellungen" element={<SettingsPage />} />
-        <Route
-          path="dashboard"
-          element={
-            <PlaceholderPage
-              title="Dashboard"
-              stage={6}
-              text="Live-Scoreboard mit laufenden Projekten, heutigen Aufgaben, den nächsten 14 Tagen und Kennzahlen."
-            />
-          }
-        />
+        <Route path="dashboard" element={<DashboardPage />} />
         <Route
           path="akquise"
           element={

@@ -3,13 +3,14 @@
 Lokale Web-App zur Verwaltung von Kunden, Projekten und Aufgaben für Videoproduktion und Social-Media-Betreuung.
 Läuft auf deinem Rechner unter `http://localhost:3000`, die Daten liegen in einer lokalen Datei.
 
-Aktueller Stand: **Etappe 5**
+Aktueller Stand: **Etappe 6**
 - Etappe 1: Grundgerüst, Kunden, Einstellungen, Hell-/Dunkelmodus, tägliche Datensicherung
 - Etappe 2: Projekte mit fünf Phasen, Kanban-Board und Liste, Checklisten mit Sperre, Drehtag, Freigaberunden, Veröffentlichungen, Fortschritt, Vorlagen je Kundentyp, Rechnungsstatus, Aufgaben
 - Etappe 3: Google-Anmeldung, automatische Drive-Ordner für Kunden und Projekte, Verknüpfung bestehender Ordner, Erkennung fertiger Videos
 - Etappe 4: Zwei-Wege-Abgleich mit Google Calendar, Kalenderansicht (Tag, Woche, Monat, Liste) mit farbigen Drehtagen, Deadlines, Freigabe-Fristen, Veröffentlichungen und Google-Terminen
 - Etappe 5: Tägliches Briefing um 9:00 Uhr (Startseite, Desktop-Benachrichtigung, optional E-Mail), Freigabe-Erinnerungen, Engpass-Warnungen, Benachrichtigungszentrale
 - Agenten und PDFs: Claude-Agenten für Videoschnitt und PDFs mit Anbindung an die App, Monatsbericht, Drehplan, Freigabe-Protokoll und Briefing als PDF
+- Etappe 6: Live-Dashboard mit Kennzahlen (aktive Projekte, Überfälliges, Freigaben, Drehtage, Durchlaufzeit Dreh bis Veröffentlichung), Projekte je Phase, Engpässe, heute, nächste 14 Tage, laufende Projekte, Paketverbrauch
 
 Weitere Dokumente:
 - Architektur und Datenmodell: [docs/ARCHITEKTUR.md](docs/ARCHITEKTUR.md)
@@ -217,6 +218,21 @@ Nach dem Update einmal `npm install` (neues Paket für PDFs), dann `npm start`. 
 2. **Auftrag an Claude:** Projekt in der Phase Bearbeitung öffnen, „Schnitt und Endkontrolle“. Ein Fenster zeigt den vorbereiteten Auftrag; „Kopieren“, dann in Claude Desktop (Code, Ordner agentur-app) einfügen.
 3. **Rückmeldung:** Nach der Endkontrolle erscheint das Ergebnis im Projekt. Sind alle Videos bestanden, ist „Clip-Qualitätsprüfung abgeschlossen“ automatisch abgehakt.
 4. **PDFs:** Kundenseite > Paketverbrauch > „Monatsbericht“; Projektseite > Dokumente > Drehplan und Freigabe-Protokoll; Startseite > Briefing > „PDF“.
+
+---
+
+## Etappe 6 testen (Dashboard)
+
+Kein `npm install` nötig, nur `npm start`.
+
+1. Links auf **Dashboard**. Oben stehen fünf Kennzahlen: aktive Projekte, Überfälliges (Aufgaben und Phasenfristen), Warten auf Freigabe mit der längsten Wartezeit, Drehtage in den nächsten 7 Tagen und die Durchlaufzeit vom Drehtag bis zur ersten Veröffentlichung (Durchschnitt der letzten 90 Tage).
+2. **Projekte je Phase:** ein Balken je Phase, Überfälliges ist markiert. Beim Darüberfahren erscheint, wie lange die Projekte im Schnitt schon in der Phase sind. Ein Klick führt zur Projektübersicht.
+3. **Engpässe:** dieselben Warnungen wie im Briefing, mit Stufe Hoch oder Mittel. Die Schwellen stellst du in den Einstellungen ein.
+4. **Heute:** Termine, Fristen und Aufgaben des Tages, ein laufender Drehtag ist mit „läuft gerade“ markiert. Darunter Überfälliges und offene Freigaben, „nachfassen“ ab der eingestellten Frist.
+5. **Nächste 14 Tage:** alles ab morgen nach Tagen gruppiert, farbig wie im Kalender.
+6. **Laufende Projekte:** Überfälliges zuerst, mit Phase, Dauer in der Phase, Fälligkeit und Fortschritt.
+7. **Durchlaufzeit:** gezählt wird vom Drehtag bis zur ersten Veröffentlichung, die als veröffentlicht markiert ist (Link eingetragen). Wird der Link erst später eingetragen, gilt das geplante Datum.
+8. **Live:** Dashboard offen lassen und in einem zweiten Tab eine Aufgabe mit Datum in der Vergangenheit anlegen oder ein Projekt verschieben. Das Dashboard ändert sich sofort, ohne Neuladen. Zusätzlich lädt es jede Minute neu (Uhrzeit, Tageswechsel).
 
 ---
 

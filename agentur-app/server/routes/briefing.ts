@@ -6,9 +6,11 @@ import type { Services } from '../google/index.ts';
 import { handle, HttpError, parse, parseId } from '../lib/http.ts';
 import { todayBerlin } from '../lib/time.ts';
 import { detectBottlenecks } from '../services/bottlenecks.ts';
+import { dashboard } from '../services/dashboard.ts';
 import { listNotifications, markRead } from '../services/notify.ts';
 
-export function briefingRouter(db: Database, { briefing }: Services): Router {
+export function briefingRouter(db: Database, services: Services): Router {
+  const { briefing } = services;
   const r = Router();
 
   // Heutiges Briefing: das verschickte (falls schon erzeugt) und immer der aktuelle Stand für die Startseite
@@ -38,6 +40,7 @@ export function briefingRouter(db: Database, { briefing }: Services): Router {
   );
 
   r.get('/bottlenecks', handle(() => detectBottlenecks(db)));
+  r.get('/dashboard', handle(() => dashboard(db, services)));
 
   // --- Benachrichtigungen ---
   r.get('/notifications', handle(() => listNotifications(db)));

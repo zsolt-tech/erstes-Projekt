@@ -1023,3 +1023,45 @@ export interface QualityCheck {
 }
 
 export type AgentKind = 'videoschnitt' | 'endkontrolle' | 'highlight' | 'pdf';
+
+// ---------------------------------------------------------------------
+// Dashboard (Etappe 6)
+// ---------------------------------------------------------------------
+
+export interface LeadTimeProject {
+  project_id: number;
+  title: string;
+  customer: string;
+  shoot_date: string;
+  published_date: string;
+  days: number;
+}
+
+export interface DashboardData {
+  generated_at: string;
+  date: string;
+  kpis: {
+    active_projects: number;
+    paused_projects: number;
+    active_customers: number;
+    overdue_tasks: number;
+    overdue_deadlines: number;
+    open_approvals: number;
+    longest_approval_days: number | null;
+    shoots_next_7: number;
+    publications_next_7: number;
+  };
+  /** Laufende Projekte je Phase (ohne pausierte) */
+  phases: { phase: Phase; count: number; overdue: number; avg_days: number | null }[];
+  /** Durchlaufzeit vom Drehtag bis zur ersten Veröffentlichung, Projekte der letzten 90 Tage */
+  lead_time: { avg_days: number | null; median_days: number | null; count: number; since: string; projects: LeadTimeProject[] };
+  /** Heute: Termine, Fristen und Aufgaben des Tages */
+  today: CalendarItem[];
+  overdue: BriefingData['overdue'];
+  approvals: BriefingData['approvals'];
+  /** Morgen bis in 14 Tagen */
+  upcoming: CalendarItem[];
+  projects: ProjectListItem[];
+  packages: BriefingData['packages'];
+  warnings: Bottleneck[];
+}

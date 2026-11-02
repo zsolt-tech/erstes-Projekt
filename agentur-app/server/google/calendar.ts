@@ -428,7 +428,7 @@ export class CalendarService {
         `SELECT p.id AS project_id, p.title, c.company_name, ar.requested_at,
                 COALESCE(p.approval_reminder_days, c.approval_reminder_days) AS days
          FROM approval_rounds ar JOIN projects p ON p.id = ar.project_id JOIN customers c ON c.id = p.customer_id
-         WHERE ar.responded_at IS NULL AND p.current_phase = 4 AND p.status = 'aktiv'`,
+         WHERE ar.responded_at IS NULL AND p.current_phase = 4 AND p.status = 'aktiv' AND c.archived_at IS NULL`,
       )
       .map((a) => {
         const requested = todayBerlin(new Date(a.requested_at));
@@ -775,7 +775,8 @@ export class CalendarService {
   /** Alle Einträge im Zeitraum [start, end) für die Kalenderansicht */
   items(start: string, end: string, customerId?: number): CalendarItem[] {
     const items: CalendarItem[] = [];
-    const cust = customerId ? 'AND c.id = :cid' : '';
+    // Ohne Kundenfilter (Kalender, Briefing, Dashboard) keine Einträge archivierter Kunden
+    const cust = customerId ? 'AND c.id = :cid' : 'AND c.archived_at IS NULL';
     const params = { start, end, cid: customerId ?? null };
     const eventLinks = new Map(
       this.db
@@ -832,7 +833,7 @@ export class CalendarService {
     for (const t of this.db.all<{ id: number; title: string; due_date: string; due_time: string | null; customer_id: number | null; company_name: string | null; project_id: number | null }>(
       `SELECT t.id, t.title, t.due_date, t.due_time, c.id AS customer_id, c.company_name, t.project_id
        FROM tasks t LEFT JOIN customers c ON c.id = t.customer_id
-       WHERE t.status <> 'erledigt' AND t.due_date >= :start AND t.due_date < :end ${customerId ? 'AND t.customer_id = :cid' : ''}`,
+       WHERE t.status <> 'erledigt' AND t.due_date >= :start AND t.due_date < :end ${customerId ? 'AND t.customer_id = :cid' : 'AND c.archived_at IS NULL'}`,
       params,
     )) {
       items.push({

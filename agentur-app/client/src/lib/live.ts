@@ -49,7 +49,10 @@ export function useLiveUpdates(): boolean {
         if (event.type !== 'changed') return;
         qc.invalidateQueries({ queryKey: [event.entity] });
         // Das Briefing auf der Startseite zeigt immer den aktuellen Stand
-        if (BRIEFING_SOURCES.has(event.entity)) qc.invalidateQueries({ queryKey: ['briefing'] });
+        if (BRIEFING_SOURCES.has(event.entity)) {
+          qc.invalidateQueries({ queryKey: ['briefing'] });
+          qc.invalidateQueries({ queryKey: ['dashboard'] });
+        }
         // Warteschlange betrifft den Drive-Stand von Kunden und Projekten
         if (event.entity === 'sync' || event.entity === 'google') {
           qc.invalidateQueries({ queryKey: ['customers', 'drive'] });

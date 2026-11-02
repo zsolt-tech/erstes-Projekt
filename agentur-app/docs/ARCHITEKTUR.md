@@ -235,3 +235,10 @@ Sonstiges: settings, briefings, notifications, search_index (Volltext), schema_m
 - **Qualitäts-Haken:** Der Systempunkt „Clip-Qualitätsprüfung abgeschlossen“ wird gesetzt, wenn die jüngste Endkontrolle jedes Videos „freigegeben“ ist (Fassungen `_v2`, `(2)` usw. gelten als dasselbe Video), und entfernt bei „zurück“.
 - **Neue Daten:** `quality_checks` (Ergebnisse je Video und Durchlauf), beim Kunden `qa_profile`, `qa_motion_required`, `qa_notes` (Migration 004).
 - **PDFs** mit PDFKit im Server: Monatsbericht (ohne interne Angaben), Drehplan, Freigabe-Protokoll, Briefing. Abruf über `…/report.pdf`, `…/drehplan.pdf`, `…/freigabe.pdf`, `/api/briefing/pdf`.
+
+## 9. Dashboard (Etappe 6)
+
+- `GET /api/dashboard` (`server/services/dashboard.ts`) bündelt Kennzahlen, Projekte je Phase, heutige Einträge, die nächsten 14 Tage (Kalendereinträge der App und gelesene Google-Termine), laufende Projekte nach Dringlichkeit, Paketverbrauch und Engpässe. Archivierte Kunden zählen nicht mit.
+- Durchlaufzeit: Drehdatum bis zur ersten Veröffentlichung mit Status „veröffentlicht“; Veröffentlichungstag ist der frühere Wert aus geplantem Datum und Zeitpunkt der Markierung. Durchschnitt und Median über Projekte, deren erste Veröffentlichung in den letzten 90 Tagen liegt.
+- Aktualisierung: Änderungsmeldungen über die Live-Verbindung (Projekte, Aufgaben, Kunden, Kalender, Einstellungen) laden das Dashboard neu, zusätzlich jede Minute.
+- Darstellung: Kennzahlen als Kacheln, Phasen als Balken in einer Farbe mit Wert an der Spitze, Farben der Kalenderarten auf Unterscheidbarkeit bei Farbsehschwäche geprüft (hell und dunkel); Google-Termine bewusst neutral grau.
