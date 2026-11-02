@@ -21,6 +21,7 @@ export function pdfRouter(db: Database, services: Services): Router {
     '/customers/:id/report.pdf',
     handle(async (req, res) => {
       const month = typeof req.query.month === 'string' && req.query.month ? req.query.month : monthBerlin();
+      if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) throw new HttpError(400, 'Monat im Format JJJJ-MM erwartet');
       send(res, await monthlyReport(db, parseId(req.params.id), month), dl(req.query.download));
     }),
   );
@@ -33,7 +34,8 @@ export function pdfRouter(db: Database, services: Services): Router {
     handle(async (req, res) => {
       const date = typeof req.query.date === 'string' && req.query.date ? req.query.date : todayBerlin();
       if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new HttpError(400, 'Datum im Format JJJJ-MM-TT erwartet');
-      const data = services.briefing.get(date)?.data ?? (date === todayBerlin() ? services.briefing.build(date) : null);
+      // Heute immer der aktuelle Stand, frühere Tage wie verschickt
+      const data = date === todayBerlin() ? services.briefing.build(date) : services.briefing.get(date)?.data ?? null;
       if (!data) throw new HttpError(404, 'Für diesen Tag gibt es kein Briefing');
       send(res, await briefingPdf(db, data), dl(req.query.download));
     }),

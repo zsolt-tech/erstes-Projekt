@@ -180,7 +180,8 @@ export function StartPage() {
   const waiting = projects.filter((p) => p.current_phase === 4 && p.status === 'aktiv').length;
   const hour = new Date().getHours();
   const greeting = hour < 11 ? 'Guten Morgen' : hour < 18 ? 'Guten Tag' : 'Guten Abend';
-  const data = briefing?.briefing?.data ?? briefing?.preview ?? null;
+  // Immer der aktuelle Stand; das verschickte Briefing bleibt in den Benachrichtigungen
+  const data = briefing?.preview ?? briefing?.briefing?.data ?? null;
 
   async function run(deliver: boolean) {
     try {
@@ -215,8 +216,8 @@ export function StartPage() {
             Tägliches Briefing
             <span className="ml-2 text-xs font-normal text-muted">
               {briefing?.briefing
-                ? `erstellt ${formatDateTime(briefing.briefing.generated_at)}`
-                : `Vorschau, das Briefing erscheint um ${settings?.briefing_time ?? '09:00'} Uhr`}
+                ? `aktueller Stand, verschickt ${formatDateTime(briefing.briefing.generated_at)}`
+                : `aktueller Stand, verschickt wird um ${settings?.briefing_time ?? '09:00'} Uhr`}
             </span>
           </span>
         }

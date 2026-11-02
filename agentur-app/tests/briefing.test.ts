@@ -88,8 +88,8 @@ test('Erzeugen: gespeichert, Benachrichtigung, E-Mail über Gmail', async () => 
   assert.equal(notes.unread, 1);
   assert.equal(notes.items[0].type, 'briefing');
   const stored = (await t.request('GET', '/api/briefing/today')).body;
-  assert.equal(stored.preview, null);
   assert.equal(stored.briefing.data.summary, res.body.data.summary);
+  assert.equal(stored.preview.summary, res.body.data.summary, 'aktueller Stand wird immer mitgeliefert');
 });
 
 test('Fälligkeit: einmal täglich ab der eingestellten Uhrzeit', () => {

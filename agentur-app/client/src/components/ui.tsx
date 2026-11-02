@@ -162,9 +162,9 @@ export function Card({
   return (
     <section className={cx('rounded-lg border border-line bg-surface', className)}>
       {(title || actions) && (
-        <header className="flex items-center justify-between gap-3 border-b border-line px-4 py-3">
-          <h2 className="text-sm font-semibold text-fg">{title}</h2>
-          {actions && <div className="flex items-center gap-1">{actions}</div>}
+        <header className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b border-line px-4 py-3">
+          <h2 className="min-w-0 text-sm font-semibold text-fg">{title}</h2>
+          {actions && <div className="flex flex-wrap items-center gap-1">{actions}</div>}
         </header>
       )}
       <div className={padded ? 'p-4' : undefined}>{children}</div>

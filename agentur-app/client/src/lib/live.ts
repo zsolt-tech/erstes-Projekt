@@ -22,6 +22,8 @@ function showBrowserNotification(title: string, body: string, link: string | nul
   };
 }
 
+const BRIEFING_SOURCES = new Set(['projects', 'tasks', 'customers', 'calendar', 'settings']);
+
 export function useLiveUpdates(): boolean {
   const qc = useQueryClient();
   const [connected, setConnected] = useState(true);
@@ -42,6 +44,8 @@ export function useLiveUpdates(): boolean {
         }
         if (event.type !== 'changed') return;
         qc.invalidateQueries({ queryKey: [event.entity] });
+        // Das Briefing auf der Startseite zeigt immer den aktuellen Stand
+        if (BRIEFING_SOURCES.has(event.entity)) qc.invalidateQueries({ queryKey: ['briefing'] });
         // Warteschlange betrifft den Drive-Stand von Kunden und Projekten
         if (event.entity === 'sync' || event.entity === 'google') {
           qc.invalidateQueries({ queryKey: ['customers', 'drive'] });

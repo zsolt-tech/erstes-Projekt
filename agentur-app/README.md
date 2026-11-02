@@ -13,7 +13,7 @@ Aktueller Stand: **Etappe 5**
 
 Weitere Dokumente:
 - Architektur und Datenmodell: [docs/ARCHITEKTUR.md](docs/ARCHITEKTUR.md)
-- Google-Zugang einrichten (für Etappe 3): [docs/GOOGLE-EINRICHTUNG.md](docs/GOOGLE-EINRICHTUNG.md)
+- Google-Zugang einrichten: [docs/GOOGLE-EINRICHTUNG.md](docs/GOOGLE-EINRICHTUNG.md)
 - Agenten und PDFs: [docs/AGENTEN.md](docs/AGENTEN.md)
 
 ---

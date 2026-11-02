@@ -11,13 +11,10 @@ import { listNotifications, markRead } from '../services/notify.ts';
 export function briefingRouter(db: Database, { briefing }: Services): Router {
   const r = Router();
 
-  // Heutiges Briefing; vor der Briefing-Uhrzeit eine Vorschau mit dem aktuellen Stand
+  // Heutiges Briefing: das verschickte (falls schon erzeugt) und immer der aktuelle Stand für die Startseite
   r.get(
     '/briefing/today',
-    handle(() => {
-      const stored = briefing.get(todayBerlin());
-      return { briefing: stored, preview: stored ? null : briefing.build() };
-    }),
+    handle(() => ({ briefing: briefing.get(todayBerlin()), preview: briefing.build() })),
   );
 
   r.get('/briefings', handle(() => briefing.list()));
