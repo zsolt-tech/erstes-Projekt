@@ -16,6 +16,10 @@ import {
   PIPELINE_STAGE_LABELS,
   PLATFORMS,
   PLATFORM_LABELS,
+  QA_PROFILES,
+  QA_PROFILE_BY_TYPE,
+  QA_PROFILE_LABELS,
+  type QaProfile,
   type Customer,
   type CustomerInput,
   type CustomerStatus,
@@ -67,6 +71,9 @@ interface FormState {
   website: string;
   notes: string;
   approval_reminder_days: string;
+  qa_profile: QaProfile | '';
+  qa_motion_required: boolean;
+  qa_notes: string;
   contacts: ContactRow[];
   social_channels: ChannelRow[];
   package_items: PackageRow[];
@@ -99,6 +106,9 @@ function emptyForm(): FormState {
     website: '',
     notes: '',
     approval_reminder_days: '',
+    qa_profile: '',
+    qa_motion_required: false,
+    qa_notes: '',
     contacts: [emptyContact(true)],
     social_channels: [],
     package_items: [],
@@ -122,6 +132,9 @@ function fromCustomer(c: Customer): FormState {
     website: s(c.website),
     notes: s(c.notes),
     approval_reminder_days: c.approval_reminder_days ? String(c.approval_reminder_days) : '',
+    qa_profile: c.qa_profile ?? '',
+    qa_motion_required: !!c.qa_motion_required,
+    qa_notes: s(c.qa_notes),
     contacts: c.contacts.map((x) => ({
       key: newKey(),
       id: x.id,
@@ -182,6 +195,9 @@ function toInput(f: FormState): { data: CustomerInput; errors: Record<string, st
       website: f.website,
       notes: f.notes,
       approval_reminder_days: days ? Number(days) : null,
+      qa_profile: f.qa_profile || null,
+      qa_motion_required: f.qa_motion_required,
+      qa_notes: f.qa_notes,
       contacts: f.contacts.map(({ id, name, role, phone, email, is_primary }) => ({ id, name, role, phone, email, is_primary })),
       social_channels: f.social_channels.map(({ id, platform, handle, url }) => ({ id, platform, handle, url })),
       package_items,
@@ -639,6 +655,36 @@ export function CustomerFormPage() {
                 onChange={(e) => update('approval_reminder_days', e.target.value)}
                 invalid={!!err('approval_reminder_days')}
               />
+            </Field>
+          </div>
+        </Card>
+
+        <Card title="Videoschnitt">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Prüfprofil für die Clip-Qualitätsprüfung" hint="Bestimmt die Schwellen des Videoschnitt-Agenten">
+              <Select value={form.qa_profile} onChange={(e) => update('qa_profile', e.target.value as QaProfile | '')}>
+                <option value="">Automatisch aus dem Kundentyp ({QA_PROFILE_LABELS[QA_PROFILE_BY_TYPE[form.customer_type]]})</option>
+                {QA_PROFILES.map((p) => (
+                  <option key={p} value={p}>
+                    {QA_PROFILE_LABELS[p]}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            <label className="flex cursor-pointer items-start gap-2.5 self-end pb-1 text-sm">
+              <input
+                type="checkbox"
+                checked={form.qa_motion_required}
+                onChange={(e) => update('qa_motion_required', e.target.checked)}
+                className="mt-0.5 size-4 accent-[var(--accent)]"
+              />
+              <span>
+                Durchgehende Kamerabewegung Pflicht
+                <span className="block text-xs text-muted">Kein Stillstand in B-Roll und Drohnenshots (Option „Bewegung Pflicht“)</span>
+              </span>
+            </label>
+            <Field label="Hinweise für den Schnitt" className="sm:col-span-2" hint="Gilt für alle Videos dieses Kunden, z. B. „keine Hände im Bild“ oder „Endschnitt in Premiere, geprüfte Einzelteile liefern“">
+              <Textarea value={form.qa_notes} onChange={(e) => update('qa_notes', e.target.value)} rows={3} />
             </Field>
           </div>
         </Card>

@@ -15,6 +15,8 @@ import { backupOverview, runBackup } from '../services/backup.ts';
 import { projectRouter } from './projects.ts';
 import { googleRouter } from './google.ts';
 import { briefingRouter } from './briefing.ts';
+import { agentRouter } from './agents.ts';
+import { pdfRouter } from './pdf.ts';
 import type { Services } from '../google/index.ts';
 import { getSettings, updateSettings } from '../services/settings.ts';
 import {
@@ -194,6 +196,8 @@ export function apiRouter(db: Database, config: AppConfig, services: Services): 
   r.use(projectRouter(db, services));
   r.use(googleRouter(services));
   r.use(briefingRouter(db, services));
+  r.use(agentRouter(db, config, services));
+  r.use(pdfRouter(db, services));
 
   r.use(() => {
     throw new HttpError(404, 'Unbekannte API-Adresse');

@@ -228,3 +228,10 @@ Sonstiges: settings, briefings, notifications, search_index (Volltext), schema_m
 | 5 | Briefing 9:00, Desktop-Benachrichtigung, E-Mail, Freigabe-Erinnerungen | Briefing manuell auslösen, Mail prüfen |
 | 6 | Live-Dashboard mit Kennzahlen, Engpass-Erkennung | Dashboard offen lassen, in zweitem Tab Projekt verschieben |
 | 7 | Zeiterfassung, Wiederholungen, Akquise-Pipeline, Rechnungsstatus, Content-Kalender, globale Suche, CSV/PDF-Export, Autostart macOS/Windows | Monatsbericht als PDF erzeugen, Autostart einrichten |
+
+## 8. Agenten und PDFs
+
+- **Claude-Agenten** in `.claude/agents/`: `videoschnitt` (Skills clip-qualitaetspruefung und local-highlight-reel) und `pdf-erstellung` (Skill pdf). Sie holen den Projektkontext über `GET /api/projects/<ID>/agent-context` und melden Endkontrollen an `POST /api/projects/<ID>/quality-checks`. Die Skills selbst bleiben beim Nutzer; das Repository enthält keine Prüfskripte und keine Kundenprofile.
+- **Qualitäts-Haken:** Der Systempunkt „Clip-Qualitätsprüfung abgeschlossen“ wird gesetzt, wenn die jüngste Endkontrolle jedes Videos „freigegeben“ ist (Fassungen `_v2`, `(2)` usw. gelten als dasselbe Video), und entfernt bei „zurück“.
+- **Neue Daten:** `quality_checks` (Ergebnisse je Video und Durchlauf), beim Kunden `qa_profile`, `qa_motion_required`, `qa_notes` (Migration 004).
+- **PDFs** mit PDFKit im Server: Monatsbericht (ohne interne Angaben), Drehplan, Freigabe-Protokoll, Briefing. Abruf über `…/report.pdf`, `…/drehplan.pdf`, `…/freigabe.pdf`, `/api/briefing/pdf`.

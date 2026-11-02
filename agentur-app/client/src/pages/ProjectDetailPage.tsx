@@ -1,7 +1,7 @@
 // Projektdetailseite: Phasenleiste, Phasenbereiche, Rechnung, Aufgaben, Verlauf.
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, CircleCheck, Lock, Pencil, RotateCcw, Trash2 } from 'lucide-react';
+import { ArrowLeft, ArrowRight, CircleCheck, FileText, Lock, Pencil, RotateCcw, Trash2 } from 'lucide-react';
 import { useProject, useTasks } from '../api/projects';
 import {
   ApprovalPanel,
@@ -15,6 +15,7 @@ import {
 } from '../components/ProjectPhases';
 import { TaskDialog, TaskQuickAdd, TaskRow } from '../components/Tasks';
 import { ProjectDrivePanel } from '../components/Drive';
+import { AgentPanel } from '../components/AgentPanel';
 import { ConfirmDialog } from '../components/feedback';
 import { PriorityBadge, ProjectStatusBadge } from '../components/labels';
 import { Button, Card, ErrorBox, Field, Input, PageHeader, ProgressBar, Segmented, Spinner } from '../components/ui';
@@ -211,6 +212,7 @@ export function ProjectDetailPage() {
             <div className="grid gap-6">
               <PhaseMeta key={`meta-${phase}`} project={project} phase={phase} />
               {phase === 1 && <ShootDetails project={project} />}
+              {(phase === 2 || phase === 3) && <AgentPanel project={project} />}
               {phase === 3 && <ProjectDrivePanel projectId={project.id} customerId={project.customer_id} />}
               {phase === 4 && <ApprovalPanel project={project} />}
               {phase === 5 && <PublicationsPanel project={project} />}
@@ -227,6 +229,24 @@ export function ProjectDetailPage() {
         <div className="grid min-w-0 grid-cols-1 content-start gap-5">
           <ProjectTasks project={project} />
           <InvoiceCard project={project} />
+          <Card title="Dokumente">
+            <ul className="grid gap-1.5 text-sm">
+              {[
+                ['Drehplan', `/api/projects/${project.id}/drehplan.pdf`, 'Termin, Ort, Ansprechpartner, Shotlist und Equipment'],
+                ['Freigabe-Protokoll', `/api/projects/${project.id}/freigabe.pdf`, 'Freigaberunden, Feedback, Endkontrolle, Veröffentlichungen'],
+              ].map(([label, href, hint]) => (
+                <li key={label}>
+                  <a href={href} target="_blank" rel="noreferrer" className="group flex items-start gap-2.5 rounded px-1 py-1 hover:bg-surface-2">
+                    <FileText className="mt-0.5 size-4 shrink-0 text-subtle group-hover:text-accent" />
+                    <span>
+                      <span className="text-fg group-hover:text-accent">{label} (PDF)</span>
+                      <span className="block text-xs text-muted">{hint}</span>
+                    </span>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </Card>
           <Card title="Details">
             <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
               <dt className="text-muted">Vorlage</dt>

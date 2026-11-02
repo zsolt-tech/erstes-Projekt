@@ -111,7 +111,11 @@ export const contactInput = z.object({
   role: optText(200),
   phone: optText(100),
   email: optEmail,
-  is_primary: z.boolean().default(false),
+  // Die API liefert 0/1; beim Zurückschicken unverändert akzeptieren
+  is_primary: z
+    .union([z.boolean(), z.number().int().min(0).max(1)])
+    .default(false)
+    .transform((v) => !!v),
 });
 export type ContactInput = z.input<typeof contactInput>;
 
@@ -165,6 +169,12 @@ export const customerInput = z.object({
     .max(60, 'Höchstens 60 Tage')
     .nullish()
     .transform((v) => v ?? null),
+  qa_profile: z
+    .enum(['standard', 'fahrschule', 'zahnarzt', 'restaurant', 'handwerk'])
+    .nullish()
+    .transform((v) => v ?? null),
+  qa_motion_required: z.boolean().default(false),
+  qa_notes: optText(5000),
   contacts: z.array(contactInput).max(50).default([]),
   social_channels: z.array(socialChannelInput).max(50).default([]),
   package_items: z.array(packageItemInput).max(50).default([]),
@@ -246,6 +256,9 @@ export interface Customer {
   website: string | null;
   notes: string | null;
   approval_reminder_days: number | null;
+  qa_profile: QaProfile | null;
+  qa_motion_required: number;
+  qa_notes: string | null;
   created_at: string;
   updated_at: string;
   archived_at: string | null;
@@ -912,3 +925,62 @@ export interface AppNotification {
   created_at: string;
   read_at: string | null;
 }
+
+// ---------------------------------------------------------------------
+// Videoschnitt-Agenten und Qualitätsprüfung
+// ---------------------------------------------------------------------
+
+export const QA_PROFILES = ['standard', 'fahrschule', 'zahnarzt', 'restaurant', 'handwerk'] as const;
+export type QaProfile = (typeof QA_PROFILES)[number];
+export const QA_PROFILE_LABELS: Record<QaProfile, string> = {
+  standard: 'Standard',
+  fahrschule: 'Fahrschule',
+  zahnarzt: 'Arzt- und Zahnarztpraxis (streng)',
+  restaurant: 'Restaurant (Schärfe streng)',
+  handwerk: 'Handwerk',
+};
+/** Prüfprofil, wenn beim Kunden keins gewählt ist */
+export const QA_PROFILE_BY_TYPE: Record<CustomerType, QaProfile> = {
+  restaurant: 'restaurant',
+  handwerk: 'handwerk',
+  arztpraxis: 'zahnarzt',
+  fahrschule: 'fahrschule',
+  sonstige: 'standard',
+};
+
+export const qualityCheckInput = z.object({
+  video_name: z.string().trim().min(1, 'Name des Videos fehlt').max(300),
+  stage: z.enum(['vorpruefung', 'endkontrolle']),
+  verdict: z.enum(['freigegeben', 'zurueck', 'offen']),
+  run_no: z.number().int().min(1).max(20).default(1),
+  profile: z.enum(QA_PROFILES).nullish().transform((v) => v ?? null),
+  shots: z.number().int().min(0).max(10000).nullish().transform((v) => v ?? null),
+  drone_perspectives: z.number().int().min(0).max(100).nullish().transform((v) => v ?? null),
+  summary: optText(2000),
+  issues: z
+    .array(z.object({ t: z.string().trim().max(20).nullish().transform((v) => v ?? null), text: z.string().trim().min(1).max(500) }))
+    .max(200)
+    .default([]),
+  clip_list: optText(50000),
+  source: z.enum(['agent', 'manuell']).default('agent'),
+});
+export type QualityCheckInput = z.input<typeof qualityCheckInput>;
+
+export interface QualityCheck {
+  id: number;
+  project_id: number;
+  video_name: string;
+  stage: 'vorpruefung' | 'endkontrolle';
+  verdict: 'freigegeben' | 'zurueck' | 'offen';
+  run_no: number;
+  profile: QaProfile | null;
+  shots: number | null;
+  drone_perspectives: number | null;
+  summary: string | null;
+  issues: { t: string | null; text: string }[];
+  clip_list: string | null;
+  source: 'agent' | 'manuell';
+  created_at: string;
+}
+
+export type AgentKind = 'videoschnitt' | 'endkontrolle' | 'highlight' | 'pdf';

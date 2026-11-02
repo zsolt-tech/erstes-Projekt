@@ -2,7 +2,7 @@
 // Projekte, Aufgaben, Termine und Drive-Links folgen in den nächsten Etappen.
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { Archive, ArchiveRestore, ArrowLeft, ChevronLeft, ChevronRight, ExternalLink, Globe, Mail, MapPin, Pencil, Phone, Plus } from 'lucide-react';
+import { Archive, ArchiveRestore, ArrowLeft, ChevronLeft, ChevronRight, ExternalLink, FileText, Globe, Mail, MapPin, Pencil, Phone, Plus } from 'lucide-react';
 import { useArchiveCustomer, useCustomer } from '../api/hooks';
 import { Badge, Button, Card, ErrorBox, IconButton, PageHeader, ProgressBar, Segmented, Spinner, type Tone } from '../components/ui';
 import { useProjects, useTasks } from '../api/projects';
@@ -13,7 +13,7 @@ import { useCalendarItems } from '../api/calendar';
 import { ConfirmDialog, useToast } from '../components/feedback';
 import { CustomerStatusBadge } from '../components/labels';
 import { currentMonth, displayUrl, formatDate, formatEuro, formatMonth, shiftMonth, telHref, today } from '../lib/format';
-import { CALENDAR_KIND_LABELS, CUSTOMER_TYPE_LABELS, PLATFORM_LABELS, type PackageUsage, type Task } from '../../../shared/schemas';
+import { CALENDAR_KIND_LABELS, CUSTOMER_TYPE_LABELS, PLATFORM_LABELS, QA_PROFILE_BY_TYPE, QA_PROFILE_LABELS, type PackageUsage, type Task } from '../../../shared/schemas';
 
 function UsageRow({ item }: { item: PackageUsage }) {
   const over = item.used > item.quantity;
@@ -199,6 +199,16 @@ export function CustomerDetailPage() {
             title={`Paketverbrauch ${formatMonth(month)}`}
             actions={
               <>
+                <a
+                  href={`/api/customers/${id}/report.pdf?month=${month}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mr-1 inline-flex h-8 items-center gap-1.5 rounded-md px-2.5 text-[13px] font-medium text-muted hover:bg-surface-2 hover:text-fg"
+                  title={`Monatsbericht ${formatMonth(month)} als PDF`}
+                >
+                  <FileText className="size-4" />
+                  Monatsbericht
+                </a>
                 <IconButton label="Vormonat" onClick={() => setMonth(shiftMonth(month, -1))}>
                   <ChevronLeft className="size-4" />
                 </IconButton>
@@ -296,6 +306,20 @@ export function CustomerDetailPage() {
                 ))}
               </ul>
             )}
+          </Card>
+
+          <Card title="Videoschnitt">
+            <dl className="grid gap-2 text-sm">
+              <div className="flex justify-between gap-3">
+                <dt className="text-muted">Prüfprofil</dt>
+                <dd className="text-right text-fg">
+                  {QA_PROFILE_LABELS[c.qa_profile ?? QA_PROFILE_BY_TYPE[c.customer_type]]}
+                  {!c.qa_profile && <span className="block text-xs text-subtle">aus dem Kundentyp</span>}
+                </dd>
+              </div>
+              {!!c.qa_motion_required && <div className="text-muted">Durchgehende Kamerabewegung Pflicht</div>}
+              {c.qa_notes ? <p className="whitespace-pre-wrap text-fg">{c.qa_notes}</p> : <p className="text-subtle">Keine besonderen Hinweise.</p>}
+            </dl>
           </Card>
 
           <Card title="Social Media">

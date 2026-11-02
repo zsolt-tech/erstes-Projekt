@@ -6,3 +6,14 @@ backups/
 *.log
 .DS_Store
 Thumbs.db
+
+# Schutz vor versehentlich abgelegten Kundendaten und Arbeitsdateien der Agenten
+arbeitsbereich/
+pruefung/
+*.mp4
+*.mov
+*.m4v
+*.mts
+*.mxf
+*.wav
+*.pdf

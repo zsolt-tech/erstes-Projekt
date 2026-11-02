@@ -172,6 +172,9 @@ const BASE_COLUMNS = [
   'website',
   'notes',
   'approval_reminder_days',
+  'qa_profile',
+  'qa_motion_required',
+  'qa_notes',
 ] as const;
 
 export function createCustomer(db: Database, data: CustomerData): Customer {

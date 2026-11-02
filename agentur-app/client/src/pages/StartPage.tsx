@@ -1,7 +1,7 @@
 // Startseite: Kennzahlen und das tägliche Briefing.
 import type { ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Plus, RefreshCw, Send } from 'lucide-react';
+import { FileText, Plus, RefreshCw, Send } from 'lucide-react';
 import { useCustomers, useSettings } from '../api/hooks';
 import { useProjects, useTasks } from '../api/projects';
 import { useBriefingToday, useGenerateBriefing } from '../api/briefing';
@@ -227,6 +227,9 @@ export function StartPage() {
             </Button>
             <Button size="sm" variant="ghost" icon={<Send className="size-4" />} loading={generate.isPending && generate.variables === true} onClick={() => run(true)}>
               Erzeugen und senden
+            </Button>
+            <Button size="sm" variant="ghost" icon={<FileText className="size-4" />} onClick={() => window.open('/api/briefing/pdf', '_blank', 'noopener')}>
+              PDF
             </Button>
           </>
         }

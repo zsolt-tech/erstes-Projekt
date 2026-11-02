@@ -9,10 +9,12 @@ Aktueller Stand: **Etappe 5**
 - Etappe 3: Google-Anmeldung, automatische Drive-Ordner für Kunden und Projekte, Verknüpfung bestehender Ordner, Erkennung fertiger Videos
 - Etappe 4: Zwei-Wege-Abgleich mit Google Calendar, Kalenderansicht (Tag, Woche, Monat, Liste) mit farbigen Drehtagen, Deadlines, Freigabe-Fristen, Veröffentlichungen und Google-Terminen
 - Etappe 5: Tägliches Briefing um 9:00 Uhr (Startseite, Desktop-Benachrichtigung, optional E-Mail), Freigabe-Erinnerungen, Engpass-Warnungen, Benachrichtigungszentrale
+- Agenten und PDFs: Claude-Agenten für Videoschnitt und PDFs mit Anbindung an die App, Monatsbericht, Drehplan, Freigabe-Protokoll und Briefing als PDF
 
 Weitere Dokumente:
 - Architektur und Datenmodell: [docs/ARCHITEKTUR.md](docs/ARCHITEKTUR.md)
 - Google-Zugang einrichten (für Etappe 3): [docs/GOOGLE-EINRICHTUNG.md](docs/GOOGLE-EINRICHTUNG.md)
+- Agenten und PDFs: [docs/AGENTEN.md](docs/AGENTEN.md)
 
 ---
 
@@ -204,6 +206,17 @@ Hinweise:
 6. **Nachfassen per E-Mail:** In der Freigabe-Phase eines Projekts öffnet „Nachfassen per E-Mail“ dein E-Mail-Programm mit einer vorformulierten Nachricht an den Ansprechpartner. Der Text ist in Sie-Form und lässt sich vor dem Senden anpassen.
 7. **Browser-Benachrichtigungen (optional):** In den Einstellungen „Browser-Benachrichtigungen auf diesem Rechner“ anhaken und im Browser erlauben. Dann erscheinen Hinweise zusätzlich als Browser-Meldung, solange die App in einem Tab offen ist.
 8. **Engpass-Schwellen:** Einstellungen > Engpass-Erkennung. Dort legst du fest, ab wann eine Warnung erscheint (z. B. länger als 5 Tage in Bearbeitung, mehr als 3 Drehtage in 7 Tagen).
+
+---
+
+## Agenten und PDFs testen
+
+Nach dem Update einmal `npm install` (neues Paket für PDFs), dann `npm start`. Ausführlich: [docs/AGENTEN.md](docs/AGENTEN.md).
+
+1. **Kunde bearbeiten > Videoschnitt:** Prüfprofil (automatisch oder fest), „Durchgehende Kamerabewegung Pflicht“ und Hinweise für den Schnitt speichern. Die Kundenseite zeigt sie im Bereich „Videoschnitt“.
+2. **Auftrag an Claude:** Projekt in der Phase Bearbeitung öffnen, „Schnitt und Endkontrolle“. Ein Fenster zeigt den vorbereiteten Auftrag; „Kopieren“, dann in Claude Desktop (Code, Ordner agentur-app) einfügen.
+3. **Rückmeldung:** Nach der Endkontrolle erscheint das Ergebnis im Projekt. Sind alle Videos bestanden, ist „Clip-Qualitätsprüfung abgeschlossen“ automatisch abgehakt.
+4. **PDFs:** Kundenseite > Paketverbrauch > „Monatsbericht“; Projektseite > Dokumente > Drehplan und Freigabe-Protokoll; Startseite > Briefing > „PDF“.
 
 ---
 
