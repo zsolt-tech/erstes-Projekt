@@ -2,9 +2,23 @@
 import type { GoogleClient } from './client.ts';
 import type { SyncQueue } from './queue.ts';
 
-/** Kodiert einen Kopfzeilenwert nach RFC 2047, damit Umlaute korrekt ankommen */
-function encodeHeader(value: string): string {
-  return /^[\x20-\x7e]*$/.test(value) ? value : `=?UTF-8?B?${Buffer.from(value, 'utf8').toString('base64')}?=`;
+/**
+ * Kodiert einen Kopfzeilenwert nach RFC 2047, damit Umlaute korrekt ankommen. Lange Werte werden in
+ * mehrere kodierte Wörter (je höchstens 75 Zeichen) aufgeteilt, ohne ein Zeichen zu trennen.
+ */
+export function encodeHeader(value: string): string {
+  if (/^[\x20-\x7e]*$/.test(value)) return value;
+  const words: string[] = [];
+  let chunk = '';
+  for (const ch of value) {
+    if (Buffer.byteLength(chunk + ch, 'utf8') > 45) {
+      words.push(chunk);
+      chunk = '';
+    }
+    chunk += ch;
+  }
+  if (chunk) words.push(chunk);
+  return words.map((w) => `=?UTF-8?B?${Buffer.from(w, 'utf8').toString('base64')}?=`).join('\r\n ');
 }
 
 /** Baut eine MIME-Nachricht mit Text- und HTML-Teil */

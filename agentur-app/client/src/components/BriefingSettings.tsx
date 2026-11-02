@@ -40,18 +40,21 @@ export function BriefingSettings() {
   const [browserNotify, setBrowserNotify] = useState(readBrowserNotify);
   const permission = typeof Notification !== 'undefined' ? Notification.permission : 'denied';
 
-  useEffect(() => {
-    if (settings) {
-      setForm({
+  const serverForm = settings
+    ? {
         briefing_time: settings.briefing_time,
         briefing_desktop: settings.briefing_desktop,
         briefing_email_enabled: settings.briefing_email_enabled,
         briefing_email_to: settings.briefing_email_to,
         reminder_enabled: settings.reminder_enabled,
         reminder_email: settings.reminder_email,
-      });
-    }
-  }, [settings]);
+      }
+    : null;
+  const serverKey = JSON.stringify(serverForm);
+  // Nur neu befüllen, wenn sich diese Werte auf dem Server ändern (nicht beim Speichern anderer Karten)
+  useEffect(() => {
+    if (serverForm) setForm(serverForm);
+  }, [serverKey]);
 
   if (!form) return null;
   const set = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) => setForm((f) => (f ? { ...f, [k]: v } : f));
@@ -147,13 +150,13 @@ export function BriefingSettings() {
   );
 }
 
-const LIMITS: { key: keyof Settings['bottleneck_limits']; label: string; unit: string }[] = [
-  { key: 'editing_days', label: 'In Bearbeitung länger als', unit: 'Tage' },
-  { key: 'upload_days', label: 'Im Upload länger als', unit: 'Tage' },
-  { key: 'approval_days', label: 'Freigabe offen länger als', unit: 'Tage' },
-  { key: 'shoots_per_week', label: 'Drehtage in 7 Tagen mehr als', unit: 'Drehtage' },
-  { key: 'editing_parallel', label: 'Gleichzeitig in Bearbeitung mehr als', unit: 'Projekte' },
-  { key: 'deadlines_per_day', label: 'Fristen an einem Tag ab', unit: 'Fristen' },
+const LIMITS: { key: keyof Settings['bottleneck_limits']; label: string; unit: string; min: number }[] = [
+  { key: 'editing_days', label: 'In Bearbeitung länger als', unit: 'Tage', min: 1 },
+  { key: 'upload_days', label: 'Im Upload länger als', unit: 'Tage', min: 1 },
+  { key: 'approval_days', label: 'Freigabe offen länger als', unit: 'Tage', min: 1 },
+  { key: 'shoots_per_week', label: 'Drehtage in 7 Tagen mehr als', unit: 'Drehtage', min: 1 },
+  { key: 'editing_parallel', label: 'Gleichzeitig in Bearbeitung mehr als', unit: 'Projekte', min: 1 },
+  { key: 'deadlines_per_day', label: 'Fristen an einem Tag ab', unit: 'Fristen', min: 2 },
 ];
 
 export function BottleneckSettings() {
@@ -161,10 +164,12 @@ export function BottleneckSettings() {
   const save = useSaveSettings();
   const toast = useToast();
   const [values, setValues] = useState<Record<string, string>>({});
+  const [limitErrors, setLimitErrors] = useState<Record<string, string>>({});
 
+  const limitsKey = JSON.stringify(settings?.bottleneck_limits ?? null);
   useEffect(() => {
     if (settings) setValues(Object.fromEntries(LIMITS.map((l) => [l.key, String(settings.bottleneck_limits[l.key])])));
-  }, [settings]);
+  }, [limitsKey]);
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -172,8 +177,11 @@ export function BottleneckSettings() {
       await save.mutateAsync({
         bottleneck_limits: Object.fromEntries(LIMITS.map((l) => [l.key, Number(values[l.key])])) as Settings['bottleneck_limits'],
       });
+      setLimitErrors({});
       toast.success('Schwellen gespeichert');
     } catch (err) {
+      const fields = (err as { fields?: Record<string, string> }).fields ?? {};
+      setLimitErrors(Object.fromEntries(Object.entries(fields).map(([k, v]) => [k.replace(/^bottleneck_limits\./, ''), v])));
       toast.error(err);
     }
   }
@@ -184,12 +192,21 @@ export function BottleneckSettings() {
         <p className="text-sm text-muted">Ab diesen Werten erscheint eine Warnung im Briefing und im Dashboard.</p>
         <div className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
           {LIMITS.map((l) => (
-            <label key={l.key} className="flex items-center justify-between gap-3 text-sm">
+            <label key={l.key} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-sm">
               <span className="text-fg">{l.label}</span>
               <span className="flex items-center gap-2">
-                <Input type="number" min={1} value={values[l.key] ?? ''} onChange={(e) => setValues((v) => ({ ...v, [l.key]: e.target.value }))} className="w-20 text-right" />
+                <Input
+                  type="number"
+                  min={l.min}
+                  value={values[l.key] ?? ''}
+                  onChange={(e) => setValues((v) => ({ ...v, [l.key]: e.target.value }))}
+                  invalid={!!limitErrors[l.key]}
+                  title={limitErrors[l.key]}
+                  className="w-20 text-right"
+                />
                 <span className="w-16 text-xs text-muted">{l.unit}</span>
               </span>
+              {limitErrors[l.key] && <span className="basis-full text-right text-xs text-danger">{limitErrors[l.key]}</span>}
             </label>
           ))}
         </div>

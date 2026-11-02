@@ -1,9 +1,11 @@
 // PDF-Erzeugung: Monatsbericht für Kunden, Drehplan, Freigabe-Protokoll, Briefing.
 // Schlichtes, sachliches Layout im A4-Format mit Kopf, Abschnitten, Tabellen und Seitenzahlen.
+import fs from 'node:fs';
+import path from 'node:path';
 import PDFDocument from 'pdfkit';
 import type { Database } from '../db/database.ts';
 import { HttpError } from '../lib/http.ts';
-import { addDays, berlinParts, monthRange, todayBerlin } from '../lib/time.ts';
+import { addDays, berlinDateOf, berlinParts, monthRange, todayBerlin } from '../lib/time.ts';
 import { getCustomer } from './customers.ts';
 import { getProject } from './projects.ts';
 import { getSettings } from './settings.ts';
@@ -32,6 +34,20 @@ const COLOR = {
 };
 const MONTHS = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
 const DAYS = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
+
+/**
+ * Schrift mit vollem Unicode-Umfang (z. B. für Namen wie Yılmaz oder Łódź): Arial bzw. DejaVu des
+ * Betriebssystems einbetten. Fehlen sie, bleibt es bei Helvetica (nur westeuropäische Zeichen).
+ */
+const FONT_CANDIDATES: [string, string][] = [
+  ['/System/Library/Fonts/Supplemental/Arial.ttf', '/System/Library/Fonts/Supplemental/Arial Bold.ttf'],
+  ['/Library/Fonts/Arial.ttf', '/Library/Fonts/Arial Bold.ttf'],
+  [path.join(process.env.WINDIR ?? 'C:\\Windows', 'Fonts', 'arial.ttf'), path.join(process.env.WINDIR ?? 'C:\\Windows', 'Fonts', 'arialbd.ttf')],
+  ['/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf', '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf'],
+  ['/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf', '/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf'],
+];
+const FONT_FILES = FONT_CANDIDATES.find(([r, b]) => fs.existsSync(r) && fs.existsSync(b)) ?? null;
+const FONT = FONT_FILES ? { regular: 'Text', bold: 'Text-Bold' } : { regular: 'Helvetica', bold: 'Helvetica-Bold' };
 
 const pad = (n: number) => String(n).padStart(2, '0');
 export const dateDe = (d: string | null | undefined) => (d ? `${d.slice(8, 10)}.${d.slice(5, 7)}.${d.slice(0, 4)}` : '–');
@@ -80,11 +96,15 @@ class Pdf {
     });
     this.width = this.doc.page.width - 112;
     this.doc.on('data', (c: Buffer) => this.chunks.push(c));
-    this.doc.font('Helvetica').fillColor(COLOR.text);
+    if (FONT_FILES) {
+      this.doc.registerFont(FONT.regular, FONT_FILES[0]);
+      this.doc.registerFont(FONT.bold, FONT_FILES[1]);
+    }
+    this.doc.font(FONT.regular).fillColor(COLOR.text);
     this.doc.fontSize(9).fillColor(COLOR.muted).text(agency.toUpperCase(), { characterSpacing: 0.8 });
     this.doc.moveDown(0.4);
-    this.doc.font('Helvetica-Bold').fontSize(20).fillColor(COLOR.text).text(title);
-    this.doc.font('Helvetica').fontSize(12).fillColor(COLOR.muted).text(subtitle);
+    this.doc.font(FONT.bold).fontSize(20).fillColor(COLOR.text).text(title);
+    this.doc.font(FONT.regular).fontSize(12).fillColor(COLOR.muted).text(subtitle);
     this.doc.moveDown(0.6);
     this.rule();
     this.doc.moveDown(0.8);
@@ -102,13 +122,13 @@ class Pdf {
   h2(text: string) {
     this.ensureSpace(60);
     this.doc.moveDown(0.6);
-    this.doc.font('Helvetica-Bold').fontSize(12.5).fillColor(COLOR.text).text(text, this.left);
+    this.doc.font(FONT.bold).fontSize(12.5).fillColor(COLOR.text).text(text, this.left);
     this.doc.moveDown(0.35);
   }
 
   para(text: string, opts: { color?: string; size?: number; bold?: boolean } = {}) {
     this.doc
-      .font(opts.bold ? 'Helvetica-Bold' : 'Helvetica')
+      .font(opts.bold ? FONT.bold : FONT.regular)
       .fontSize(opts.size ?? 10.5)
       .fillColor(opts.color ?? COLOR.text)
       .text(text, this.left, undefined, { width: this.width, lineGap: 2 });
@@ -125,13 +145,13 @@ class Pdf {
     for (const [label, value] of rows) {
       if (value === null || value === undefined || value === '') continue;
       const v = typeof value === 'string' ? { text: value } : value;
-      this.doc.font('Helvetica').fontSize(10.5);
+      this.doc.font(FONT.regular).fontSize(10.5);
       const h = Math.max(this.doc.heightOfString(v.text, { width: this.width - labelW }), 14);
       this.ensureSpace(h + 4);
       const y = this.doc.y;
       this.doc.fillColor(COLOR.muted).text(label, this.left, y, { width: labelW - 10 });
       this.doc
-        .font(v.bold ? 'Helvetica-Bold' : 'Helvetica')
+        .font(v.bold ? FONT.bold : FONT.regular)
         .fillColor(v.link ? COLOR.accent : (v.color ?? COLOR.text))
         .text(v.text, this.left + labelW, y, { width: this.width - labelW, link: v.link ?? undefined, underline: !!v.link, lineGap: 1.5 });
       this.doc.y = Math.max(this.doc.y, y + h) + 4;
@@ -148,8 +168,8 @@ class Pdf {
     items.forEach((it, i) => {
       const x = this.left + i * (w + gap);
       this.doc.save().roundedRect(x, y, w, 52, 4).fillColor(COLOR.soft).fill().restore();
-      this.doc.font('Helvetica').fontSize(8.5).fillColor(COLOR.muted).text(it.label, x + 10, y + 9, { width: w - 20 });
-      this.doc.font('Helvetica-Bold').fontSize(16).fillColor(COLOR.text).text(it.value, x + 10, y + 24, { width: w - 20 });
+      this.doc.font(FONT.regular).fontSize(8.5).fillColor(COLOR.muted).text(it.label, x + 10, y + 9, { width: w - 20 });
+      this.doc.font(FONT.bold).fontSize(16).fillColor(COLOR.text).text(it.value, x + 10, y + 24, { width: w - 20 });
     });
     this.doc.x = this.left;
     this.doc.y = y + 62;
@@ -168,7 +188,7 @@ class Pdf {
       this.ensureSpace(40);
       const y = this.doc.y;
       let x = this.left;
-      this.doc.font('Helvetica-Bold').fontSize(8.5).fillColor(COLOR.muted);
+      this.doc.font(FONT.bold).fontSize(8.5).fillColor(COLOR.muted);
       columns.forEach((c, i) => {
         this.doc.text(c.label.toUpperCase(), x + pad, y, { width: widths[i] - pad * 2, align: c.align ?? 'left', characterSpacing: 0.4 });
         x += widths[i];
@@ -183,7 +203,7 @@ class Pdf {
       this.doc.fontSize(9.5);
       const h = Math.max(
         ...cells.map((c, i) => {
-          this.doc.font(c.bold ? 'Helvetica-Bold' : 'Helvetica');
+          this.doc.font(c.bold ? FONT.bold : FONT.regular);
           return this.doc.heightOfString(c.text || '–', { width: widths[i] - pad * 2, lineGap: 1 });
         }),
       );
@@ -195,7 +215,7 @@ class Pdf {
       let x = this.left;
       cells.forEach((c, i) => {
         this.doc
-          .font(c.bold ? 'Helvetica-Bold' : 'Helvetica')
+          .font(c.bold ? FONT.bold : FONT.regular)
           .fontSize(9.5)
           .fillColor(c.link ? COLOR.accent : (c.color ?? COLOR.text))
           .text(c.text || '–', x + pad, y, {
@@ -222,7 +242,7 @@ class Pdf {
       return;
     }
     for (const it of items) {
-      this.doc.font('Helvetica').fontSize(10.5);
+      this.doc.font(FONT.regular).fontSize(10.5);
       const h = Math.max(this.doc.heightOfString(it.label, { width: this.width - 22 }), 13);
       this.ensureSpace(h + 6);
       const y = this.doc.y;
@@ -250,7 +270,7 @@ class Pdf {
     }
     for (const it of items) {
       const text = it.meta ? `${it.text}  ·  ${it.meta}` : it.text;
-      this.doc.font('Helvetica').fontSize(10.5);
+      this.doc.font(FONT.regular).fontSize(10.5);
       const h = this.doc.heightOfString(text, { width: this.width - 14 });
       this.ensureSpace(h + 4);
       const y = this.doc.y;
@@ -270,7 +290,7 @@ class Pdf {
       const bottom = this.doc.page.margins.bottom;
       this.doc.page.margins.bottom = 0;
       const y = this.doc.page.height - 40;
-      this.doc.font('Helvetica').fontSize(8).fillColor(COLOR.subtle);
+      this.doc.font(FONT.regular).fontSize(8).fillColor(COLOR.subtle);
       this.doc.text(`${this.agency} · ${stamp}`, this.left, y, { width: this.width / 2, lineBreak: false });
       this.doc.text(`Seite ${i - range.start + 1} von ${range.count}`, this.left + this.width / 2, y, {
         width: this.width / 2,
@@ -292,6 +312,13 @@ const agencyName = (db: Database) => getSettings(db).agency_name;
 // Monatsbericht für einen Kunden (zum Weitergeben, ohne interne Angaben)
 // ---------------------------------------------------------------------
 
+/** Datum einer Veröffentlichung in Berliner Zeit: geplantes Datum, sonst Zeitpunkt der Veröffentlichung */
+function pubDate(pu: { planned_date: string | null; published_at: string | null }): string | null {
+  if (pu.planned_date) return pu.planned_date;
+  if (!pu.published_at) return null;
+  return pu.published_at.length > 10 ? berlinDateOf(pu.published_at) : pu.published_at;
+}
+
 export async function monthlyReport(db: Database, customerId: number, month: string): Promise<{ file: string; pdf: Buffer }> {
   if (!/^\d{4}-\d{2}$/.test(month)) throw new HttpError(400, 'Monat im Format JJJJ-MM erwartet');
   const c = getCustomer(db, customerId, month);
@@ -300,19 +327,23 @@ export async function monthlyReport(db: Database, customerId: number, month: str
     `SELECT p.title, pu.platform, pu.planned_date, pu.planned_time, pu.published_at, pu.post_url, pu.status
      FROM publications pu JOIN projects p ON p.id = pu.project_id
      WHERE p.customer_id = :cid AND p.status <> 'abgebrochen'
-       AND COALESCE(pu.planned_date, substr(pu.published_at, 1, 10)) BETWEEN :start AND :end
+       AND COALESCE(pu.planned_date, substr(pu.published_at, 1, 10)) BETWEEN :from AND :to
      ORDER BY COALESCE(pu.planned_date, pu.published_at), pu.planned_time`,
-    { cid: customerId, start, end },
-  );
-  const projects = db.all<{ id: number; title: string; status: ProjectStatus; current_phase: Phase; deliverable_count: number; type: string | null; completed_at: string | null; corrections: number }>(
-    `SELECT p.id, p.title, p.status, p.current_phase, p.deliverable_count, dt.name AS type, p.completed_at,
+    // Zeitstempel sind UTC: einen Tag Puffer abfragen und unten nach Berliner Datum filtern
+    { cid: customerId, from: addDays(start, -1), to: addDays(end, 1) },
+  ).filter((pu) => {
+    const d = pubDate(pu);
+    return !!d && d >= start && d <= end;
+  });
+  const projects = db.all<{ id: number; title: string; status: ProjectStatus; current_phase: Phase; deliverable_count: number; type: string | null; completed_at: string | null; service_month: string | null; corrections: number }>(
+    `SELECT p.id, p.title, p.status, p.current_phase, p.deliverable_count, dt.name AS type, p.completed_at, p.service_month,
             (SELECT COUNT(*) FROM approval_rounds ar WHERE ar.project_id = p.id AND ar.result = 'korrektur') AS corrections
      FROM projects p LEFT JOIN deliverable_types dt ON dt.id = p.deliverable_type_id
      WHERE p.customer_id = :cid AND p.status <> 'abgebrochen'
-       AND (p.service_month = :month OR substr(p.completed_at, 1, 7) = :month)
+       AND (p.service_month = :month OR substr(p.completed_at, 1, 10) BETWEEN :from AND :to)
      ORDER BY p.completed_at IS NULL, p.completed_at, p.id`,
-    { cid: customerId, month },
-  );
+    { cid: customerId, month, from: addDays(start, -1), to: addDays(end, 1) },
+  ).filter((p) => p.service_month === month || (!!p.completed_at && berlinDateOf(p.completed_at).slice(0, 7) === month));
   const nextFrom = addDays(end, 1);
   const nextTo = addDays(end, 31);
   const upcoming = db.all<{ date: string; time: string | null; text: string }>(
@@ -326,7 +357,7 @@ export async function monthlyReport(db: Database, customerId: number, month: str
   ).map((u) => ({ ...u, text: u.text.replace(/^Veröffentlichung (\w+):/, (_m, p: Platform) => `Veröffentlichung ${PLATFORM_LABELS[p] ?? p}:`) }));
 
   const published = pubs.filter((p) => p.status === 'veroeffentlicht').length;
-  const completed = projects.filter((p) => p.completed_at && p.completed_at.slice(0, 7) === month).length;
+  const completed = projects.filter((p) => p.completed_at && berlinDateOf(p.completed_at).slice(0, 7) === month).length;
   const used = c.package_usage.items.reduce((s, i) => s + i.used, 0);
   const booked = c.package_usage.items.reduce((s, i) => s + i.quantity, 0);
 
@@ -364,7 +395,7 @@ export async function monthlyReport(db: Database, customerId: number, month: str
       { label: 'Link', width: 2.4 },
     ],
     pubs.map((p) => [
-      `${dateDe(p.planned_date ?? p.published_at?.slice(0, 10))}${p.planned_time ? `, ${p.planned_time}` : ''}`,
+      `${dateDe(pubDate(p))}${p.planned_time ? `, ${p.planned_time}` : ''}`,
       PLATFORM_LABELS[p.platform],
       p.title,
       p.post_url ? { text: p.post_url.replace(/^https?:\/\//, ''), link: p.post_url } : { text: p.status === 'veroeffentlicht' ? 'veröffentlicht' : 'geplant', color: COLOR.muted },

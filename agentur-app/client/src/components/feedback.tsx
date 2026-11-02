@@ -114,6 +114,59 @@ export function ConfirmDialog({
   );
 }
 
+export interface ConfirmOptions {
+  title: string;
+  text: ReactNode;
+  confirmLabel: string;
+  danger?: boolean;
+}
+
+const ConfirmContext = createContext<(opts: ConfirmOptions) => Promise<boolean>>(() => Promise.resolve(window.confirm('Fortfahren?')));
+
+/** Ein gemeinsamer Bestätigungsdialog für die ganze App */
+export function ConfirmProvider({ children }: { children: ReactNode }) {
+  const [state, setState] = useState<{ opts: ConfirmOptions; resolve: (ok: boolean) => void } | null>(null);
+  const confirm = useCallback((opts: ConfirmOptions) => new Promise<boolean>((resolve) => setState({ opts, resolve })), []);
+  const close = (ok: boolean) => {
+    state?.resolve(ok);
+    setState(null);
+  };
+  return (
+    <ConfirmContext.Provider value={confirm}>
+      {children}
+      <ConfirmDialog
+        open={!!state}
+        title={state?.opts.title ?? ''}
+        text={state?.opts.text ?? ''}
+        confirmLabel={state?.opts.confirmLabel ?? 'OK'}
+        danger={state?.opts.danger}
+        onConfirm={() => close(true)}
+        onCancel={() => close(false)}
+      />
+    </ConfirmContext.Provider>
+  );
+}
+
+/** Rückfrage als Promise: if (!(await confirm({...}))) return; */
+export function useConfirm() {
+  return useContext(ConfirmContext);
+}
+
+/** Rückfrage beim Verlassen der Freigabe ohne Entscheidung des Kunden */
+export function leaveApprovalOptions(to: number): ConfirmOptions {
+  return to > 4
+    ? {
+        title: 'Ohne Rückmeldung des Kunden weiter?',
+        text: 'Die offene Freigabeanfrage wird als freigegeben vermerkt und erscheint so im Freigabe-Protokoll. Hat der Kunde zugestimmt, besser im Projekt „Freigegeben“ wählen.',
+        confirmLabel: 'Als freigegeben weiter',
+      }
+    : {
+        title: 'Freigabeanfrage zurücknehmen?',
+        text: 'Die offene Anfrage wird zurückgenommen und erscheint nicht im Freigabe-Protokoll. Für Änderungswünsche des Kunden besser im Projekt „Korrektur nötig“ wählen, dann zählt die Korrekturschleife.',
+        confirmLabel: 'Zurücknehmen und verschieben',
+      };
+}
+
 // --- Allgemeiner Dialog ---
 
 export function Dialog({

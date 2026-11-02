@@ -1,6 +1,6 @@
 // Projekte und Workflow: Phasen, Checklisten mit Sperrpunkten, Drehtag, Freigaberunden, Veröffentlichungen.
 import type { Database } from '../db/database.ts';
-import { HttpError, notFound } from '../lib/http.ts';
+import { HttpError, likeContains, notFound } from '../lib/http.ts';
 import { addDays, berlinDateOf, daysBetween, monthBerlin, nowIso, todayBerlin } from '../lib/time.ts';
 import { getSettings } from './settings.ts';
 import type {
@@ -103,8 +103,8 @@ export function listProjects(db: Database, filter: ProjectFilter = {}): ProjectL
     params.status = scope;
   }
   if (filter.q?.trim()) {
-    where.push('(p.title LIKE :q OR c.company_name LIKE :q OR p.notes LIKE :q OR p.description LIKE :q)');
-    params.q = `%${filter.q.trim()}%`;
+    where.push("(p.title LIKE :q ESCAPE '\\' OR c.company_name LIKE :q ESCAPE '\\' OR p.notes LIKE :q ESCAPE '\\' OR p.description LIKE :q ESCAPE '\\')");
+    params.q = likeContains(filter.q);
   }
   const rows = db.all<RawListRow>(
     `${LIST_SELECT} WHERE ${where.map((w) => `(${w})`).join(' AND ')}
@@ -347,9 +347,10 @@ export function updateInvoice(db: Database, id: number, d: Out<typeof invoiceInp
       status: d.invoice_status,
       number: d.invoice_number,
       amount: d.invoice_amount_cents,
-      // Datum automatisch setzen, wenn der Status wechselt und kein Datum angegeben ist
-      date: d.invoice_date ?? (d.invoice_status !== 'offen' ? today : null),
-      paid: d.paid_date ?? (d.invoice_status === 'bezahlt' ? today : null),
+      // Datum automatisch setzen, wenn der Status wechselt und kein Datum angegeben ist;
+      // beim Zurücksetzen des Status gehören die Daten nicht mehr dazu
+      date: d.invoice_status === 'offen' ? null : (d.invoice_date ?? today),
+      paid: d.invoice_status === 'bezahlt' ? (d.paid_date ?? today) : null,
       now: nowIso(),
     },
   );
@@ -396,9 +397,9 @@ export function moveProject(db: Database, id: number, toPhase: Phase, reason: st
     if (toPhase > from) {
       const gate = db.get<{ label: string; phase: Phase }>(
         `SELECT label, phase FROM checklist_items
-         WHERE project_id = :id AND phase >= :from AND phase < :to AND is_gate = 1 AND is_done = 0
+         WHERE project_id = :id AND phase < :to AND is_gate = 1 AND is_done = 0
          ORDER BY phase, sort_order LIMIT 1`,
-        { id, from, to: toPhase },
+        { id, to: toPhase },
       );
       if (gate) {
         throw new HttpError(

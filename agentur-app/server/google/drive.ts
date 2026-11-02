@@ -113,12 +113,28 @@ export class DriveService {
     });
   }
 
-  /** Unterordner suchen und nur anlegen, wenn es ihn noch nicht gibt (verhindert Doppelungen) */
-  private async ensureChild(parentId: string, name: string): Promise<GFile> {
-    const existing = await this.list(
-      `'${q(parentId)}' in parents and name = '${q(name)}' and mimeType = '${FOLDER_MIME}' and trashed = false`,
+  /**
+   * Unterordner suchen und nur anlegen, wenn es ihn noch nicht gibt (verhindert Doppelungen).
+   * Mit owner: ein Ordner, der schon einem anderen Kunden oder Projekt gehört, wird nicht mitbenutzt
+   * (z. B. zwei Kunden gleichen Namens); dann entsteht "Name (2)".
+   */
+  private async ensureChild(parentId: string, name: string, owner?: { customerId: number; projectId: number | null }): Promise<GFile> {
+    for (let n = 1; n < 50; n++) {
+      const candidate = n === 1 ? name : `${name} (${n})`;
+      const found = await this.list(`'${q(parentId)}' in parents and name = '${q(candidate)}' and mimeType = '${FOLDER_MIME}' and trashed = false`);
+      const free = owner ? found.filter((f) => !this.usedElsewhere(f.id, owner.customerId, owner.projectId)) : found;
+      if (free[0]) return free[0];
+      if (!found.length) return this.createFolder(candidate, parentId);
+      // Der Name gehört schon einem anderen Kunden oder Projekt: mit dem nächsten Zusatz weiter
+    }
+    return this.createFolder(`${name} (${Date.now()})`, parentId);
+  }
+
+  private usedElsewhere(folderId: string, customerId: number, projectId: number | null): boolean {
+    return !!this.db.get(
+      `SELECT 1 FROM drive_folders WHERE google_folder_id = :f AND NOT (customer_id = :c AND COALESCE(project_id, 0) = :p)`,
+      { f: folderId, c: customerId, p: projectId ?? 0 },
     );
-    return existing[0] ?? (await this.createFolder(name, parentId));
   }
 
   // ---------------------------------------------------------------------
@@ -199,7 +215,7 @@ export class DriveService {
       this.db.run('DELETE FROM drive_folders WHERE customer_id = ? AND project_id IS NULL', [customerId]);
     }
     const root = await this.ensureRoot();
-    const folder = await this.ensureChild(root, c.company_name);
+    const folder = await this.ensureChild(root, c.company_name, { customerId, projectId: null });
     for (const sub of getSettings(this.db).drive_customer_subfolders) await this.ensureChild(folder.id, sub);
     this.saveMapping(customerId, null, 'kunde', folder, 'angelegt');
     events.changed('customers', customerId);
@@ -221,21 +237,33 @@ export class DriveService {
 
   async ensureProjectFolders(projectId: number): Promise<void> {
     const p = this.project(projectId);
+    const owner = { customerId: p.customer_id, projectId };
     const existing = this.mapping(p.customer_id, projectId, 'projekt');
-    if (existing && (await this.getFile(existing.google_folder_id))) return;
-    if (!this.mapping(p.customer_id, null, 'kunde')) {
-      throw new Error('Für diesen Kunden gibt es noch keinen Drive-Ordner. Bitte auf der Kundenseite anlegen oder verknüpfen.');
+    let folder = existing ? await this.getFile(existing.google_folder_id) : null;
+    if (!folder) {
+      if (!this.mapping(p.customer_id, null, 'kunde')) {
+        throw new Error('Für diesen Kunden gibt es noch keinen Drive-Ordner. Bitte auf der Kundenseite anlegen oder verknüpfen.');
+      }
+      // Kundenordner prüfen (gelöscht oder im Papierkorb: neu anlegen bzw. Hinweis bei verknüpften Ordnern)
+      await this.ensureCustomerFolder(p.customer_id);
+      const year = Number(p.service_month.slice(0, 4)) || berlinParts().year;
+      const yearFolder = await this.ensureYearFolder(p.customer_id, year);
+      folder = await this.ensureChild(yearFolder.id, `${p.service_month} ${p.title}`, owner);
+      this.saveMapping(p.customer_id, projectId, 'projekt', folder, 'angelegt');
     }
-    const year = Number(p.service_month.slice(0, 4)) || berlinParts().year;
-    const yearFolder = await this.ensureYearFolder(p.customer_id, year);
-    const folder = await this.ensureChild(yearFolder.id, `${p.service_month} ${p.title}`);
-    this.saveMapping(p.customer_id, projectId, 'projekt', folder, 'angelegt');
+    // Verknüpfte Ordner bleiben, wie sie sind
+    if (existing?.origin === 'verknuepft' && folder.id === existing.google_folder_id) return;
+    // Unterordner auch dann ergänzen, wenn ein früherer Versuch mittendrin abgebrochen ist
     const names = getSettings(this.db).drive_subfolders;
+    let changed = !existing;
     for (const [i, role] of PROJECT_ROLES.entries()) {
-      const sub = await this.ensureChild(folder.id, names[i]);
+      const m = this.mapping(p.customer_id, projectId, role);
+      if (m && (await this.getFile(m.google_folder_id))) continue;
+      const sub = await this.ensureChild(folder.id, names[i], owner);
       this.saveMapping(p.customer_id, projectId, role, sub, 'angelegt');
+      changed = true;
     }
-    events.changed('projects', projectId);
+    if (changed) events.changed('projects', projectId);
   }
 
   // ---------------------------------------------------------------------

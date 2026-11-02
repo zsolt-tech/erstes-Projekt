@@ -11,9 +11,12 @@ import { createServices, type Services } from './google/index.ts';
 const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '::1']);
 const stripBrackets = (host: string) => host.replace(/^\[|\]$/g, '');
 
-function isLocalOrigin(origin: string): boolean {
+/** Eigene Oberfläche: localhost mit dem Port der App oder dem Entwicklungsserver (Vite, 5173) */
+function isOwnOrigin(origin: string, appPort: number): boolean {
   try {
-    return LOCAL_HOSTS.has(stripBrackets(new URL(origin).hostname));
+    const u = new URL(origin);
+    const port = Number(u.port || (u.protocol === 'https:' ? 443 : 80));
+    return LOCAL_HOSTS.has(stripBrackets(u.hostname)) && (port === appPort || port === 5173);
   } catch {
     return false;
   }
@@ -32,7 +35,7 @@ export function createApp(db: Database, config: AppConfig, services: Services = 
   app.use((req, res, next) => {
     if (req.method === 'GET' || req.method === 'HEAD' || req.method === 'OPTIONS') return next();
     const origin = req.headers.origin;
-    const crossSite = req.headers['sec-fetch-site'] === 'cross-site' || (origin !== undefined && !isLocalOrigin(origin));
+    const crossSite = req.headers['sec-fetch-site'] === 'cross-site' || (origin !== undefined && !isOwnOrigin(origin, config.port));
     if (crossSite) return res.status(403).json({ error: 'Aufruf von einer fremden Webseite abgelehnt' });
     next();
   });

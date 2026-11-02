@@ -57,12 +57,12 @@ export class BriefingService {
       `SELECT 'Aufgabe: ' || t.title AS title, c.company_name AS customer, t.due_date,
               CASE WHEN t.project_id IS NOT NULL THEN '/projekte/' || t.project_id ELSE '/aufgaben' END AS url
        FROM tasks t LEFT JOIN customers c ON c.id = t.customer_id
-       WHERE t.status <> 'erledigt' AND t.due_date <= :date
+       WHERE t.status <> 'erledigt' AND t.due_date <= :date AND c.archived_at IS NULL
        UNION ALL
        SELECT p.current_phase || '|' || p.title, c.company_name, ph.due_date, '/projekte/' || p.id
        FROM projects p JOIN customers c ON c.id = p.customer_id
        JOIN project_phases ph ON ph.project_id = p.id AND ph.phase = p.current_phase
-       WHERE p.status = 'aktiv' AND p.current_phase > 1 AND ph.due_date <= :date
+       WHERE p.status = 'aktiv' AND p.current_phase > 1 AND ph.due_date <= :date AND c.archived_at IS NULL
        ORDER BY 3`,
       { date },
     ).map((r) => {
@@ -80,7 +80,7 @@ export class BriefingService {
         `SELECT p.id AS project_id, p.title, c.company_name AS customer, ar.requested_at,
                 COALESCE(p.approval_reminder_days, c.approval_reminder_days) AS days
          FROM approval_rounds ar JOIN projects p ON p.id = ar.project_id JOIN customers c ON c.id = p.customer_id
-         WHERE ar.responded_at IS NULL AND p.current_phase = 4 AND p.status = 'aktiv'`,
+         WHERE ar.responded_at IS NULL AND p.current_phase = 4 AND p.status = 'aktiv' AND c.archived_at IS NULL`,
       )
       .map((a) => {
         const waiting = daysBetween(berlinDateOf(a.requested_at), date);
@@ -99,7 +99,7 @@ export class BriefingService {
       .all<{ project_id: number; title: string; customer: string; shoot_date: string; start_time: string | null; location: string | null }>(
         `SELECT p.id AS project_id, p.title, c.company_name AS customer, s.shoot_date, s.start_time, s.location
          FROM shoots s JOIN projects p ON p.id = s.project_id JOIN customers c ON c.id = p.customer_id
-         WHERE p.status IN ('aktiv','pausiert') AND s.shoot_date > :date AND s.shoot_date <= :to
+         WHERE p.status IN ('aktiv','pausiert') AND s.shoot_date > :date AND s.shoot_date <= :to AND c.archived_at IS NULL
          ORDER BY s.shoot_date, s.start_time`,
         { date, to: addDays(date, 7) },
       )
@@ -250,7 +250,8 @@ ${parts.join('\n')}
 
   isDue(now = new Date()): boolean {
     const time = getSettings(this.db).briefing_time;
-    return timeBerlin(now) >= time && !this.db.get('SELECT 1 FROM briefings WHERE briefing_date = ?', [todayBerlin(now)]);
+    // Ein nur zur Ansicht erzeugtes Briefing (ohne Versand) ersetzt nicht das tägliche
+    return timeBerlin(now) >= time && !this.db.get('SELECT 1 FROM briefings WHERE briefing_date = ? AND notified_at IS NOT NULL', [todayBerlin(now)]);
   }
 
   /** Erzeugt (oder ersetzt) das Briefing des Tages, benachrichtigt und versendet es */
@@ -303,7 +304,7 @@ ${parts.join('\n')}
       `SELECT ar.id, ar.project_id, ar.round_no, p.title, c.company_name AS customer, c.id AS customer_id, ar.requested_at,
               ar.last_reminder_at, ar.reminder_count, COALESCE(p.approval_reminder_days, c.approval_reminder_days) AS days
        FROM approval_rounds ar JOIN projects p ON p.id = ar.project_id JOIN customers c ON c.id = p.customer_id
-       WHERE ar.responded_at IS NULL AND p.current_phase = 4 AND p.status = 'aktiv'`,
+       WHERE ar.responded_at IS NULL AND p.current_phase = 4 AND p.status = 'aktiv' AND c.archived_at IS NULL`,
     );
     let sent = 0;
     for (const r of rounds) {
@@ -322,7 +323,8 @@ ${parts.join('\n')}
         title,
         body,
         link: `/projekte/${r.project_id}`,
-        dedupeKey: `freigabe:${r.id}:${r.reminder_count + 1}`,
+        // requested_at gehört dazu: Runden-IDs können nach dem Zurücknehmen einer Anfrage neu vergeben werden
+        dedupeKey: `freigabe:${r.id}:${r.requested_at}:${r.reminder_count + 1}`,
         desktop: true,
       });
       this.db.run('UPDATE approval_rounds SET last_reminder_at = ?, reminder_count = reminder_count + 1 WHERE id = ?', [nowIso(), r.id]);

@@ -5,7 +5,7 @@ import { FileText, Plus, RefreshCw, Send } from 'lucide-react';
 import { useCustomers, useSettings } from '../api/hooks';
 import { useProjects, useTasks } from '../api/projects';
 import { useBriefingToday, useGenerateBriefing } from '../api/briefing';
-import { Badge, Button, Card, PageHeader, ProgressBar, Spinner, cx } from '../components/ui';
+import { Badge, Button, Card, ErrorBox, PageHeader, ProgressBar, Spinner, cx } from '../components/ui';
 import { useToast } from '../components/feedback';
 import { formatDate, formatDateTime, formatLongDate, formatMonth, today } from '../lib/format';
 import type { BriefingData } from '../../../shared/schemas';
@@ -172,7 +172,7 @@ export function StartPage() {
   const { data: customers = [] } = useCustomers({});
   const { data: projects = [] } = useProjects({ scope: 'offen' });
   const { data: tasks = [] } = useTasks({ status: 'offen' });
-  const { data: briefing, isLoading } = useBriefingToday();
+  const { data: briefing, isLoading, error: briefingError, refetch, isFetching } = useBriefingToday();
   const generate = useGenerateBriefing();
   const toast = useToast();
   const navigate = useNavigate();
@@ -186,7 +186,7 @@ export function StartPage() {
   async function run(deliver: boolean) {
     try {
       const b = await generate.mutateAsync(deliver);
-      toast.success(!deliver ? 'Briefing aktualisiert' : b.emailed_at ? 'Briefing erzeugt, Benachrichtigung und E-Mail verschickt' : 'Briefing erzeugt und als Benachrichtigung verschickt');
+      toast.success(b.emailed_at ? 'Briefing erzeugt, Benachrichtigung und E-Mail verschickt' : 'Briefing erzeugt und als Benachrichtigung verschickt');
     } catch (err) {
       toast.error(err);
     }
@@ -215,15 +215,15 @@ export function StartPage() {
           <span>
             Tägliches Briefing
             <span className="ml-2 text-xs font-normal text-muted">
-              {briefing?.briefing
-                ? `aktueller Stand, verschickt ${formatDateTime(briefing.briefing.generated_at)}`
+              {briefing?.briefing?.notified_at
+                ? `aktueller Stand, verschickt ${formatDateTime(briefing.briefing.notified_at)}`
                 : `aktueller Stand, verschickt wird um ${settings?.briefing_time ?? '09:00'} Uhr`}
             </span>
           </span>
         }
         actions={
           <>
-            <Button size="sm" variant="ghost" icon={<RefreshCw className="size-4" />} loading={generate.isPending && generate.variables === false} onClick={() => run(false)}>
+            <Button size="sm" variant="ghost" icon={<RefreshCw className="size-4" />} loading={isFetching && !isLoading} onClick={() => void refetch()}>
               Aktualisieren
             </Button>
             <Button size="sm" variant="ghost" icon={<Send className="size-4" />} loading={generate.isPending && generate.variables === true} onClick={() => run(true)}>
@@ -235,7 +235,7 @@ export function StartPage() {
           </>
         }
       >
-        {isLoading || !data ? <Spinner /> : <BriefingView data={data} />}
+        {briefingError && !data ? <ErrorBox error={briefingError} /> : isLoading || !data ? <Spinner /> : <BriefingView data={data} />}
       </Card>
     </>
   );

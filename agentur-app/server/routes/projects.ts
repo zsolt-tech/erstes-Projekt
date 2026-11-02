@@ -3,7 +3,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import type { Database } from '../db/database.ts';
 import { events } from '../lib/events.ts';
-import { handle, HttpError, parse, parseId } from '../lib/http.ts';
+import { handle, HttpError, parse, parseId, queryString } from '../lib/http.ts';
 import * as projects from '../services/projects.ts';
 import * as tasks from '../services/tasks.ts';
 import type { Services } from '../google/index.ts';
@@ -51,7 +51,7 @@ export function projectRouter(db: Database, services: Services): Router {
       return projects.listProjects(db, {
         customer_id: optionalId(req.query.customer_id),
         scope: scope as projects.ProjectFilter['scope'],
-        q: (req.query.q as string) || undefined,
+        q: queryString(req.query.q),
       });
     }),
   );

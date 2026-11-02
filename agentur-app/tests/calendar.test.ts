@@ -197,3 +197,56 @@ test('Abgebrochenes Projekt: Drehtag verschwindet aus Google', async () => {
   await sync();
   assert.ok(!g.calendar.find((e) => e.summary === 'Drehtag: Pizzeria Roma – Reels November' && e.status !== 'cancelled'));
 });
+
+test('Tagesgrenzen in Berliner Zeit, Termine anderer Installationen, App-Stand gewinnt', async () => {
+  await t.request('PUT', '/api/calendar/settings', { write_id: 'inhaber@beispiel.de', read_ids: ['inhaber@beispiel.de'], push_approvals: false, push_publications: false });
+  g.calendar.addExternal('Nachttermin', { dateTime: '2026-11-12T00:30:00+01:00' }, { dateTime: '2026-11-12T01:30:00+01:00' });
+  g.calendar.addExternal('Ganztags', { date: '2026-11-12' }, { date: '2026-11-13' });
+
+  // Termin einer anderen Installation (z. B. alte Datenbank auf einem anderen Rechner)
+  const token = await t.services.google.accessToken();
+  const foreign = await fetch(`${g.base}/calendar/v3/calendars/primary/events`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      summary: 'Drehtag: Alte Installation',
+      start: { dateTime: '2026-11-20T10:00:00', timeZone: 'Europe/Berlin' },
+      end: { dateTime: '2026-11-20T12:00:00', timeZone: 'Europe/Berlin' },
+      extendedProperties: { private: { agenturApp: '1', agenturInstall: 'andere', linkedType: 'shoot', linkedId: '999' } },
+    }),
+  }).then((r) => r.json() as Promise<{ id: string }>);
+  await sync();
+  const titles = async (start: string, end: string) =>
+    (await t.request('GET', `/api/calendar/items?start=${start}&end=${end}`)).body.map((i: any) => i.title);
+  assert.ok(!(await titles('2026-11-11', '2026-11-12')).includes('Nachttermin'), '00:30 Uhr gehört nicht zum Vortag');
+  assert.ok(!(await titles('2026-11-11', '2026-11-12')).includes('Ganztags'));
+  assert.deepEqual((await titles('2026-11-12', '2026-11-13')).filter((x: string) => ['Nachttermin', 'Ganztags'].includes(x)).sort(), ['Ganztags', 'Nachttermin']);
+  assert.equal(g.calendar.find((e) => e.id === foreign.id)!.status, 'confirmed', 'fremder App-Termin nicht gelöscht');
+  assert.ok((await titles('2026-11-20', '2026-11-21')).includes('Drehtag: Alte Installation'), 'als fremder Termin sichtbar');
+
+  // Drehtag in Google verschoben, danach in der App unverändert gespeichert: App-Stand gewinnt und landet in Google
+  const p = (await t.request('POST', '/api/projects', { customer_id: customerId, title: 'Gewinner', shoot_date: '2026-11-25', start_time: '09:00', end_time: '11:00' })).body;
+  await sync();
+  const ev = g.calendar.find((e) => e.extendedProperties?.private?.linkedId === String(p.id) && e.status !== 'cancelled')!;
+  g.calendar.change(ev.id, { start: { dateTime: '2026-11-26T09:00:00+01:00' }, end: { dateTime: '2026-11-26T11:00:00+01:00' } });
+  // Der Testserver stempelt Änderungen leicht in der Zukunft: warten, bis die App-Änderung sicher jünger ist
+  await new Promise((r) => setTimeout(r, Math.max(5, Date.parse(g.calendar.find((e) => e.id === ev.id)!.updated) - Date.now() + 20)));
+  await t.request('PUT', `/api/projects/${p.id}/shoot`, { shoot_date: '2026-11-25', start_time: '09:00', end_time: '11:00', location: null });
+  await sync();
+  assert.equal(g.calendar.find((e) => e.id === ev.id)!.start.dateTime, '2026-11-25T09:00:00', 'Google zeigt wieder den App-Stand');
+  const shoot = (await t.request('GET', `/api/projects/${p.id}`)).body.shoot;
+  assert.equal(shoot.shoot_date, '2026-11-25');
+});
+
+test('„Jetzt abgleichen“ wartet nicht auf die Pause nach Fehlversuchen', async () => {
+  t.db.run("UPDATE sync_jobs SET status = 'fertig' WHERE status = 'wartend'");
+  t.db.run("INSERT INTO sync_jobs (job_type, payload_json, attempts, run_after) VALUES ('calendar.sync', ?, 5, ?)", [
+    JSON.stringify({ label: 'Kalender abgleichen' }),
+    new Date(Date.now() + 6 * 3600000).toISOString(),
+  ]);
+  const before = t.db.get<{ n: string }>("SELECT value_json AS n FROM settings WHERE key = 'calendar_last_sync'")?.n;
+  await new Promise((r) => setTimeout(r, 5));
+  await sync();
+  const after = t.db.get<{ n: string }>("SELECT value_json AS n FROM settings WHERE key = 'calendar_last_sync'")?.n;
+  assert.notEqual(after, before, 'Abgleich lief sofort');
+});

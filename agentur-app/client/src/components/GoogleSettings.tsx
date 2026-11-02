@@ -157,12 +157,13 @@ function FolderSettings() {
   const [customerSubs, setCustomerSubs] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  const driveKey = JSON.stringify(settings ? [settings.drive_root_folder, settings.drive_subfolders, settings.drive_customer_subfolders] : null);
   useEffect(() => {
     if (!settings) return;
     setRoot(settings.drive_root_folder);
     setSubs(settings.drive_subfolders);
     setCustomerSubs(settings.drive_customer_subfolders.join(', '));
-  }, [settings]);
+  }, [driveKey]);
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -255,13 +256,17 @@ function CalendarSettingsForm() {
   const [approvals, setApprovals] = useState(false);
   const [publications, setPublications] = useState(false);
 
+  // Nicht bei jedem Abgleich (last_sync_at) neu befüllen, nur wenn sich die Auswahl auf dem Server ändert
+  const calendarKey = JSON.stringify(
+    data ? [data.write_id, data.calendars.filter((c) => c.read_enabled).map((c) => c.id), data.push_approvals, data.push_publications] : null,
+  );
   useEffect(() => {
     if (!data) return;
     setWriteId(data.write_id);
     setReadIds(data.calendars.filter((c) => c.read_enabled).map((c) => c.id));
     setApprovals(data.push_approvals);
     setPublications(data.push_publications);
-  }, [data]);
+  }, [calendarKey]);
 
   if (!google?.connected) return <p className="text-sm text-muted">Nach dem Verbinden mit Google kannst du hier die Kalender auswählen.</p>;
   if (isLoading || !data) return <Spinner />;

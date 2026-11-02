@@ -32,7 +32,7 @@ interface FormState {
   location: string;
   description: string;
   notes: string;
-  status: 'aktiv' | 'pausiert' | 'abgebrochen';
+  status: 'aktiv' | 'pausiert' | 'abgebrochen' | 'abgeschlossen';
   approval_reminder_days: string;
 }
 
@@ -64,7 +64,7 @@ function fromProject(p: ProjectDetail): FormState {
     priority: p.priority,
     description: p.description ?? '',
     notes: p.notes ?? '',
-    status: p.status === 'abgeschlossen' ? 'aktiv' : p.status,
+    status: p.status,
     approval_reminder_days: p.approval_reminder_days ? String(p.approval_reminder_days) : '',
   };
 }
@@ -154,7 +154,8 @@ export function ProjectFormPage() {
           deliverable_count: form.deliverable_count === '' ? NaN : count,
           service_month: form.service_month,
           priority: form.priority,
-          status: form.status,
+          // Abgeschlossene Projekte bleiben abgeschlossen, solange der Status nicht ausdrücklich geändert wird
+          ...(form.status !== 'abgeschlossen' ? { status: form.status } : {}),
           approval_reminder_days: form.approval_reminder_days ? Number(form.approval_reminder_days) : null,
           notes: form.notes,
         });
@@ -282,8 +283,9 @@ export function ProjectFormPage() {
               </Select>
             </Field>
             {isEdit && (
-              <Field label="Status" hint={project?.status === 'abgeschlossen' ? 'Speichern öffnet das abgeschlossene Projekt wieder' : undefined}>
+              <Field label="Status" hint={project?.status === 'abgeschlossen' ? 'Ein anderer Status öffnet das abgeschlossene Projekt wieder.' : undefined}>
                 <Select value={form.status} onChange={(e) => update('status', e.target.value as FormState['status'])}>
+                  {project?.status === 'abgeschlossen' && <option value="abgeschlossen">Abgeschlossen</option>}
                   <option value="aktiv">Aktiv</option>
                   <option value="pausiert">Pausiert</option>
                   <option value="abgebrochen">Abgebrochen (zählt nicht mehr für das Paket)</option>

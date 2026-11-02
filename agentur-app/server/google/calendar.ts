@@ -10,7 +10,7 @@ import type { Database } from '../db/database.ts';
 import type { AppConfig } from '../env.ts';
 import { HttpError } from '../lib/http.ts';
 import { events } from '../lib/events.ts';
-import { addDays, berlinParts, nowIso, todayBerlin, TIME_ZONE } from '../lib/time.ts';
+import { addDays, berlinMidnightIso, berlinParts, nowIso, todayBerlin, TIME_ZONE } from '../lib/time.ts';
 import { getSetting, getSettings, setSetting } from '../services/settings.ts';
 import { GoogleApiError, type GoogleClient } from './client.ts';
 import type { SyncQueue } from './queue.ts';
@@ -63,6 +63,9 @@ interface GEvent {
 interface EventRow {
   id: number;
   start_at: string | null;
+  end_at: string | null;
+  all_day: number;
+  location: string | null;
   google_calendar_id: string;
   google_event_id: string;
   source: 'google' | 'app';
@@ -78,6 +81,10 @@ interface EventRow {
 // Google-Kalenderfarben passend zur App: Drehtag blau, Freigabe violett, Veröffentlichung grün
 const GOOGLE_COLOR: Record<LinkedType, string> = { shoot: '9', approval: '3', publication: '10' };
 const DAY_MS = 86400000;
+/** Angezeigte Dauer eines Drehtags ohne Endzeit */
+const SHOOT_DEFAULT_MINUTES = 120;
+/** Markierung: in Google gelöschten Termin auf Wunsch wieder eintragen */
+const RESTORE = 'wiederherstellen';
 
 const pad = (n: number) => String(n).padStart(2, '0');
 
@@ -92,6 +99,12 @@ function addMinutesLocal(local: string, minutes: number): string {
 function toBerlinLocal(dateTime: string): string {
   const p = berlinParts(new Date(dateTime));
   return `${p.year}-${pad(p.month)}-${pad(p.day)}T${pad(p.hour)}:${pad(p.minute)}`;
+}
+
+/** Gleiches Datum, gleiche Uhrzeit und gleicher Ort wie zuletzt in Google */
+function sameSlot(row: { start_at: string | null; end_at: string | null; all_day: number; location: string | null }, d: Omit<Desired, 'hash'>): boolean {
+  const local = (v: string | null) => (v && !row.all_day && v.length > 16 ? toBerlinLocal(v) : v);
+  return !!row.all_day === d.all_day && local(row.start_at) === d.start && local(row.end_at) === d.end && (row.location ?? '') === (d.location ?? '');
 }
 
 function hashOf(d: Omit<Desired, 'hash'>): string {
@@ -119,6 +132,16 @@ export class CalendarService {
   // Einstellungen
   // ---------------------------------------------------------------------
 
+  /** Kennung dieser Installation: Termine einer anderen Installation (anderer Rechner, neue Datenbank) werden nie übernommen */
+  private installationId(): string {
+    let id = getSetting<string | null>(this.db, 'installation_id', null);
+    if (!id) {
+      id = crypto.randomUUID();
+      setSetting(this.db, 'installation_id', id);
+    }
+    return id;
+  }
+
   private writeId(): string {
     return getSetting<string>(this.db, 'calendar_write_id', 'primary');
   }
@@ -138,9 +161,19 @@ export class CalendarService {
 
   /** Kalenderliste von Google holen und lokal merken; der Hauptkalender wird beim ersten Mal gelesen */
   async refreshCalendarList(): Promise<void> {
-    const res = await this.google.request<{
-      items: { id: string; summary: string; primary?: boolean; accessRole: string; backgroundColor?: string; summaryOverride?: string }[];
-    }>('GET', '/calendar/v3/users/me/calendarList', { query: { maxResults: '250' } });
+    type Entry = { id: string; summary: string; primary?: boolean; accessRole: string; backgroundColor?: string; summaryOverride?: string };
+    const items: Entry[] = [];
+    let pageToken: string | undefined;
+    for (let guard = 0; guard < 20; guard++) {
+      // Auch in Google ausgeblendete Kalender, sonst verschwinden sie samt Terminen aus der App
+      const query: Record<string, string> = { maxResults: '250', showHidden: 'true' };
+      if (pageToken) query.pageToken = pageToken;
+      const page = await this.google.request<{ items?: Entry[]; nextPageToken?: string }>('GET', '/calendar/v3/users/me/calendarList', { query });
+      items.push(...(page.items ?? []));
+      if (!page.nextPageToken) break;
+      pageToken = page.nextPageToken;
+    }
+    const res = { items };
     const primary = res.items.find((c) => c.primary);
     this.db.transaction(() => {
       for (const c of res.items) {
@@ -162,6 +195,19 @@ export class CalendarService {
       // "primary" durch die echte Kennung ersetzen, damit Einträge eindeutig zugeordnet sind
       if (primary && this.writeId() === 'primary') setSetting(this.db, 'calendar_write_id', primary.id);
     });
+  }
+
+  /** Neues Google-Konto: Kalenderliste, Sync-Stand und Zuordnungen des alten Kontos verwerfen */
+  resetForAccountChange(): void {
+    this.db.transaction(() => {
+      this.db.run('DELETE FROM calendar_events');
+      this.db.run('DELETE FROM calendar_sync_state');
+      setSetting(this.db, 'calendar_write_id', 'primary');
+      setSetting(this.db, 'calendar_last_sync', null);
+      setSetting(this.db, 'calendar_last_error', null);
+      setSetting(this.db, 'drive_root_folder_ref', null);
+    });
+    events.changed('calendar');
   }
 
   settings(): CalendarSettings {
@@ -195,6 +241,7 @@ export class CalendarService {
     if (known.access_role !== 'owner' && known.access_role !== 'writer') {
       throw new HttpError(400, 'In diesen Kalender darf die App nicht schreiben. Bitte einen eigenen Kalender wählen.');
     }
+    const before = new Set(this.readIds());
     this.db.transaction(() => {
       setSetting(this.db, 'calendar_write_id', data.write_id);
       setSetting(this.db, 'calendar_push_approvals', data.push_approvals);
@@ -206,7 +253,13 @@ export class CalendarService {
         `DELETE FROM calendar_events WHERE source = 'google' AND google_calendar_id IN
            (SELECT google_calendar_id FROM calendar_sync_state WHERE read_enabled = 0)`,
       );
-      this.db.run('UPDATE calendar_sync_state SET sync_token = NULL WHERE read_enabled = 0');
+      // Lesen ein- oder ausgeschaltet: vollständig neu laden, sonst fehlen Termine aus der Zeit dazwischen
+      const after = new Set(data.read_ids);
+      for (const r of this.db.all<{ google_calendar_id: string }>('SELECT google_calendar_id FROM calendar_sync_state')) {
+        if (before.has(r.google_calendar_id) !== after.has(r.google_calendar_id)) {
+          this.db.run('UPDATE calendar_sync_state SET sync_token = NULL WHERE google_calendar_id = ?', [r.google_calendar_id]);
+        }
+      }
     });
     this.requestSync(0);
     return this.settings();
@@ -222,7 +275,7 @@ export class CalendarService {
     if (this.syncTimer) clearTimeout(this.syncTimer);
     this.syncTimer = setTimeout(() => {
       this.syncTimer = null;
-      this.queue.enqueue('calendar.sync', { label: 'Kalender abgleichen' });
+      this.queue.enqueue('calendar.sync', { label: 'Kalender abgleichen' }, { now: true });
     }, delayMs);
     this.syncTimer.unref?.();
   }
@@ -233,11 +286,28 @@ export class CalendarService {
       if (!this.db.get('SELECT 1 FROM calendar_sync_state LIMIT 1') || this.writeId() === 'primary') {
         await this.refreshCalendarList();
       }
-      const calendars = new Set([...this.readIds(), this.writeId()]);
-      for (const id of calendars) await this.pull(id);
+      const writeId = this.writeId();
+      const calendars = new Set([...this.readIds(), writeId]);
+      const problems: string[] = [];
+      for (const id of calendars) {
+        try {
+          await this.pull(id);
+        } catch (err) {
+          // Ein nicht mehr erreichbarer Lesekalender (z. B. Freigabe entzogen) darf den Abgleich nicht aufhalten
+          if (id === writeId || !(err instanceof GoogleApiError) || err.status === 0 || err.status === 429 || err.status >= 500) throw err;
+          const name = this.db.get<{ name: string }>('SELECT name FROM calendar_sync_state WHERE google_calendar_id = ?', [id])?.name ?? id;
+          if (err.status === 404 || err.status === 403) {
+            this.db.run('UPDATE calendar_sync_state SET read_enabled = 0, sync_token = NULL WHERE google_calendar_id = ?', [id]);
+            this.db.run("DELETE FROM calendar_events WHERE google_calendar_id = ? AND source = 'google'", [id]);
+            problems.push(`Kalender „${name}“ ist nicht mehr erreichbar und wird nicht mehr gelesen.`);
+          } else {
+            problems.push(`Kalender „${name}“: ${err.message}`);
+          }
+        }
+      }
       await this.push();
       setSetting(this.db, 'calendar_last_sync', nowIso());
-      setSetting(this.db, 'calendar_last_error', null);
+      setSetting(this.db, 'calendar_last_error', problems.length ? problems.join(' ') : null);
     } catch (err) {
       setSetting(this.db, 'calendar_last_error', err instanceof Error ? err.message : String(err));
       throw err;
@@ -375,7 +445,9 @@ export class CalendarService {
       start: time(d.start),
       end: time(d.end),
       colorId: d.color,
-      extendedProperties: { private: { agenturApp: '1', linkedType: d.linked_type, linkedId: String(d.linked_id) } },
+      extendedProperties: {
+        private: { agenturApp: '1', agenturInstall: this.installationId(), linkedType: d.linked_type, linkedId: String(d.linked_id) },
+      },
     };
   }
 
@@ -421,6 +493,22 @@ export class CalendarService {
     }
   }
 
+  /** Eintrag gibt es noch, aber sein Datum liegt vor der Abgleichsgrenze */
+  private movedBeforeCutoff(row: EventRow, cutoff: string): boolean {
+    if (row.linked_type === 'shoot') {
+      const s = this.db.get<{ shoot_date: string | null }>(
+        "SELECT s.shoot_date FROM shoots s JOIN projects p ON p.id = s.project_id WHERE s.project_id = ? AND p.status <> 'abgebrochen'",
+        [row.linked_id],
+      );
+      return !!s?.shoot_date && s.shoot_date < cutoff;
+    }
+    if (row.linked_type === 'publication') {
+      const pu = this.db.get<{ planned_date: string | null }>('SELECT planned_date FROM publications WHERE id = ?', [row.linked_id]);
+      return !!pu?.planned_date && pu.planned_date < cutoff;
+    }
+    return false;
+  }
+
   private async insertEvent(calendarId: string, d: Desired): Promise<GEvent> {
     return this.google.request<GEvent>('POST', `/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`, { body: this.toGoogle(d) });
   }
@@ -460,8 +548,9 @@ export class CalendarService {
         continue;
       }
       if (row.status === 'cancelled') {
-        // In Google gelöscht: nur neu anlegen, wenn sich in der App seitdem etwas geändert hat
-        if (row.content_hash === d.hash) continue;
+        // In Google gelöscht: nur neu anlegen, wenn sich Datum, Uhrzeit oder Ort in der App geändert haben
+        // (nicht bei einer Umbenennung des Kunden oder geänderter Shotlist)
+        if (row.content_hash !== RESTORE && (row.content_hash === d.hash || sameSlot(row, d))) continue;
         this.saveAppRow(writeId, await this.insertEvent(writeId, d), d, row.id);
         stats.created++;
         continue;
@@ -486,6 +575,7 @@ export class CalendarService {
     const cutoff = this.cutoff();
     for (const row of byKey.values()) {
       if (row.start_at && row.start_at.slice(0, 10) < cutoff) continue; // Vergangenes bleibt stehen
+      if (this.movedBeforeCutoff(row, cutoff)) continue; // in die Vergangenheit verschoben: ebenfalls stehen lassen
       if (row.status !== 'cancelled') await this.deleteEvent(row.google_calendar_id, row.google_event_id);
       this.db.run('DELETE FROM calendar_events WHERE id = ?', [row.id]);
       stats.deleted++;
@@ -504,7 +594,8 @@ export class CalendarService {
     let pageToken: string | undefined;
     let changed = 0;
     for (let guard = 0; guard < 100; guard++) {
-      const query: Record<string, string> = { singleEvents: 'true', showDeleted: 'true', maxResults: '250' };
+      // Nur normale Termine und Abwesenheiten, keine Arbeitsorte („Büro“, „Homeoffice“) oder Geburtstage
+      const query: Record<string, string | string[]> = { singleEvents: 'true', showDeleted: 'true', maxResults: '250', eventTypes: ['default', 'outOfOffice'] };
       if (pageToken) query.pageToken = pageToken;
       if (syncToken) query.syncToken = syncToken;
       else query.timeMin = new Date(Date.now() - 60 * DAY_MS).toISOString();
@@ -529,7 +620,7 @@ export class CalendarService {
         continue;
       }
       this.db.run(
-        `INSERT INTO calendar_sync_state (google_calendar_id, name, sync_token, last_sync_at) VALUES (:id, :id, :token, :now)
+        `INSERT INTO calendar_sync_state (google_calendar_id, name, read_enabled, sync_token, last_sync_at) VALUES (:id, :id, 0, :token, :now)
          ON CONFLICT(google_calendar_id) DO UPDATE SET sync_token = excluded.sync_token, last_sync_at = excluded.last_sync_at`,
         { id: calendarId, token: res.nextSyncToken ?? null, now: nowIso() },
       );
@@ -549,8 +640,10 @@ export class CalendarService {
   /** Übernimmt einen Termin aus Google. Gibt true zurück, wenn sich lokal etwas geändert hat. */
   private applyEvent(calendarId: string, ev: GEvent): boolean {
     const priv = ev.extendedProperties?.private ?? {};
-    const isApp = priv.agenturApp === '1';
     const row = this.db.get<EventRow>('SELECT * FROM calendar_events WHERE google_calendar_id = ? AND google_event_id = ?', [calendarId, ev.id]);
+    // Eigener Termin: bekannt oder von dieser Installation angelegt. Termine einer anderen Installation
+    // (z. B. alte Datenbank auf einem anderen Rechner) gelten als fremde Termine und werden nie geändert oder gelöscht.
+    const isApp = priv.agenturApp === '1' && (row?.source === 'app' || priv.agenturInstall === this.installationId());
 
     if (ev.status === 'cancelled') {
       if (!row) return false;
@@ -582,17 +675,19 @@ export class CalendarService {
       }
       // Eigene Änderung, die wir gerade übertragen haben: nichts zu tun
       if (row.google_updated_at && ev.updated && ev.updated <= row.google_updated_at) return false;
+      const desiredOf = () => this.desiredEvents().find((x) => x.linked_type === linkedType && x.linked_id === linkedId);
+      // Hatte die App noch nicht übertragene Änderungen (z. B. Titel), müssen sie trotzdem nach Google
+      const pendingInApp = row.content_hash !== desiredOf()?.hash;
       const applied = this.applyGoogleChange(linkedType, linkedId, ev, row);
       this.db.run(
         `UPDATE calendar_events SET etag = ?, title = ?, location = ?, start_at = ?, end_at = ?, all_day = ?, status = ?,
            html_link = ?, google_updated_at = ?, synced_at = ? WHERE id = ?`,
         [ev.etag ?? null, ev.summary ?? '', ev.location ?? null, t.start, t.end, t.all_day ? 1 : 0, ev.status, ev.htmlLink ?? null, ev.updated ?? null, nowIso(), row.id],
       );
-      if (applied) {
-        // Neue Prüfsumme merken, damit der übernommene Stand nicht zurückgeschrieben wird
-        const d = this.desiredEvents().find((x) => x.linked_type === linkedType && x.linked_id === linkedId);
-        if (d) this.db.run('UPDATE calendar_events SET content_hash = ? WHERE id = ?', [d.hash, row.id]);
-      }
+      const d = applied && !pendingInApp ? desiredOf() : undefined;
+      // Übernommen und sonst nichts offen: Prüfsumme merken, damit nichts zurückgeschrieben wird.
+      // Sonst (App-Stand gewinnt, Freigabe-Frist, offene App-Änderungen): beim anschließenden Übertragen den App-Stand schreiben.
+      this.db.run('UPDATE calendar_events SET content_hash = ? WHERE id = ?', [d?.hash ?? null, row.id]);
       return true;
     }
 
@@ -700,7 +795,7 @@ export class CalendarService {
         kind: 'drehtag',
         title: `Drehtag: ${s.company_name} – ${s.title}`,
         start: timed ? `${s.shoot_date}T${s.start_time}` : s.shoot_date,
-        end: timed ? (s.end_time && s.end_time > s.start_time! ? `${s.shoot_date}T${s.end_time}` : addMinutesLocal(`${s.shoot_date}T${s.start_time}`, 120)) : null,
+        end: timed ? (s.end_time && s.end_time > s.start_time! ? `${s.shoot_date}T${s.end_time}` : addMinutesLocal(`${s.shoot_date}T${s.start_time}`, SHOOT_DEFAULT_MINUTES)) : null,
         all_day: !timed,
         url: `/projekte/${s.project_id}`,
         external_url: eventLinks.get(`shoot:${s.project_id}`) ?? null,
@@ -802,8 +897,11 @@ export class CalendarService {
       for (const e of this.db.all<{ id: number; title: string; start_at: string; end_at: string; all_day: number; location: string | null; html_link: string | null }>(
         `SELECT e.id, e.title, e.start_at, e.end_at, e.all_day, e.location, e.html_link FROM calendar_events e
          JOIN calendar_sync_state s ON s.google_calendar_id = e.google_calendar_id AND s.read_enabled = 1
-         WHERE e.source = 'google' AND e.status <> 'cancelled' AND e.start_at < :endTs AND e.end_at > :start`,
-        { start, endTs: `${end}T00:00` },
+         WHERE e.source = 'google' AND e.status <> 'cancelled'
+           AND CASE WHEN e.all_day = 1 THEN e.start_at < :end AND e.end_at > :start
+                    ELSE e.start_at < :endUtc AND e.end_at > :startUtc END`,
+        // Ganztägige Termine haben Datumswerte, alle anderen UTC-Zeitpunkte: Tagesgrenzen in Berliner Zeit
+        { start, end, startUtc: berlinMidnightIso(start), endUtc: berlinMidnightIso(end) },
       )) {
         items.push({
           id: `google:${e.id}`,
@@ -832,7 +930,10 @@ export class CalendarService {
     const now = nowIso();
     if (type === 'shoot') {
       const projectId = Number(a);
-      const endTime = !allDay && end && end.slice(0, 10) === date ? end.slice(11, 16) : null;
+      const before = this.db.get<{ start_time: string | null; end_time: string | null }>('SELECT start_time, end_time FROM shoots WHERE project_id = ?', [projectId]);
+      let endTime = !allDay && end && end.slice(0, 10) === date ? end.slice(11, 16) : null;
+      // Ohne eingetragene Endzeit zeigt der Kalender 2 Stunden an; beim bloßen Verschieben keine Endzeit erfinden
+      if (before && !before.end_time && endTime && time && end === addMinutesLocal(`${date}T${time}`, SHOOT_DEFAULT_MINUTES)) endTime = null;
       const r = this.db.run('UPDATE shoots SET shoot_date = ?, start_time = ?, end_time = ?, updated_at = ? WHERE project_id = ?', [date, time, endTime, now, projectId]);
       if (!r.changes) throw new HttpError(404, 'Drehtag nicht gefunden');
       this.db.run('UPDATE project_phases SET due_date = ? WHERE project_id = ? AND phase = 1', [date, projectId]);
@@ -869,7 +970,7 @@ export class CalendarService {
 
   /** In Google gelöschten Drehtag erneut eintragen */
   restoreShoot(projectId: number): ShootCalendar {
-    this.db.run("UPDATE calendar_events SET content_hash = 'neu' WHERE source = 'app' AND linked_type = 'shoot' AND linked_id = ?", [projectId]);
+    this.db.run("UPDATE calendar_events SET content_hash = ? WHERE source = 'app' AND linked_type = 'shoot' AND linked_id = ?", [RESTORE, projectId]);
     this.requestSync(0);
     return this.shootCalendar(projectId);
   }

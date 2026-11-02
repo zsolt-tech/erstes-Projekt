@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Bot, ClipboardCopy, Film, ScanSearch, Trash2 } from 'lucide-react';
 import { fetchAgentPrompt, useDeleteQualityCheck, useQualityChecks } from '../api/agents';
 import { useCustomer } from '../api/hooks';
-import { Dialog, useToast } from './feedback';
+import { Dialog, useConfirm, useToast } from './feedback';
 import { Badge, Button, IconButton, Input, Textarea } from './ui';
 import { formatDateTime } from '../lib/format';
 import { QA_PROFILE_BY_TYPE, QA_PROFILE_LABELS, type AgentKind, type ProjectDetail, type QualityCheck } from '../../../shared/schemas';
@@ -26,6 +26,7 @@ export function AgentPanel({ project }: { project: ProjectDetail }) {
   const { data: customer } = useCustomer(project.customer_id);
   const remove = useDeleteQualityCheck(project.id);
   const toast = useToast();
+  const confirm = useConfirm();
   const [prompt, setPrompt] = useState<{ kind: AgentKind; text: string } | null>(null);
   const [loading, setLoading] = useState<AgentKind | null>(null);
   const [dauer, setDauer] = useState('30');
@@ -105,7 +106,11 @@ export function AgentPanel({ project }: { project: ProjectDetail }) {
                     Durchlauf {c.run_no} · {formatDateTime(c.created_at)}
                     {c.source === 'manuell' ? ' · von Hand' : ''}
                   </span>
-                  <IconButton label="Ergebnis entfernen" className="ml-auto opacity-0 group-hover:opacity-100 focus:opacity-100" onClick={() => remove.mutate(c.id)}>
+                  <IconButton label="Ergebnis entfernen" className="ml-auto opacity-0 group-hover:opacity-100 focus:opacity-100" onClick={async () => {
+                      if (!(await confirm({ title: 'Prüfergebnis entfernen?', text: `Das Ergebnis für „${c.video_name}“ wird gelöscht und der Qualitäts-Haken neu berechnet.`, confirmLabel: 'Entfernen', danger: true }))) return;
+                      remove.mutate(c.id, { onError: (err) => toast.error(err) });
+                    }}
+                  >
                     <Trash2 className="size-3.5" />
                   </IconButton>
                 </div>

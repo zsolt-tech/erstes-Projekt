@@ -2,7 +2,8 @@
 // und wird später nachgeholt; bei Fehlern wird mit wachsendem Abstand erneut versucht.
 import type { Database } from '../db/database.ts';
 import { events } from '../lib/events.ts';
-import { nowIso } from '../lib/time.ts';
+import { nowIso, todayBerlin } from '../lib/time.ts';
+import { HttpError } from '../lib/http.ts';
 import { GoogleApiError, GoogleNotConnectedError, type GoogleClient } from './client.ts';
 import type { SyncJob } from '../../shared/schemas.ts';
 
@@ -29,14 +30,19 @@ export class SyncQueue {
     this.handlers.set(type, handler);
   }
 
-  /** Neuen Auftrag einplanen; ein gleicher, noch offener Auftrag wird nicht doppelt angelegt */
-  enqueue(type: string, payload: Record<string, unknown> & { label: string }): void {
+  /**
+   * Neuen Auftrag einplanen; ein gleicher, noch offener Auftrag wird nicht doppelt angelegt.
+   * now: ein wartender gleicher Auftrag wird sofort fällig (z. B. nach Änderungen oder auf Knopfdruck),
+   * statt in seiner Wartezeit nach Fehlversuchen zu bleiben.
+   */
+  enqueue(type: string, payload: Record<string, unknown> & { label: string }, opts: { now?: boolean } = {}): void {
     const json = JSON.stringify(payload);
-    const exists = this.db.get(
-      "SELECT 1 FROM sync_jobs WHERE job_type = ? AND payload_json = ? AND status = 'wartend'",
+    const exists = this.db.get<{ id: number }>(
+      "SELECT id FROM sync_jobs WHERE job_type = ? AND payload_json = ? AND status = 'wartend'",
       [type, json],
     );
     if (!exists) this.db.run('INSERT INTO sync_jobs (job_type, payload_json) VALUES (?, ?)', [type, json]);
+    else if (opts.now) this.db.run('UPDATE sync_jobs SET run_after = ?, updated_at = ? WHERE id = ?', [nowIso(), nowIso(), exists.id]);
     events.changed('sync');
     this.kick();
   }
@@ -106,7 +112,13 @@ export class SyncQueue {
             break;
           }
           const attempts = job.attempts + 1;
-          if (attempts >= MAX_ATTEMPTS) {
+          // Eintrag in der App gelöscht (z. B. Projekt): Auftrag ist hinfällig
+          if (err instanceof HttpError && err.status === 404) {
+            this.db.run("UPDATE sync_jobs SET status = 'fehler', attempts = ?, last_error = ?, updated_at = ? WHERE id = ?", [attempts, message, nowIso(), job.id]);
+            events.changed('sync');
+            continue;
+          }
+          if (attempts >= MAX_ATTEMPTS || isPermanent(err)) {
             this.db.run(
               "UPDATE sync_jobs SET status = 'fehler', attempts = ?, last_error = ?, updated_at = ? WHERE id = ?",
               [attempts, message, nowIso(), job.id],
@@ -115,7 +127,8 @@ export class SyncQueue {
             this.db.run(
               `INSERT INTO notifications (type, title, body, link, dedupe_key) VALUES ('sync_fehler', ?, ?, '/einstellungen', ?)
                ON CONFLICT(dedupe_key) DO NOTHING`,
-              [`Google-Auftrag fehlgeschlagen: ${label}`, message, `sync_fehler:${job.id}`],
+              // Höchstens eine Meldung je Auftragsart, Fehler und Tag (der Kalenderabgleich läuft alle 5 Minuten)
+              [`Google-Auftrag fehlgeschlagen: ${label}`, message, `sync_fehler:${job.job_type}:${todayBerlin()}:${message.slice(0, 120)}`],
             );
           } else {
             const minutes = BACKOFF_MINUTES[Math.min(attempts - 1, BACKOFF_MINUTES.length - 1)];
@@ -165,4 +178,12 @@ export class SyncQueue {
       [type, id],
     );
   }
+}
+
+/** Fehler, die sich durch Wiederholen nicht beheben (falsche Anfrage, fehlende Rechte, nicht gefunden) */
+function isPermanent(err: unknown): boolean {
+  if (!(err instanceof GoogleApiError)) return false;
+  if (err.status === 0 || err.status === 429 || err.status >= 500) return false;
+  if (err.status === 403 && /rateLimitExceeded|userRateLimitExceeded|quotaExceeded|backendError/.test(err.reason ?? '')) return false;
+  return err.status === 400 || err.status === 403 || err.status === 404;
 }

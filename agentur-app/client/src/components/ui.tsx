@@ -1,5 +1,5 @@
 // Grundbausteine der Oberfläche.
-import { forwardRef, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react';
+import { forwardRef, useEffect, useRef, useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react';
 import { LoaderCircle } from 'lucide-react';
 
 export function cx(...classes: (string | false | null | undefined)[]) {
@@ -290,5 +290,71 @@ export function ProgressBar({ value, max, tone = 'accent' }: { value: number; ma
     <div className="h-2 w-full overflow-hidden rounded-full bg-surface-3" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
       <div className={cx('h-full rounded-full transition-all', bar[tone])} style={{ width: `${pct}%` }} />
     </div>
+  );
+}
+
+/** Gültiges Datum JJJJ-MM-TT mit plausibler Jahreszahl (beim Tippen entstehen Zwischenwerte wie 0002-12-20) */
+function plausibleDate(v: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) return false;
+  const year = Number(v.slice(0, 4));
+  return year >= 2000 && year <= 2100 && !Number.isNaN(new Date(`${v}T12:00:00`).getTime());
+}
+
+/**
+ * Datums- oder Zeitfeld, das nicht bei jedem Tastendruck speichert: erst beim Verlassen, mit Enter
+ * oder nach einer kurzen Pause, und nur gültige Werte. Auswahl über den Kalender speichert nach der Pause.
+ */
+export function CommitInput({
+  value,
+  onCommit,
+  type,
+  ...rest
+}: Omit<InputHTMLAttributes<HTMLInputElement>, 'value' | 'onChange' | 'type'> & {
+  value: string;
+  type: 'date' | 'time';
+  onCommit: (value: string) => void;
+  invalid?: boolean;
+}) {
+  const [draft, setDraft] = useState(value);
+  const focused = useRef(false);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const latest = useRef({ draft, value, onCommit });
+  latest.current = { draft, value, onCommit };
+  useEffect(() => {
+    if (!focused.current) setDraft(value);
+  }, [value]);
+  useEffect(() => () => {
+    if (timer.current) clearTimeout(timer.current);
+  }, []);
+
+  const valid = (v: string) => v === '' || (type === 'date' ? plausibleDate(v) : /^([01]\d|2[0-3]):[0-5]\d$/.test(v));
+  const commit = () => {
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = null;
+    const { draft: d, value: current, onCommit: fn } = latest.current;
+    if (d !== current && valid(d)) fn(d);
+  };
+  return (
+    <Input
+      {...rest}
+      type={type}
+      value={draft}
+      onFocus={() => (focused.current = true)}
+      onChange={(e) => {
+        setDraft(e.target.value);
+        if (timer.current) clearTimeout(timer.current);
+        timer.current = setTimeout(commit, 1200);
+      }}
+      onBlur={() => {
+        focused.current = false;
+        commit();
+        // Ungültige Eingabe verwerfen und den gespeicherten Wert zeigen
+        if (!valid(latest.current.draft)) setDraft(latest.current.value);
+      }}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') (e.currentTarget as HTMLInputElement).blur();
+        rest.onKeyDown?.(e);
+      }}
+    />
   );
 }

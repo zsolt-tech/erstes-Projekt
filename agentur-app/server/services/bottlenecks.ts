@@ -20,7 +20,7 @@ export function detectBottlenecks(db: Database, today = todayBerlin()): Bottlene
      FROM projects p JOIN customers c ON c.id = p.customer_id
      LEFT JOIN project_phases ph ON ph.project_id = p.id AND ph.phase = p.current_phase
      LEFT JOIN shoots s ON s.project_id = p.id
-     WHERE p.status = 'aktiv'`,
+     WHERE p.status = 'aktiv' AND c.archived_at IS NULL`,
   );
   const limitFor: Partial<Record<Phase, number>> = { 2: limits.editing_days, 3: limits.upload_days };
   for (const p of projects) {
@@ -59,7 +59,7 @@ export function detectBottlenecks(db: Database, today = todayBerlin()): Bottlene
   for (const pu of db.all<{ id: number; project_id: number; title: string; customer: string; planned_date: string }>(
     `SELECT pu.id, pu.project_id, p.title, c.company_name AS customer, pu.planned_date
      FROM publications pu JOIN projects p ON p.id = pu.project_id JOIN customers c ON c.id = p.customer_id
-     WHERE pu.status = 'geplant' AND pu.planned_date < ? AND p.status = 'aktiv'`,
+     WHERE pu.status = 'geplant' AND pu.planned_date < ? AND p.status = 'aktiv' AND c.archived_at IS NULL`,
     [today],
   )) {
     out.push({
@@ -73,8 +73,8 @@ export function detectBottlenecks(db: Database, today = todayBerlin()): Bottlene
 
   // --- Zu viele Drehtage in den nächsten 7 Tagen ---
   const shoots = db.get<{ n: number }>(
-    `SELECT COUNT(*) AS n FROM shoots s JOIN projects p ON p.id = s.project_id
-     WHERE p.status IN ('aktiv','pausiert') AND s.shoot_date >= ? AND s.shoot_date < ?`,
+    `SELECT COUNT(*) AS n FROM shoots s JOIN projects p ON p.id = s.project_id JOIN customers c ON c.id = p.customer_id
+     WHERE p.status IN ('aktiv','pausiert') AND s.shoot_date >= ? AND s.shoot_date < ? AND c.archived_at IS NULL`,
     [today, addDays(today, 7)],
   )!.n;
   if (shoots > limits.shoots_per_week) {
@@ -110,9 +110,11 @@ export function detectBottlenecks(db: Database, today = todayBerlin()): Bottlene
   for (const r of db.all<{ d: string; n: number }>(
     `SELECT d, COUNT(*) AS n FROM (
        SELECT ph.due_date AS d FROM projects p JOIN project_phases ph ON ph.project_id = p.id AND ph.phase = p.current_phase
-       WHERE p.status = 'aktiv' AND ph.due_date >= :from AND ph.due_date < :to
+       JOIN customers c ON c.id = p.customer_id
+       WHERE p.status = 'aktiv' AND ph.due_date >= :from AND ph.due_date < :to AND c.archived_at IS NULL
        UNION ALL
-       SELECT due_date FROM tasks WHERE status <> 'erledigt' AND due_date >= :from AND due_date < :to
+       SELECT t.due_date FROM tasks t LEFT JOIN customers c ON c.id = t.customer_id
+       WHERE t.status <> 'erledigt' AND t.due_date >= :from AND t.due_date < :to AND c.archived_at IS NULL
      ) GROUP BY d`,
     { from: today, to: addDays(today, 14) },
   )) {

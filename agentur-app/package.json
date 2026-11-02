@@ -8,7 +8,7 @@
     "node": ">=22.13.0"
   },
   "scripts": {
-    "start": "node --disable-warning=ExperimentalWarning scripts/start.mjs",
+    "start": "node scripts/start.mjs",
     "dev": "concurrently -k -n server,client -c blue,green \"npm:dev:server\" \"npm:dev:client\"",
     "dev:server": "node --disable-warning=ExperimentalWarning --import tsx --watch server/index.ts",
     "dev:client": "vite",

@@ -16,7 +16,8 @@ function pdfText(buf: Buffer): string | null {
   const file = path.join(t.dir, `t${Date.now()}.pdf`);
   fs.writeFileSync(file, buf);
   try {
-    return execFileSync('pdftotext', ['-layout', file, '-'], { encoding: 'utf8' });
+    // Leerraum zusammenfassen, damit Zeilenumbrüche (je nach Schrift des Systems) keine Rolle spielen
+    return execFileSync('pdftotext', ['-layout', file, '-'], { encoding: 'utf8' }).replace(/\s+/g, ' ');
   } catch {
     return null;
   }
@@ -151,12 +152,43 @@ test('Endkontrolle: Ergebnis setzt und entfernt den Qualitäts-Haken', async () 
   assert.equal(invalid.body.fields.video_name, 'Name des Videos fehlt');
 });
 
+test('Nach einer Korrekturschleife zählen alte Endkontrollen nicht mehr', async () => {
+  const p = (await t.request('POST', '/api/projects', { customer_id: customer.id, title: 'Korrekturtest' })).body;
+  await t.request('POST', `/api/projects/${p.id}/move`, { to_phase: 2 });
+  await t.request('POST', `/api/projects/${p.id}/quality-checks`, { video_name: 'reel_01.mp4', stage: 'endkontrolle', verdict: 'freigegeben' });
+  assert.equal((await t.request('POST', `/api/projects/${p.id}/move`, { to_phase: 4 })).status, 200);
+  await t.request('POST', `/api/projects/${p.id}/approval`, { result: 'korrektur', feedback: 'Musik leiser', back_to_editing: true });
+  let cur = (await t.request('GET', `/api/projects/${p.id}`)).body;
+  assert.equal(cur.current_phase, 2);
+  assert.equal(gateOf(cur).is_done, 0);
+
+  // Vorprüfung der neuen Fassung setzt den Haken nicht wieder
+  await t.request('POST', `/api/projects/${p.id}/quality-checks`, { video_name: 'reel_01_v2.mp4', stage: 'vorpruefung', verdict: 'offen' });
+  cur = (await t.request('GET', `/api/projects/${p.id}`)).body;
+  assert.equal(gateOf(cur).is_done, 0, 'altes Ergebnis vor der Korrektur zählt nicht');
+  assert.equal((await t.request('POST', `/api/projects/${p.id}/move`, { to_phase: 3 })).status, 409);
+
+  // Von Hand gesetzter Haken bleibt bei einer Vorprüfung erhalten
+  await t.request('PATCH', `/api/checklist/${gateOf(cur).id}`, { is_done: true });
+  await t.request('POST', `/api/projects/${p.id}/quality-checks`, { video_name: 'reel_02.mp4', stage: 'vorpruefung', verdict: 'offen' });
+  cur = (await t.request('GET', `/api/projects/${p.id}`)).body;
+  assert.equal(gateOf(cur).is_done, 1);
+
+  // "zurück" im Upload sperrt das Weiterrücken
+  assert.equal((await t.request('POST', `/api/projects/${p.id}/move`, { to_phase: 3 })).status, 200);
+  await t.request('POST', `/api/projects/${p.id}/quality-checks`, { video_name: 'reel_01_final.mp4', stage: 'endkontrolle', verdict: 'zurueck' });
+  assert.equal((await t.request('POST', `/api/projects/${p.id}/move`, { to_phase: 5 })).status, 409);
+  await t.request('POST', `/api/projects/${p.id}/quality-checks`, { video_name: 'reel_01_v3.mp4', stage: 'endkontrolle', verdict: 'freigegeben' });
+  assert.equal((await t.request('POST', `/api/projects/${p.id}/move`, { to_phase: 5 })).status, 200, 'final und v3 sind dasselbe Video');
+});
+
 test('Fassungen eines Videos gelten als dasselbe Video', async () => {
   const { videoKey } = await import('../server/services/agents.ts');
   assert.equal(videoKey('Reel_01_v3.mp4'), 'reel 01');
   assert.equal(videoKey('reel-01 (2).mov'), 'reel 01');
   assert.equal(videoKey('Reel 01 Fassung 2.mp4'), 'reel 01');
   assert.equal(videoKey('reel_01.mp4'), 'reel 01');
+  assert.equal(videoKey('reel_01_final_v2.mp4'), 'reel 01');
   assert.notEqual(videoKey('reel_02.mp4'), 'reel 01');
 
   const p = (await t.request('POST', '/api/projects', { customer_id: customer.id, title: 'Fassungstest' })).body;
@@ -188,6 +220,7 @@ test('PDF: Drehplan, Freigabe-Protokoll, Monatsbericht und Briefing', async () =
   assert.match(text, /Drehplan/);
   assert.match(text, /Praxis Dr\. Neumann – Praxisvorstellung/);
   assert.match(text, /Hauptstraße 5, Bonn/);
+  assert.doesNotMatch(text, /[ÃÂ]/, 'Umlaute korrekt');
   assert.match(text, /08:00 bis 10:30 Uhr/);
   assert.match(text, /Teamvorstellung/);
   assert.match(text, /Arzt- und Zahnarztpraxis \(streng\), durchgehende Kamerabewegung Pflicht/);

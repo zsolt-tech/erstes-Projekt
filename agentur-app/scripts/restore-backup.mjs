@@ -43,12 +43,13 @@ if (!fs.existsSync(source)) {
 }
 
 // App muss beendet sein
-try {
-  await fetch(`http://127.0.0.1:${port}/api/health`, { signal: AbortSignal.timeout(1000) });
+const running = await fetch(`http://127.0.0.1:${port}/api/health`, { signal: AbortSignal.timeout(1000) })
+  .then((r) => r.json())
+  .then((b) => b?.app === 'agentur-verwaltung')
+  .catch(() => false);
+if (running) {
   console.error('Die App läuft noch. Bitte zuerst beenden (im Terminal Strg+C), dann erneut versuchen.');
   process.exit(1);
-} catch {
-  /* gut, läuft nicht */
 }
 
 // Sicherung prüfen

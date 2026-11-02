@@ -11,6 +11,7 @@ import type { BackupInfo, BackupOverview } from '../../shared/schemas.ts';
 const FILE_RE = /^agentur-(\d{4}-\d{2}-\d{2})_(\d{2})-(\d{2})-(\d{2})\.sqlite$/;
 const DAILY_TIME = '02:30';
 const DAY_MS = 24 * 60 * 60 * 1000;
+const stampDe = () => new Date().toLocaleString('de-DE', { timeZone: 'Europe/Berlin' });
 
 export function listBackupFiles(dir: string): BackupInfo[] {
   if (!fs.existsSync(dir)) return [];
@@ -71,19 +72,26 @@ export function runBackup(db: Database, config: AppConfig): BackupInfo {
     }
     // VACUUM INTO erzeugt eine konsistente, kompakte Kopie, auch während die App läuft
     db.exec(`VACUUM INTO '${target.replace(/'/g, "''")}'`);
-    if (config.backupExtraDir) {
-      fs.mkdirSync(config.backupExtraDir, { recursive: true });
-      fs.copyFileSync(target, path.join(config.backupExtraDir, file));
-      pruneBackups(config.backupExtraDir, config.backupKeepDays);
-    }
     pruneBackups(config.backupDir, config.backupKeepDays);
     setSetting(db, 'last_backup_at', nowIso());
     setSetting(db, 'last_backup_error', null);
+    // Zweiter Speicherort (USB, NAS, Cloud-Ordner) ist optional: Fehler dort nur melden,
+    // die Hauptsicherung gilt trotzdem, sonst entstünde alle 15 Minuten eine neue Kopie
+    if (config.backupExtraDir) {
+      try {
+        fs.mkdirSync(config.backupExtraDir, { recursive: true });
+        fs.copyFileSync(target, path.join(config.backupExtraDir, file));
+        pruneBackups(config.backupExtraDir, config.backupKeepDays);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        setSetting(db, 'last_backup_error', `${stampDe()}: Kopie in den zweiten Speicherort fehlgeschlagen (${message})`);
+      }
+    }
     const stat = fs.statSync(target);
     return { file, size: stat.size, created_at: stat.mtime.toISOString() };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    setSetting(db, 'last_backup_error', `${new Date().toLocaleString('de-DE')}: ${message}`);
+    setSetting(db, 'last_backup_error', `${stampDe()}: ${message}`);
     throw err;
   }
 }

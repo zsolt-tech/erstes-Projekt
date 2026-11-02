@@ -29,9 +29,18 @@ export function formatLongDate(d: Date = new Date()): string {
   return longDateFmt.format(d);
 }
 
-/** YYYY-MM -> "November 2026" */
+/** YYYY-MM -> "November 2026"; unvollständige Eingaben (z. B. beim Tippen) bleiben, wie sie sind */
 export function formatMonth(month: string): string {
-  return monthFmt.format(new Date(`${month}-15T12:00:00`));
+  const d = /^\d{4}-(0[1-9]|1[0-2])$/.test(month) ? new Date(`${month}-15T12:00:00`) : null;
+  return d && !Number.isNaN(d.getTime()) ? monthFmt.format(d) : month;
+}
+
+const berlinDateFmt = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Berlin', year: 'numeric', month: '2-digit', day: '2-digit' });
+
+/** Zeitpunkt (ISO, UTC) -> Kalenderdatum in Berliner Zeit "YYYY-MM-DD" */
+export function berlinDate(iso: string): string {
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? iso.slice(0, 10) : berlinDateFmt.format(d);
 }
 
 export function shiftMonth(month: string, delta: number): string {
@@ -61,11 +70,12 @@ export function centsToInput(cents: number | null | undefined): string {
   return (cents / 100).toFixed(2).replace('.', ',');
 }
 
-/** Eingabetext "1.234,50" oder "1234.5" -> Cent; leer -> null; ungültig -> NaN */
+/** Eingabetext "1.234,50", "1.500" oder "1234.5" -> Cent; leer -> null; ungültig -> NaN */
 export function inputToCents(text: string): number | null {
   const t = text.trim().replace(/\s|€/g, '');
   if (!t) return null;
-  const normalized = t.includes(',') ? t.replace(/\./g, '').replace(',', '.') : t;
+  // Deutsche Schreibweise: Punkt als Tausendertrenner ("1.500" = 1500 Euro), Komma als Dezimaltrenner
+  const normalized = t.includes(',') || /^\d{1,3}(\.\d{3})+$/.test(t) ? t.replace(/\./g, '').replace(',', '.') : t;
   const n = Number(normalized);
   return Number.isFinite(n) ? Math.round(n * 100) : NaN;
 }

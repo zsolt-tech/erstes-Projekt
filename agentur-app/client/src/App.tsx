@@ -1,4 +1,5 @@
-import { Route, Routes } from 'react-router-dom';
+import { Fragment, type ReactElement } from 'react';
+import { Route, Routes, useParams } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import { StartPage } from './pages/StartPage';
 import { CustomersPage } from './pages/CustomersPage';
@@ -12,6 +13,12 @@ import { TasksPage } from './pages/TasksPage';
 import { CalendarPage } from './pages/CalendarPage';
 import { NotFoundPage, PlaceholderPage } from './pages/PlaceholderPage';
 
+/** Seite beim Wechsel auf einen anderen Datensatz neu aufbauen (keine Formularwerte des vorherigen) */
+function Keyed({ children }: { children: ReactElement }) {
+  const { id } = useParams();
+  return <Fragment key={id}>{children}</Fragment>;
+}
+
 export function App() {
   return (
     <Routes>
@@ -19,8 +26,8 @@ export function App() {
         <Route index element={<StartPage />} />
         <Route path="kunden" element={<CustomersPage />} />
         <Route path="kunden/neu" element={<CustomerFormPage />} />
-        <Route path="kunden/:id" element={<CustomerDetailPage />} />
-        <Route path="kunden/:id/bearbeiten" element={<CustomerFormPage />} />
+        <Route path="kunden/:id" element={<Keyed><CustomerDetailPage /></Keyed>} />
+        <Route path="kunden/:id/bearbeiten" element={<Keyed><CustomerFormPage /></Keyed>} />
         <Route path="einstellungen" element={<SettingsPage />} />
         <Route
           path="dashboard"
@@ -44,8 +51,8 @@ export function App() {
         />
         <Route path="projekte" element={<ProjectsPage />} />
         <Route path="projekte/neu" element={<ProjectFormPage />} />
-        <Route path="projekte/:id" element={<ProjectDetailPage />} />
-        <Route path="projekte/:id/bearbeiten" element={<ProjectFormPage />} />
+        <Route path="projekte/:id" element={<Keyed><ProjectDetailPage /></Keyed>} />
+        <Route path="projekte/:id/bearbeiten" element={<Keyed><ProjectFormPage /></Keyed>} />
         <Route path="aufgaben" element={<TasksPage />} />
         <Route path="kalender" element={<CalendarPage />} />
         <Route

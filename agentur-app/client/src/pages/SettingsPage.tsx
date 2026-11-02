@@ -29,12 +29,13 @@ function GeneralSettings() {
   const [days, setDays] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  // Nur neu befüllen, wenn sich diese Werte auf dem Server ändern (nicht beim Speichern anderer Karten)
   useEffect(() => {
     if (settings) {
       setName(settings.agency_name);
       setDays(String(settings.approval_reminder_days));
     }
-  }, [settings]);
+  }, [settings?.agency_name, settings?.approval_reminder_days]);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();

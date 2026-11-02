@@ -10,12 +10,14 @@ import {
   useDroppable,
   useSensor,
   useSensors,
+  type Announcements,
   type DragEndEvent,
   type DragStartEvent,
 } from '@dnd-kit/core';
 import { CalendarDays, Clock, Lock, RotateCcw, Video } from 'lucide-react';
 import { useProjectAction } from '../api/projects';
-import { useToast } from './feedback';
+import { leaveApprovalOptions, useConfirm, useToast } from './feedback';
+import { useQueryClient } from '@tanstack/react-query';
 import { Badge, ProgressBar, cx } from './ui';
 import { formatDate } from '../lib/format';
 import { PHASES, PHASE_LABELS, type Phase, type ProjectListItem } from '../../../shared/schemas';
@@ -79,6 +81,19 @@ export function ProjectCardBody({ p, dragging }: { p: ProjectListItem; dragging?
   );
 }
 
+// Ansagen für Screenreader auf Deutsch
+const titleOf = (data: unknown) => (data as { project?: ProjectListItem } | undefined)?.project?.title ?? 'Projekt';
+const phaseName = (data: unknown) => {
+  const phase = (data as { phase?: Phase } | undefined)?.phase;
+  return phase ? PHASE_LABELS[phase] : 'keine Phase';
+};
+const ANNOUNCEMENTS: Announcements = {
+  onDragStart: ({ active }) => `„${titleOf(active.data.current)}“ aufgenommen.`,
+  onDragOver: ({ active, over }) => `„${titleOf(active.data.current)}“ über ${over ? phaseName(over.data.current) : 'keiner Phase'}.`,
+  onDragEnd: ({ active, over }) => (over ? `„${titleOf(active.data.current)}“ in ${phaseName(over.data.current)} abgelegt.` : 'Verschieben beendet.'),
+  onDragCancel: ({ active }) => `Verschieben von „${titleOf(active.data.current)}“ abgebrochen.`,
+};
+
 function DraggableCard({ p }: { p: ProjectListItem }) {
   const navigate = useNavigate();
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: p.id, data: { project: p } });
@@ -90,7 +105,7 @@ function DraggableCard({ p }: { p: ProjectListItem }) {
       onClick={() => navigate(`/projekte/${p.id}`)}
       onKeyDown={(e) => {
         listeners?.onKeyDown?.(e);
-        if (e.key === 'Enter') navigate(`/projekte/${p.id}`);
+        if (e.key === 'Enter' && !isDragging) navigate(`/projekte/${p.id}`);
       }}
       className={cx('cursor-grab touch-none rounded-md active:cursor-grabbing', isDragging && 'opacity-30')}
       aria-label={`${p.title}, ${p.customer_name}. Mit Leertaste aufnehmen und mit Pfeiltasten verschieben, Enter öffnet das Projekt.`}
@@ -138,11 +153,14 @@ export function ProjectBoard({ projects }: { projects: ProjectListItem[] }) {
   const action = useProjectAction();
   const toast = useToast();
   const [active, setActive] = useState<ProjectListItem | null>(null);
+  const confirm = useConfirm();
+  const qc = useQueryClient();
   // Sofortige Anzeige des Ziels, bis der Server antwortet
   const [pending, setPending] = useState<Record<number, Phase>>({});
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
-    useSensor(KeyboardSensor),
+    // Nur die Leertaste nimmt auf und legt ab; Enter öffnet das Projekt
+    useSensor(KeyboardSensor, { keyboardCodes: { start: ['Space'], cancel: ['Escape'], end: ['Space'] } }),
   );
 
   const phaseOf = (p: ProjectListItem) => pending[p.id] ?? p.current_phase;
@@ -156,9 +174,12 @@ export function ProjectBoard({ projects }: { projects: ProjectListItem[] }) {
     const p = e.active.data.current?.project as ProjectListItem | undefined;
     const to = e.over?.data.current?.phase as Phase | undefined;
     if (!p || !to || to === phaseOf(p)) return;
+    if (phaseOf(p) === 4 && !(await confirm(leaveApprovalOptions(to)))) return;
     setPending((s) => ({ ...s, [p.id]: to }));
     try {
       await action.mutateAsync({ method: 'POST', url: `/projects/${p.id}/move`, body: { to_phase: to } });
+      // Vorläufige Position erst entfernen, wenn die Liste neu geladen ist (sonst springt die Karte kurz zurück)
+      await qc.invalidateQueries({ queryKey: ['projects', 'list'] });
       toast.success(`„${p.title}“ ist jetzt in ${PHASE_LABELS[to]}`);
     } catch (err) {
       toast.error(err);
@@ -172,7 +193,13 @@ export function ProjectBoard({ projects }: { projects: ProjectListItem[] }) {
   }
 
   return (
-    <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd} onDragCancel={() => setActive(null)}>
+    <DndContext
+      sensors={sensors}
+      onDragStart={onDragStart}
+      onDragEnd={onDragEnd}
+      onDragCancel={() => setActive(null)}
+      accessibility={{ announcements: ANNOUNCEMENTS, screenReaderInstructions: { draggable: 'Leertaste nimmt das Projekt auf, Pfeiltasten wählen die Phase, Leertaste legt ab, Escape bricht ab.' } }}
+    >
       <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-2 sm:mx-0 sm:px-0">
         {PHASES.map((phase) => (
           <Column key={phase} phase={phase} items={projects.filter((p) => phaseOf(p) === phase)} />

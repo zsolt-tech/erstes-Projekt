@@ -24,22 +24,26 @@ function showBrowserNotification(title: string, body: string, link: string | nul
 
 const BRIEFING_SOURCES = new Set(['projects', 'tasks', 'customers', 'calendar', 'settings']);
 
+/**
+ * Live-Aktualisierung über eine einzige Serververbindung für alle Tabs: Browser erlauben nur wenige
+ * gleichzeitige Verbindungen je Adresse (6 bei Chrome), mehrere Tabs mit eigener Verbindung würden die
+ * App sonst blockieren. Ein Tab hält die Verbindung (Web Locks) und gibt Meldungen per BroadcastChannel weiter.
+ */
 export function useLiveUpdates(): boolean {
   const qc = useQueryClient();
   const [connected, setConnected] = useState(true);
   useEffect(() => {
-    const source = new EventSource('/api/events');
-    source.onopen = () => {
-      setConnected(true);
-      // Nach einer Unterbrechung alles auffrischen
-      qc.invalidateQueries();
-    };
-    source.onerror = () => setConnected(false);
-    source.onmessage = (msg) => {
+    const channel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('agentur-live') : null;
+    const abort = new AbortController();
+    let source: EventSource | null = null;
+    let release: (() => void) | null = null;
+
+    const apply = (raw: string, leader: boolean) => {
       try {
-        const event = JSON.parse(msg.data) as LiveEvent;
+        const event = JSON.parse(raw) as LiveEvent;
         if (event.type === 'notify') {
-          showBrowserNotification(event.title, event.body, event.link);
+          // Browser-Benachrichtigung nur einmal, vom verbindenden Tab
+          if (leader) showBrowserNotification(event.title, event.body, event.link);
           return;
         }
         if (event.type !== 'changed') return;
@@ -55,7 +59,52 @@ export function useLiveUpdates(): boolean {
         /* ungültige Nachricht ignorieren */
       }
     };
-    return () => source.close();
+
+    const connect = () => {
+      source = new EventSource('/api/events');
+      source.onopen = () => {
+        setConnected(true);
+        // Nach einer Unterbrechung alles auffrischen
+        qc.invalidateQueries();
+        channel?.postMessage({ kind: 'status', ok: true });
+      };
+      source.onerror = () => {
+        setConnected(false);
+        channel?.postMessage({ kind: 'status', ok: false });
+      };
+      source.onmessage = (msg) => {
+        apply(msg.data, true);
+        channel?.postMessage({ kind: 'event', data: msg.data });
+      };
+    };
+
+    if (channel) {
+      channel.onmessage = (e: MessageEvent<{ kind: 'event'; data: string } | { kind: 'status'; ok: boolean }>) => {
+        if (e.data.kind === 'event') apply(e.data.data, false);
+        else {
+          setConnected(e.data.ok);
+          if (e.data.ok) qc.invalidateQueries();
+        }
+      };
+    }
+
+    if (channel && navigator.locks) {
+      navigator.locks
+        .request('agentur-live', { signal: abort.signal }, () => {
+          connect();
+          return new Promise<void>((resolve) => (release = resolve));
+        })
+        .catch(() => undefined);
+    } else {
+      connect();
+    }
+
+    return () => {
+      abort.abort();
+      source?.close();
+      release?.();
+      channel?.close();
+    };
   }, [qc]);
   return connected;
 }

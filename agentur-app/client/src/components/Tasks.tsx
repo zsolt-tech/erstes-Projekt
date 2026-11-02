@@ -1,11 +1,11 @@
 // Aufgabenliste, Schnellerfassung und Bearbeitungsdialog.
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { Plus, Trash2 } from 'lucide-react';
 import { ApiError } from '../api/client';
 import { useCustomers, useTeam } from '../api/hooks';
 import { useDeleteTask, useProjects, useSaveTask, useSetTaskStatus } from '../api/projects';
-import { Dialog, useToast } from './feedback';
+import { Dialog, useConfirm, useToast } from './feedback';
 import { Badge, Button, Field, IconButton, Input, Select, Textarea, cx } from './ui';
 import { formatDate, today } from '../lib/format';
 import {
@@ -34,6 +34,7 @@ export function TaskRow({ task, onEdit, showLinks = true }: { task: Task; onEdit
   const setStatus = useSetTaskStatus();
   const remove = useDeleteTask();
   const toast = useToast();
+  const confirm = useConfirm();
   const done = task.status === 'erledigt';
   const due = dueLabel(task);
 
@@ -84,6 +85,7 @@ export function TaskRow({ task, onEdit, showLinks = true }: { task: Task; onEdit
         label="Aufgabe löschen"
         className="opacity-0 group-hover:opacity-100 focus:opacity-100"
         onClick={async () => {
+          if (!(await confirm({ title: 'Aufgabe löschen?', text: `„${task.title}“ wird endgültig gelöscht.`, confirmLabel: 'Löschen', danger: true }))) return;
           try {
             await remove.mutateAsync(task.id);
             toast.success('Aufgabe gelöscht');
@@ -192,9 +194,13 @@ export function TaskDialog({
   }, [open, task]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const set = <K extends keyof TaskForm>(k: K, v: TaskForm[K]) => setForm((f) => ({ ...f, [k]: v }));
+  const busy = useRef(false);
 
   async function submit(e?: FormEvent) {
     e?.preventDefault();
+    // Doppeltes Enter legt keine zweite Aufgabe an
+    if (busy.current) return;
+    busy.current = true;
     const data: TaskInput = {
       title: form.title,
       description: form.description,
@@ -214,6 +220,8 @@ export function TaskDialog({
     } catch (err) {
       if (err instanceof ApiError) setErrors(err.fields);
       toast.error(err);
+    } finally {
+      busy.current = false;
     }
   }
 

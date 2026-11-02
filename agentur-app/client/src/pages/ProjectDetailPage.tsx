@@ -16,7 +16,7 @@ import {
 import { TaskDialog, TaskQuickAdd, TaskRow } from '../components/Tasks';
 import { ProjectDrivePanel } from '../components/Drive';
 import { AgentPanel } from '../components/AgentPanel';
-import { ConfirmDialog } from '../components/feedback';
+import { ConfirmDialog, leaveApprovalOptions, useConfirm } from '../components/feedback';
 import { PriorityBadge, ProjectStatusBadge } from '../components/labels';
 import { Button, Card, ErrorBox, Field, Input, PageHeader, ProgressBar, Segmented, Spinner } from '../components/ui';
 import { centsToInput, formatDate, formatEuro, formatMonth, inputToCents } from '../lib/format';
@@ -105,6 +105,7 @@ export function ProjectDetailPage() {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const { run, pending } = useRun();
   const navigate = useNavigate();
+  const confirm = useConfirm();
 
   // Beim Phasenwechsel die neue Phase anzeigen
   const current = project?.current_phase;
@@ -118,6 +119,10 @@ export function ProjectDetailPage() {
   const next = project.current_phase < 5 ? ((project.current_phase + 1) as Phase) : null;
   const prev = project.current_phase > 1 ? ((project.current_phase - 1) as Phase) : null;
   const openGate = project.checklist.find((i) => i.phase === project.current_phase && i.is_gate && !i.is_done);
+  const moveTo = async (to: Phase, message: string) => {
+    if (project.current_phase === 4 && !(await confirm(leaveApprovalOptions(to)))) return;
+    run('POST', `/projects/${id}/move`, { to_phase: to }, message);
+  };
 
   return (
     <>
@@ -178,7 +183,7 @@ export function ProjectDetailPage() {
           {active && (
             <div className="flex gap-2">
               {prev && (
-                <Button size="sm" icon={<ArrowLeft className="size-4" />} loading={pending} onClick={() => run('POST', `/projects/${id}/move`, { to_phase: prev }, `Zurück in ${PHASE_LABELS[prev]}`)}>
+                <Button size="sm" icon={<ArrowLeft className="size-4" />} loading={pending} onClick={() => moveTo(prev, `Zurück in ${PHASE_LABELS[prev]}`)}>
                   Zurück
                 </Button>
               )}
@@ -189,7 +194,7 @@ export function ProjectDetailPage() {
                   disabled={!!openGate}
                   title={openGate ? `Erst „${openGate.label}“ abhaken` : undefined}
                   loading={pending}
-                  onClick={() => run('POST', `/projects/${id}/move`, { to_phase: next }, `Weiter in ${PHASE_LABELS[next]}`)}
+                  onClick={() => moveTo(next, `Weiter in ${PHASE_LABELS[next]}`)}
                 >
                   Weiter zu {PHASE_LABELS[next]}
                   <ArrowRight className="size-4" />

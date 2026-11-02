@@ -125,6 +125,31 @@ test('Neues Projekt: Jahresordner, Projektordner und vier Unterordner, ohne Dopp
   assert.deepEqual(drive.folders.map((f: any) => f.role), ['projekt', 'rohmaterial', 'schnitt', 'final', 'freigabe']);
 });
 
+test('Abgebrochenes Anlegen wird vervollständigt, gleichnamige Kunden teilen keinen Ordner', async () => {
+  const c = t.db.get<{ id: number }>("SELECT id FROM customers WHERE company_name = 'Pizzeria Roma'")!;
+  g.stats.failCreateNames.add('02 Entwürfe');
+  const p = (await t.request('POST', '/api/projects', { customer_id: c.id, title: 'Teilweise', service_month: '2026-11' })).body;
+  await flush();
+  g.stats.failCreateNames.clear();
+  const job = (await t.request('GET', '/api/sync/jobs')).body.find((j: any) => j.label.includes('Teilweise'));
+  assert.equal(job.status, 'wartend', 'Fehler beim Unterordner: erneut versuchen');
+  await t.request('POST', `/api/sync/jobs/${job.id}/retry`);
+  await flush();
+  const drive = (await t.request('GET', `/api/projects/${p.id}/drive`)).body;
+  assert.deepEqual(drive.folders.map((f: any) => f.role), ['projekt', 'rohmaterial', 'schnitt', 'final', 'freigabe'], 'alle Unterordner zugeordnet');
+
+  // Zweiter Kunde mit gleichem Namen und Projekt gleichen Titels
+  const twin = (await t.request('POST', '/api/customers', { company_name: 'Pizzeria Roma', status: 'aktiv' })).body;
+  await flush();
+  const [first, second] = [c.id, twin.id].map((id) => t.db.get<{ google_folder_id: string; name: string }>("SELECT google_folder_id, name FROM drive_folders WHERE customer_id = ? AND role = 'kunde'", [id])!);
+  assert.notEqual(first.google_folder_id, second.google_folder_id);
+  assert.equal(second.name, 'Pizzeria Roma (2)');
+  const p2 = (await t.request('POST', '/api/projects', { customer_id: c.id, title: 'Teilweise', service_month: '2026-11' })).body;
+  await flush();
+  const finals = [p.id, p2.id].map((id) => t.db.get<{ google_folder_id: string }>("SELECT google_folder_id FROM drive_folders WHERE project_id = ? AND role = 'final'", [id])!.google_folder_id);
+  assert.notEqual(finals[0], finals[1], 'gleichnamige Projekte haben eigene Ordner');
+});
+
 test('Upload-Erkennung: Datei in „Fertige Videos“ hakt den Checkpunkt ab', async () => {
   const p = t.db.get<{ id: number }>("SELECT id FROM projects WHERE title = 'Reels November'")!;
   let drive = (await t.request('POST', `/api/projects/${p.id}/drive/check`)).body;

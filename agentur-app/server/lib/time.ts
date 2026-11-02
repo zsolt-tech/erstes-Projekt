@@ -87,3 +87,11 @@ export function daysBetween(a: string, b: string): number {
 export function berlinDateOf(iso: string): string {
   return todayBerlin(new Date(iso));
 }
+
+/** Zeitpunkt (UTC, ISO) von 00:00 Uhr Berliner Zeit an einem Datum */
+export function berlinMidnightIso(date: string): string {
+  const guess = new Date(`${date}T00:00:00Z`);
+  const p = berlinParts(guess);
+  const offset = Date.UTC(p.year, p.month - 1, p.day, p.hour, p.minute, p.second) - guess.getTime();
+  return new Date(guess.getTime() - offset).toISOString();
+}

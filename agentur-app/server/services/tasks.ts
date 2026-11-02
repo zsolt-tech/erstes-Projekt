@@ -34,6 +34,8 @@ export function listTasks(db: Database, filter: TaskFilter = {}): Task[] {
     where.push('t.project_id = :pid');
     params.pid = filter.project_id;
   }
+  // Aufgaben archivierter Kunden stehen nur noch auf der Kunden- und Projektseite
+  if (!filter.customer_id && !filter.project_id) where.push('c.archived_at IS NULL');
   if (filter.range === 'ueberfaellig') where.push('t.due_date < :today');
   if (filter.range === 'heute') where.push('t.due_date <= :today');
   if (filter.range === 'woche') {

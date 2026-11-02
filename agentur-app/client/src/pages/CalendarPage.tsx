@@ -12,7 +12,7 @@ import type { DatesSetArg, EventChangeArg, EventClickArg, EventInput } from '@fu
 import { RefreshCw } from 'lucide-react';
 import { useCalendarItems, useCalendarSettings, useMoveCalendarItem, useSyncCalendar } from '../api/calendar';
 import { useGoogleStatus } from '../api/google';
-import { Button, Card, PageHeader, cx } from '../components/ui';
+import { Button, Card, ErrorBox, PageHeader, cx } from '../components/ui';
 import { useToast } from '../components/feedback';
 import { formatDateTime } from '../lib/format';
 import { CALENDAR_KINDS, CALENDAR_KIND_LABELS, type CalendarItem, type CalendarKind } from '../../../shared/schemas';
@@ -50,13 +50,27 @@ export function CalendarPage() {
   const toast = useToast();
   const [range, setRange] = useState<{ start: string; end: string } | null>(null);
   const [hidden, setHidden] = useState<CalendarKind[]>(readHidden);
-  const { data: items = [] } = useCalendarItems(range);
+  const { data: items = [], error: itemsError } = useCalendarItems(range);
   const { data: google } = useGoogleStatus();
   const { data: settings } = useCalendarSettings(!!google?.connected);
   const sync = useSyncCalendar();
   const move = useMoveCalendarItem();
 
   const events = useMemo(() => items.filter((i) => !hidden.includes(i.kind)).map(toEvent), [items, hidden]);
+  // Sichtbarer Zeitraum der Tages- und Wochenansicht: 6 bis 22 Uhr, erweitert um frühere oder spätere Einträge
+  const slots = useMemo(() => {
+    let min = 6;
+    let max = 22;
+    for (const i of items) {
+      if (i.all_day) continue;
+      const s = new Date(i.start);
+      const e = i.end ? new Date(i.end) : s;
+      if (!Number.isNaN(s.getTime())) min = Math.min(min, s.getHours());
+      if (!Number.isNaN(e.getTime()) && e.toDateString() === s.toDateString()) max = Math.max(max, e.getHours() + (e.getMinutes() ? 1 : 0));
+    }
+    const hh = (h: number) => `${String(h).padStart(2, '0')}:00:00`;
+    return { min: hh(min), max: hh(Math.min(24, max)) };
+  }, [items]);
   const counts = useMemo(() => {
     const c: Partial<Record<CalendarKind, number>> = {};
     for (const i of items) c[i.kind] = (c[i.kind] ?? 0) + 1;
@@ -167,6 +181,7 @@ export function CalendarPage() {
       </div>
 
       <Card>
+        {itemsError && <ErrorBox error={itemsError} />}
         <FullCalendar
           plugins={[dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin]}
           locale={deLocale}
@@ -181,8 +196,10 @@ export function CalendarPage() {
           nowIndicator
           weekNumbers={!narrow}
           weekText="KW"
-          slotMinTime="06:00:00"
-          slotMaxTime="22:00:00"
+          slotMinTime={slots.min}
+          slotMaxTime={slots.max}
+          // Phasenfristen sind ganztägig: nicht in die Stundenleiste ziehen
+          eventAllow={(drop, ev) => !(ev?.id.startsWith('phase:') && !drop.allDay)}
           scrollTime="08:00:00"
           allDayText="ganztägig"
           noEventsText="Keine Einträge in diesem Zeitraum"

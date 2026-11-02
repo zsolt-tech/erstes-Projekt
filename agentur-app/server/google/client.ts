@@ -6,6 +6,7 @@ import type { Database } from '../db/database.ts';
 import type { AppConfig } from '../env.ts';
 import { HttpError } from '../lib/http.ts';
 import { nowIso } from '../lib/time.ts';
+import { getSetting, setSetting } from '../services/settings.ts';
 import { decrypt, encrypt } from './crypto.ts';
 import type { GoogleStatus } from '../../shared/schemas.ts';
 
@@ -49,6 +50,8 @@ interface AccountRow {
 export class GoogleClient {
   private states = new Map<string, number>();
   private refreshing: Promise<string> | null = null;
+  /** Konto vor der letzten Anmeldung (zum Erkennen eines Kontowechsels) */
+  previousEmail: string | null = null;
 
   constructor(
     private db: Database,
@@ -151,6 +154,8 @@ export class GoogleClient {
       throw new HttpError(400, 'Google hat keinen dauerhaften Zugang erteilt. Bitte unter myaccount.google.com/permissions den Zugriff der App entfernen und erneut verbinden.');
     }
     const email = emailFromIdToken(token.id_token) ?? 'unbekannt';
+    this.previousEmail = getSetting<string | null>(this.db, 'google_last_email', null) ?? this.account()?.email ?? null;
+    if (email !== 'unbekannt') setSetting(this.db, 'google_last_email', email);
     const secret = this.config.appSecret;
     this.db.run(
       `INSERT INTO google_accounts (id, email, refresh_token_enc, access_token_enc, token_expires_at, scopes, connected_at)
@@ -206,6 +211,10 @@ export class GoogleClient {
     const data = (await res.json().catch(() => ({}))) as Record<string, string | number | undefined>;
     if (!res.ok) {
       const err = String(data.error ?? res.status);
+      if (err === 'invalid_grant' && params.grant_type !== 'refresh_token') {
+        // Anmeldecode abgelaufen oder schon benutzt: bestehende Verbindung bleibt
+        throw new HttpError(400, 'Die Anmeldung bei Google ist abgelaufen. Bitte noch einmal auf „Mit Google verbinden“ klicken.');
+      }
       if (err === 'invalid_grant') {
         // Zugang widerrufen oder abgelaufen: Verbindung lokal entfernen
         this.db.run('DELETE FROM google_accounts');
@@ -231,15 +240,25 @@ export class GoogleClient {
     const acc = this.account();
     if (!acc) throw new GoogleNotConnectedError();
     const secret = this.config.appSecret;
+    const open = (enc: string) => {
+      try {
+        return decrypt(enc, secret);
+      } catch {
+        // z. B. Datenbank auf einen anderen Rechner kopiert oder APP_SECRET in der .env geändert
+        this.db.run('DELETE FROM google_accounts');
+        throw new GoogleNotConnectedError('Die gespeicherte Google-Verbindung lässt sich auf diesem Rechner nicht öffnen. Bitte in den Einstellungen neu verbinden.');
+      }
+    };
     if (!forceRefresh && acc.access_token_enc && acc.token_expires_at && acc.token_expires_at > nowIso()) {
-      return decrypt(acc.access_token_enc, secret);
+      return open(acc.access_token_enc);
     }
+    const refreshToken = open(acc.refresh_token_enc);
     // Gleichzeitige Anfragen teilen sich eine Erneuerung
     this.refreshing ??= (async () => {
       try {
         const token = await this.tokenRequest({
           grant_type: 'refresh_token',
-          refresh_token: decrypt(acc.refresh_token_enc, secret),
+          refresh_token: refreshToken,
         });
         this.db.run('UPDATE google_accounts SET access_token_enc = :access, token_expires_at = :expires WHERE id = 1', {
           access: encrypt(token.access_token, secret),
@@ -254,9 +273,9 @@ export class GoogleClient {
   }
 
   /** Aufruf einer Google-Schnittstelle mit JSON-Antwort */
-  async request<T>(method: string, path: string, opts: { query?: Record<string, string>; body?: unknown } = {}): Promise<T> {
+  async request<T>(method: string, path: string, opts: { query?: Record<string, string | string[]>; body?: unknown } = {}): Promise<T> {
     const url = new URL(path, this.config.google.apiBase);
-    for (const [k, v] of Object.entries(opts.query ?? {})) url.searchParams.set(k, v);
+    for (const [k, v] of Object.entries(opts.query ?? {})) for (const item of [v].flat()) url.searchParams.append(k, item);
     for (let attempt = 0; attempt < 2; attempt++) {
       const token = await this.accessToken(attempt > 0);
       let res: Response;
@@ -290,7 +309,10 @@ function describeError(status: number, message?: string, reason?: string): strin
   if (reason === 'accessNotConfigured' || /has not been used|is disabled/i.test(message ?? '')) {
     return 'Die benötigte Google-Schnittstelle ist im Cloud-Projekt nicht aktiviert (siehe Anleitung, Schritt 2).';
   }
-  if (status === 403 && /insufficient/i.test(message ?? '')) {
+  if (reason === 'insufficientFilePermissions' || reason === 'forbidden' || /insufficient permissions for (the|this) (specified )?(parent|file)/i.test(message ?? '')) {
+    return 'Für diesen Ordner oder Eintrag hat das Google-Konto nur Lesezugriff. Bitte einen Ordner mit Bearbeitungsrecht verknüpfen.';
+  }
+  if (status === 403 && (reason === 'insufficientPermissions' || /insufficient authentication scopes/i.test(message ?? ''))) {
     return 'Der App fehlt eine Berechtigung. Bitte in den Einstellungen die Google-Verbindung trennen und neu verbinden.';
   }
   if (status === 404) return 'Bei Google nicht gefunden (gelöscht oder kein Zugriff).';

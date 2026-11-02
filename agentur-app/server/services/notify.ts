@@ -13,23 +13,31 @@ export function desktopNotification(title: string, body: string): void {
     if (err) console.error('[Benachrichtigung] Desktop-Hinweis nicht möglich:', err.message);
   };
   if (process.platform === 'darwin') {
-    // AppleScript-Zeichenketten: Backslash und Anführungszeichen maskieren
-    const esc = (s: string) => s.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
-    execFile('osascript', ['-e', `display notification "${esc(text)}" with title "${esc(title)}" sound name "Glass"`], done);
+    // Titel und Text als Argumente übergeben, nicht im Skript: keine Probleme mit Anführungszeichen
+    execFile(
+      'osascript',
+      ['-e', 'on run argv', '-e', 'display notification (item 2 of argv) with title (item 1 of argv) sound name "Glass"', '-e', 'end run', title, text],
+      done,
+    );
   } else if (process.platform === 'win32') {
-    // Windows 10/11: Toast über die Windows-Runtime, ohne Zusatzmodule
-    const esc = (s: string) => s.replace(/'/g, "''");
+    // Windows 10/11: Toast über die Windows-Runtime, ohne Zusatzmodule. Titel und Text kommen über
+    // Umgebungsvariablen, damit Zeichen wie ’ oder ' im Namen das Skript nicht stören
     const script = [
       '[Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] > $null',
       '$t = [Windows.UI.Notifications.ToastNotificationManager]::GetTemplateContent([Windows.UI.Notifications.ToastTemplateType]::ToastText02)',
-      `$t.GetElementsByTagName('text')[0].AppendChild($t.CreateTextNode('${esc(title)}')) > $null`,
-      `$t.GetElementsByTagName('text')[1].AppendChild($t.CreateTextNode('${esc(text)}')) > $null`,
+      "$t.GetElementsByTagName('text')[0].AppendChild($t.CreateTextNode($env:AGENTUR_TOAST_TITLE)) > $null",
+      "$t.GetElementsByTagName('text')[1].AppendChild($t.CreateTextNode($env:AGENTUR_TOAST_TEXT)) > $null",
       '$n = [Windows.UI.Notifications.ToastNotification]::new($t)',
       "[Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier('{1AC14E77-02E7-4E5D-B744-2EB1AE5198B7}\\WindowsPowerShell\\v1.0\\powershell.exe').Show($n)",
     ].join('; ');
-    execFile('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', script], { windowsHide: true }, done);
+    execFile(
+      'powershell.exe',
+      ['-NoProfile', '-NonInteractive', '-Command', script],
+      { windowsHide: true, env: { ...process.env, AGENTUR_TOAST_TITLE: title, AGENTUR_TOAST_TEXT: text } },
+      done,
+    );
   } else {
-    execFile('notify-send', [title, text], done);
+    execFile('notify-send', ['--', title, text], done);
   }
 }
 

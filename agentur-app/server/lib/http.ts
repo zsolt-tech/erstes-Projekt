@@ -40,6 +40,16 @@ export const handle =
     }
   };
 
+/** Text-Parameter aus der Adresszeile (Listen oder Objekte wie ?q[]=a werden ignoriert) */
+export function queryString(v: unknown): string | undefined {
+  return typeof v === 'string' && v.trim() ? v : undefined;
+}
+
+/** Suchmuster für LIKE ... ESCAPE '\\': % und _ in der Eingabe zählen als normale Zeichen */
+export function likeContains(q: string): string {
+  return `%${q.trim().replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
+}
+
 // Einheitliche Fehlerantwort auf Deutsch
 export function errorHandler(err: unknown, _req: Request, res: Response, _next: NextFunction) {
   if (err instanceof ZodError) {
@@ -62,6 +72,12 @@ export function errorHandler(err: unknown, _req: Request, res: Response, _next: 
   }
   if (err && typeof err === 'object' && (err as { type?: string }).type === 'entity.parse.failed') {
     res.status(400).json({ error: 'Ungültige Anfrage (JSON)' });
+    return;
+  }
+  // Fehler des Body-Parsers (z. B. zu große Anfrage)
+  const status = (err as { status?: unknown; expose?: unknown } | null)?.status;
+  if (typeof status === 'number' && status >= 400 && status < 500 && (err as { expose?: unknown }).expose) {
+    res.status(status).json({ error: status === 413 ? 'Die Anfrage ist zu groß' : 'Ungültige Anfrage' });
     return;
   }
   console.error('[Fehler]', err);

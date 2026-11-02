@@ -3,7 +3,7 @@ import { Router } from 'express';
 import type { Database } from '../db/database.ts';
 import type { AppConfig } from '../env.ts';
 import { events } from '../lib/events.ts';
-import { handle, HttpError, parse, parseId } from '../lib/http.ts';
+import { handle, HttpError, parse, parseId, queryString } from '../lib/http.ts';
 import {
   createCustomer,
   getCustomer,
@@ -69,7 +69,7 @@ export function apiRouter(db: Database, config: AppConfig, services: Services): 
       }
       return listCustomers(db, {
         status: status as CustomerStatus | undefined,
-        q: (req.query.q as string) || undefined,
+        q: queryString(req.query.q),
         archived: req.query.archived === '1',
       });
     }),

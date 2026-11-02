@@ -21,6 +21,7 @@ import {
 import { useSettings } from '../api/hooks';
 import { useLiveUpdates } from '../lib/live';
 import { NotificationBell } from './Notifications';
+import { ErrorBoundary } from './ErrorBoundary';
 import { useTheme } from '../lib/theme';
 import { cx } from './ui';
 import type { Theme } from '../../../shared/schemas';
@@ -137,7 +138,9 @@ export function Layout() {
         )}
         <main className="flex-1 overflow-y-auto">
           <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
-            <Outlet />
+            <ErrorBoundary resetKey={location.pathname}>
+              <Outlet />
+            </ErrorBoundary>
           </div>
         </main>
       </div>

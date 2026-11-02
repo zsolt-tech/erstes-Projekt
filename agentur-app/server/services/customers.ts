@@ -1,6 +1,6 @@
 // Kundenverwaltung: Lesen, Anlegen, Bearbeiten, Archivieren, Paketverbrauch.
 import type { Database } from '../db/database.ts';
-import { HttpError, notFound } from '../lib/http.ts';
+import { HttpError, likeContains, notFound } from '../lib/http.ts';
 import { monthBerlin, monthRange, nowIso, todayBerlin } from '../lib/time.ts';
 import type {
   Contact,
@@ -28,9 +28,10 @@ export function listCustomers(db: Database, filter: CustomerListFilter = {}): Cu
     params.status = filter.status;
   }
   if (filter.q && filter.q.trim()) {
-    where.push(`(c.company_name LIKE :q OR c.industry LIKE :q OR c.city LIKE :q
-      OR EXISTS (SELECT 1 FROM contacts x WHERE x.customer_id = c.id AND (x.name LIKE :q OR x.email LIKE :q OR x.phone LIKE :q)))`);
-    params.q = `%${filter.q.trim()}%`;
+    const like = (col: string) => `${col} LIKE :q ESCAPE '\\'`;
+    where.push(`(${like('c.company_name')} OR ${like('c.industry')} OR ${like('c.city')}
+      OR EXISTS (SELECT 1 FROM contacts x WHERE x.customer_id = c.id AND (${like('x.name')} OR ${like('x.email')} OR ${like('x.phone')})))`);
+    params.q = likeContains(filter.q);
   }
   return db.all<CustomerListItem>(
     `SELECT c.id, c.company_name, c.industry, c.customer_type, c.status, c.pipeline_stage, c.city,
@@ -54,23 +55,36 @@ export function listCustomers(db: Database, filter: CustomerListFilter = {}): Cu
 /** Paketverbrauch eines Monats: gebuchte Menge je Leistungsart gegen angelegte Projekte. */
 export function packageUsage(db: Database, customerId: number, month = monthBerlin()): PackageUsage[] {
   const { start, end } = monthRange(month);
-  return db.all<PackageUsage>(
-    `SELECT pi.deliverable_type_id, dt.name AS deliverable_type_name,
-            SUM(pi.quantity_per_month) AS quantity,
-            COALESCE((SELECT SUM(p.deliverable_count) FROM projects p
-                      WHERE p.customer_id = :cid AND p.deliverable_type_id = pi.deliverable_type_id
-                        AND p.service_month = :month AND p.status <> 'abgebrochen'), 0) AS used,
-            COALESCE((SELECT SUM(p.deliverable_count) FROM projects p
-                      WHERE p.customer_id = :cid AND p.deliverable_type_id = pi.deliverable_type_id
-                        AND p.service_month = :month AND p.status = 'abgeschlossen'), 0) AS completed
-     FROM package_items pi
-     JOIN deliverable_types dt ON dt.id = pi.deliverable_type_id
-     WHERE pi.customer_id = :cid AND pi.valid_from <= :end
-       AND (pi.valid_until IS NULL OR pi.valid_until >= :start)
-     GROUP BY pi.deliverable_type_id
+  const lines = db.all<{ type_id: number; name: string; quantity: number; valid_from: string; valid_until: string | null }>(
+    `SELECT pi.deliverable_type_id AS type_id, dt.name, pi.quantity_per_month AS quantity, pi.valid_from, pi.valid_until
+     FROM package_items pi JOIN deliverable_types dt ON dt.id = pi.deliverable_type_id
+     WHERE pi.customer_id = :cid AND pi.valid_from <= :end AND (pi.valid_until IS NULL OR pi.valid_until >= :start)
      ORDER BY dt.sort_order, dt.name`,
-    { cid: customerId, month, start, end },
+    { cid: customerId, start, end },
   );
+  const byType = new Map<number, typeof lines>();
+  for (const l of lines) byType.set(l.type_id, [...(byType.get(l.type_id) ?? []), l]);
+  const count = (type: number, completedOnly: boolean) =>
+    db.get<{ n: number }>(
+      `SELECT COALESCE(SUM(deliverable_count), 0) AS n FROM projects
+       WHERE customer_id = :cid AND deliverable_type_id = :type AND service_month = :month AND status <> 'abgebrochen'
+         AND (:completed = 0 OR status = 'abgeschlossen')`,
+      { cid: customerId, type, month, completed: completedOnly ? 1 : 0 },
+    )!.n;
+  return [...byType.entries()].map(([typeId, items]) => {
+    // Ändert sich das Paket im Monat, gilt der Stand am letzten gültigen Tag des Monats (keine Doppelzählung)
+    const ref = items.reduce((d, l) => (l.valid_until && l.valid_until < end ? (l.valid_until > d ? l.valid_until : d) : end), start);
+    const quantity = items
+      .filter((l) => l.valid_from <= ref && (!l.valid_until || l.valid_until >= ref))
+      .reduce((sum, l) => sum + l.quantity, 0);
+    return {
+      deliverable_type_id: typeId,
+      deliverable_type_name: items[0].name,
+      quantity,
+      used: count(typeId, false),
+      completed: count(typeId, true),
+    };
+  });
 }
 
 export function getCustomer(db: Database, id: number, month?: string): Customer {

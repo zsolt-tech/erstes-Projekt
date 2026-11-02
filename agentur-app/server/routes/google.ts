@@ -4,7 +4,7 @@ import { z } from 'zod';
 import type { Services } from '../google/index.ts';
 import { events } from '../lib/events.ts';
 import { handle, parse, parseId } from '../lib/http.ts';
-import { calendarMoveInput, calendarSettingsInput, driveLinkInput } from '../../shared/schemas.ts';
+import { calendarMoveInput, calendarSettingsInput, driveLinkInput, isValidIsoDate } from '../../shared/schemas.ts';
 import { HttpError } from '../lib/http.ts';
 
 export function googleRouter({ google, queue, drive, calendar }: Services): Router {
@@ -40,6 +40,8 @@ export function googleRouter({ google, queue, drive, calendar }: Services): Rout
     }
     try {
       const email = await google.handleCallback(String(req.query.code ?? ''), String(req.query.state ?? ''));
+      // Anderes Google-Konto als zuvor: Kalenderzuordnung und Stammordner gehören zum alten Konto
+      if (google.previousEmail && google.previousEmail !== email) calendar.resetForAccountChange();
       events.changed('google');
       queue.kick();
       back({ google: 'verbunden', konto: email });
@@ -127,7 +129,7 @@ export function googleRouter({ google, queue, drive, calendar }: Services): Rout
   );
 
   // --- Kalender ---
-  const isDate = (v: unknown): v is string => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v);
+  const isDate = (v: unknown): v is string => typeof v === 'string' && isValidIsoDate(v);
 
   r.get(
     '/calendar/items',
@@ -169,7 +171,7 @@ export function googleRouter({ google, queue, drive, calendar }: Services): Rout
     '/calendar/sync',
     handle(async () => {
       if (!google.connected) throw new HttpError(409, 'Google ist nicht verbunden.');
-      queue.enqueue('calendar.sync', { label: 'Kalender abgleichen' });
+      queue.enqueue('calendar.sync', { label: 'Kalender abgleichen' }, { now: true });
       await queue.process();
       return calendar.settings();
     }),

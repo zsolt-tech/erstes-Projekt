@@ -4,9 +4,9 @@ import { CalendarCheck, CalendarX, Check, Clock, ExternalLink, LoaderCircle, Loc
 import { useProjectAction } from '../api/projects';
 import { useRestoreShoot, useShootCalendar } from '../api/calendar';
 import { useCustomer, useTeam } from '../api/hooks';
-import { Dialog, useToast } from './feedback';
-import { Badge, Button, Field, IconButton, Input, Select, Textarea, cx } from './ui';
-import { displayUrl, formatDate, formatDateTime, today } from '../lib/format';
+import { Dialog, useConfirm, useToast } from './feedback';
+import { Badge, Button, CommitInput, Field, IconButton, Input, Select, Textarea, cx } from './ui';
+import { berlinDate, displayUrl, formatDate, formatDateTime, today } from '../lib/format';
 import {
   CHECKLIST_KIND_LABELS,
   PHASES,
@@ -99,6 +99,7 @@ export function PhaseStepper({ project, selected, onSelect }: { project: Project
 
 function ChecklistRow({ item }: { item: ChecklistItem }) {
   const { run } = useRun();
+  const confirm = useConfirm();
   const [editing, setEditing] = useState(false);
   const [label, setLabel] = useState(item.label);
   useEffect(() => setLabel(item.label), [item.label]);
@@ -149,7 +150,12 @@ function ChecklistRow({ item }: { item: ChecklistItem }) {
               <IconButton label="Umbenennen" onClick={() => setEditing(true)}>
                 <Pencil className="size-3.5" />
               </IconButton>
-              <IconButton label="Punkt löschen" onClick={() => run('DELETE', `/checklist/${item.id}`)}>
+              <IconButton
+                label="Punkt löschen"
+                onClick={async () => {
+                  if (await confirm({ title: 'Punkt löschen?', text: `„${item.label}“ wird aus der Checkliste entfernt.`, confirmLabel: 'Löschen', danger: true })) run('DELETE', `/checklist/${item.id}`);
+                }}
+              >
                 <Trash2 className="size-3.5" />
               </IconButton>
             </span>
@@ -237,10 +243,10 @@ export function PhaseMeta({ project, phase }: { project: ProjectDetail; phase: P
   return (
     <div className="grid gap-4 sm:grid-cols-2">
       <Field label="Fällig am" error={overdue ? 'Überfällig' : undefined}>
-        <Input
+        <CommitInput
           type="date"
           value={data.due_date ?? ''}
-          onChange={(e) => save({ due_date: e.target.value || null })}
+          onCommit={(v) => save({ due_date: v || null })}
           invalid={!!overdue}
           disabled={phase === 1}
         />
@@ -416,14 +422,14 @@ export function ApprovalPanel({ project }: { project: ProjectDetail }) {
             <div>
               <div className="text-sm font-medium text-fg">Runde {open.round_no} wartet auf Rückmeldung</div>
               <div className="mt-0.5 text-xs text-muted">
-                Erinnerung nach {threshold} {threshold === 1 ? 'Tag' : 'Tagen'} ohne Antwort (ab Etappe 5 automatisch)
+                Erinnerung nach {threshold} {threshold === 1 ? 'Tag' : 'Tagen'} ohne Antwort
               </div>
             </div>
             <Field label="Anfrage gesendet am">
-              <Input
+              <CommitInput
                 type="date"
-                value={open.requested_at.slice(0, 10)}
-                onChange={(e) => e.target.value && run('PUT', `/projects/${project.id}/approval`, { requested_date: e.target.value })}
+                value={berlinDate(open.requested_at)}
+                onCommit={(v) => v && run('PUT', `/projects/${project.id}/approval`, { requested_date: v })}
                 className="w-44"
               />
             </Field>
@@ -543,6 +549,7 @@ function Stat({ label, value, tone }: { label: string; value: ReactNode; tone?: 
 
 function PublicationRow({ pub }: { pub: Publication }) {
   const { run } = useRun();
+  const confirm = useConfirm();
   const [url, setUrl] = useState(pub.post_url ?? '');
   useEffect(() => setUrl(pub.post_url ?? ''), [pub.post_url]);
   const save = (patch: Partial<Publication>) =>
@@ -564,8 +571,8 @@ function PublicationRow({ pub }: { pub: Publication }) {
           </option>
         ))}
       </Select>
-      <Input type="date" value={pub.planned_date ?? ''} onChange={(e) => save({ planned_date: e.target.value || null })} aria-label="Geplant am" />
-      <Input type="time" value={pub.planned_time ?? ''} onChange={(e) => save({ planned_time: e.target.value || null })} aria-label="Uhrzeit" />
+      <CommitInput type="date" value={pub.planned_date ?? ''} onCommit={(v) => save({ planned_date: v || null })} aria-label="Geplant am" />
+      <CommitInput type="time" value={pub.planned_time ?? ''} onCommit={(v) => save({ planned_time: v || null })} aria-label="Uhrzeit" />
       <div className="flex items-center gap-2">
         <Input
           value={url}
@@ -583,7 +590,12 @@ function PublicationRow({ pub }: { pub: Publication }) {
       </div>
       <div className="flex items-center gap-1">
         {pub.status === 'veroeffentlicht' ? <Badge tone="success">Veröffentlicht</Badge> : <Badge>Geplant</Badge>}
-        <IconButton label="Veröffentlichung entfernen" onClick={() => run('DELETE', `/publications/${pub.id}`)}>
+        <IconButton
+          label="Veröffentlichung entfernen"
+          onClick={async () => {
+            if (await confirm({ title: 'Veröffentlichung entfernen?', text: 'Die geplante Veröffentlichung wird gelöscht, auch der Eintrag im Kalender.', confirmLabel: 'Entfernen', danger: true })) run('DELETE', `/publications/${pub.id}`);
+          }}
+        >
           <Trash2 className="size-4" />
         </IconButton>
       </div>

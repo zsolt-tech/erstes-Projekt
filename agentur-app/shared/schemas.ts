@@ -1,6 +1,38 @@
 // Gemeinsame Datentypen, Bezeichnungen und Prüfregeln für Server und Oberfläche.
 import { z } from 'zod';
 
+// Deutsche Standard-Fehlermeldungen für alle Prüfregeln ohne eigene Meldung (sonst zeigt die Oberfläche englische Texte)
+z.setErrorMap((issue, ctx) => {
+  switch (issue.code) {
+    case z.ZodIssueCode.invalid_type:
+      if (issue.received === 'undefined' || issue.received === 'null') return { message: 'Bitte angeben' };
+      if (issue.expected === 'integer') return { message: 'Bitte eine ganze Zahl angeben' };
+      if (issue.expected === 'number') return { message: 'Bitte eine Zahl angeben' };
+      return { message: 'Ungültiger Wert' };
+    case z.ZodIssueCode.too_small:
+      if (issue.type === 'string') return { message: Number(issue.minimum) <= 1 ? 'Darf nicht leer sein' : `Mindestens ${issue.minimum} Zeichen` };
+      if (issue.type === 'array') return { message: `Mindestens ${issue.minimum} Einträge` };
+      return { message: `Mindestens ${issue.minimum}` };
+    case z.ZodIssueCode.too_big:
+      if (issue.type === 'string') return { message: `Höchstens ${issue.maximum} Zeichen` };
+      if (issue.type === 'array') return { message: `Höchstens ${issue.maximum} Einträge` };
+      return { message: `Höchstens ${issue.maximum}` };
+    case z.ZodIssueCode.invalid_string:
+      if (issue.validation === 'email') return { message: 'Ungültige E-Mail-Adresse' };
+      if (issue.validation === 'url') return { message: 'Ungültige Adresse' };
+      return { message: 'Ungültiges Format' };
+    case z.ZodIssueCode.invalid_enum_value:
+    case z.ZodIssueCode.invalid_literal:
+      return { message: 'Ungültige Auswahl' };
+    case z.ZodIssueCode.invalid_union:
+      return { message: 'Ungültige Eingabe' };
+    case z.ZodIssueCode.not_multiple_of:
+      return { message: 'Bitte eine ganze Zahl angeben' };
+    default:
+      return { message: ctx.defaultError };
+  }
+});
+
 // ---------------------------------------------------------------------
 // Aufzählungen mit deutschen Bezeichnungen
 // ---------------------------------------------------------------------
@@ -74,7 +106,14 @@ const optText = (max = 500) =>
     .nullish()
     .transform((v) => (v ? v : null));
 
-const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Datum im Format JJJJ-MM-TT erwartet');
+/** Echtes Kalenderdatum (kein 30. Februar) */
+export function isValidIsoDate(v: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) return false;
+  const d = new Date(`${v}T12:00:00Z`);
+  return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === v;
+}
+
+const isoDate = z.string().refine(isValidIsoDate, 'Datum im Format JJJJ-MM-TT erwartet (gültiges Datum)');
 
 const optDate = z
   .union([isoDate, z.literal('')])
@@ -464,10 +503,10 @@ export const TASK_STATUS_LABELS: Record<TaskStatus, string> = {
 };
 
 const optTime = z
-  .union([z.string().regex(/^\d{2}:\d{2}$/, 'Uhrzeit im Format HH:MM'), z.literal('')])
+  .union([z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Uhrzeit im Format HH:MM'), z.literal('')])
   .nullish()
   .transform((v) => (v ? v : null));
-const month = z.string().regex(/^\d{4}-\d{2}$/, 'Monat im Format JJJJ-MM');
+const month = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, 'Monat im Format JJJJ-MM');
 const optId = id.nullish().transform((v) => v ?? null);
 const optCents = z.number().int().min(0).nullish().transform((v) => v ?? null);
 

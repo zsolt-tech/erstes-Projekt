@@ -16,6 +16,13 @@ if (major < 22 || (major === 22 && minor < 13)) {
   process.exit(1);
 }
 
+// Hinweis „SQLite is an experimental feature“ ausblenden, andere Warnungen bleiben sichtbar
+// (bewusst hier statt als Startoption, damit die Versionsprüfung oben auch auf alten Node-Versionen greift)
+process.removeAllListeners('warning');
+process.on('warning', (w) => {
+  if (w.name !== 'ExperimentalWarning') console.warn(`${w.name}: ${w.message}`);
+});
+
 // --- .env anlegen bzw. APP_SECRET ergänzen ---
 const envFile = path.join(root, '.env');
 if (!fs.existsSync(envFile)) {

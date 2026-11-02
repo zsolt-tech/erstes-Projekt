@@ -159,7 +159,9 @@ test('Ändernde Aufrufe von fremden Webseiten werden abgelehnt', async () => {
   assert.equal(await post({ Origin: 'https://angreifer.example' }), 403);
   assert.equal(await post({ Origin: 'null' }), 403);
   assert.equal(await post({ 'Sec-Fetch-Site': 'cross-site' }), 403);
-  assert.notEqual(await post({ Origin: t.url, 'Sec-Fetch-Site': 'same-origin' }), 403, 'eigene Oberfläche');
+  assert.equal(await post({ Origin: 'http://localhost:8080', 'Sec-Fetch-Site': 'same-site' }), 403, 'andere lokale Webseite');
+  assert.notEqual(await post({ Origin: `http://localhost:${t.config.port}`, 'Sec-Fetch-Site': 'same-origin' }), 403, 'eigene Oberfläche');
+  assert.notEqual(await post({ Origin: 'http://localhost:5173' }), 403, 'Entwicklungsserver');
   assert.notEqual(await post({}), 403, 'curl und Agenten ohne Origin');
   const report = await fetch(`${t.url}/api/customers/1/report.pdf?month=2026-13`);
   assert.equal(report.status, 400);
