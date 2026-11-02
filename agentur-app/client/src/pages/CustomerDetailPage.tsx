@@ -9,10 +9,11 @@ import { useProjects, useTasks } from '../api/projects';
 import { ProjectTable } from './ProjectsPage';
 import { TaskDialog, TaskQuickAdd, TaskRow } from '../components/Tasks';
 import { CustomerDriveCard } from '../components/Drive';
+import { useCalendarItems } from '../api/calendar';
 import { ConfirmDialog, useToast } from '../components/feedback';
 import { CustomerStatusBadge } from '../components/labels';
 import { currentMonth, displayUrl, formatDate, formatEuro, formatMonth, shiftMonth, telHref, today } from '../lib/format';
-import { CUSTOMER_TYPE_LABELS, PLATFORM_LABELS, type PackageUsage, type Task } from '../../../shared/schemas';
+import { CALENDAR_KIND_LABELS, CUSTOMER_TYPE_LABELS, PLATFORM_LABELS, type PackageUsage, type Task } from '../../../shared/schemas';
 
 function UsageRow({ item }: { item: PackageUsage }) {
   const over = item.used > item.quantity;
@@ -89,10 +90,40 @@ function CustomerTasks({ customerId }: { customerId: number }) {
   );
 }
 
-function Upcoming({ title, stage }: { title: string; stage: number }) {
+function CustomerAppointments({ customerId }: { customerId: number }) {
+  const start = today();
+  const end = (() => {
+    const d = new Date(`${start}T12:00:00`);
+    d.setDate(d.getDate() + 60);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  })();
+  const { data = [], isLoading } = useCalendarItems({ start, end }, customerId);
   return (
-    <Card title={title}>
-      <p className="text-sm text-subtle">Wird in Etappe {stage} ergänzt.</p>
+    <Card title="Termine der nächsten 60 Tage">
+      {isLoading ? (
+        <Spinner />
+      ) : data.length === 0 ? (
+        <p className="text-sm text-subtle">Keine anstehenden Termine.</p>
+      ) : (
+        <ul className="-my-1 divide-y divide-line text-sm">
+          {data.map((i) => (
+            <li key={i.id} className="flex items-center gap-3 py-2">
+              <span className="size-2.5 shrink-0 rounded-full" style={{ background: `var(--cal-${i.kind})` }} title={CALENDAR_KIND_LABELS[i.kind]} />
+              <span className="w-32 shrink-0 text-muted tabular">
+                {formatDate(i.start.slice(0, 10))}
+                {!i.all_day && `, ${i.start.slice(11, 16)}`}
+              </span>
+              {i.url ? (
+                <Link to={i.url} className="min-w-0 flex-1 truncate text-fg hover:text-accent">
+                  {i.title}
+                </Link>
+              ) : (
+                <span className="min-w-0 flex-1 truncate">{i.title}</span>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
     </Card>
   );
 }
@@ -204,7 +235,7 @@ export function CustomerDetailPage() {
 
           <CustomerProjects customerId={id} archived={!!c.archived_at} />
           <CustomerTasks customerId={id} />
-          <Upcoming title="Termine" stage={4} />
+          <CustomerAppointments customerId={id} />
 
           <Card title="Notizen">
             {c.notes ? (

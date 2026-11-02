@@ -33,7 +33,7 @@ export class SyncQueue {
   enqueue(type: string, payload: Record<string, unknown> & { label: string }): void {
     const json = JSON.stringify(payload);
     const exists = this.db.get(
-      "SELECT 1 FROM sync_jobs WHERE job_type = ? AND payload_json = ? AND status IN ('wartend','laeuft')",
+      "SELECT 1 FROM sync_jobs WHERE job_type = ? AND payload_json = ? AND status = 'wartend'",
       [type, json],
     );
     if (!exists) this.db.run('INSERT INTO sync_jobs (job_type, payload_json) VALUES (?, ?)', [type, json]);
@@ -128,9 +128,12 @@ export class SyncQueue {
         }
         events.changed('sync');
       }
-      // Erledigte Aufträge nach 7 Tagen aufräumen
+      // Erledigte Aufträge nach 7 Tagen aufräumen, routinemäßige Kalenderabgleiche schon nach einer Stunde
       this.db.run("DELETE FROM sync_jobs WHERE status = 'fertig' AND updated_at < ?", [
         new Date(Date.now() - 7 * 86400000).toISOString(),
+      ]);
+      this.db.run("DELETE FROM sync_jobs WHERE status = 'fertig' AND job_type = 'calendar.sync' AND updated_at < ?", [
+        new Date(Date.now() - 3600000).toISOString(),
       ]);
     }
     return done;

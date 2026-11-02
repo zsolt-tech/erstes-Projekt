@@ -127,7 +127,7 @@ Kunden/                              Stammordner für neue Kunden, frei wählbar
 - Ohne Internet oder ohne Google-Verbindung funktioniert die App vollständig weiter; die Ordner werden über die Warteschlange angelegt, sobald die Verbindung steht.
 - Final-Erkennung: Die App zählt die Dateien in `03 Fertige Videos`. Liegt dort mindestens eine Datei, wird der Checkpunkt "Dateien im Final-Ordner" automatisch abgehakt. Zusätzlich gibt es einen Knopf "Jetzt prüfen".
 
-**Kalender, Zwei-Wege-Sync:**
+**Kalender, Zwei-Wege-Sync** (umgesetzt in `server/google/calendar.ts`):
 
 - App nach Google: Drehtage werden automatisch als Termin eingetragen (mit Ort, Shotlist-Auszug und Link zum Projekt). Optional per Einstellung auch Freigabe-Fristen und Veröffentlichungen als ganztägige Termine.
 - Google nach App: Alle Termine der ausgewählten Kalender erscheinen in der App und im Briefing. Wird ein App-Termin in Google verschoben, übernimmt die App Datum, Uhrzeit und Ort in den Drehtag. Wird er in Google gelöscht, bleibt das Projekt erhalten und zeigt einen Hinweis.

@@ -5,6 +5,7 @@ import { CircleCheck, Copy, FileUp, LogIn, RefreshCw, TriangleAlert, Unplug } fr
 import { ApiError } from '../api/client';
 import { useSaveSettings, useSettings } from '../api/hooks';
 import { useDisconnectGoogle, useGoogleStatus, useRetryJob, useSaveCredentials, useSyncJobs } from '../api/google';
+import { useCalendarSettings, useSaveCalendarSettings, useSyncCalendar } from '../api/calendar';
 import { ConfirmDialog, useToast } from './feedback';
 import { Badge, Button, Card, Field, Input, Spinner } from './ui';
 import { formatDateTime } from '../lib/format';
@@ -222,7 +223,7 @@ function Queue() {
   const { data = [] } = useSyncJobs();
   const retry = useRetryJob();
   const open = data.filter((j) => j.status !== 'fertig');
-  const recent = data.filter((j) => j.status === 'fertig').slice(0, 5);
+  const recent = data.filter((j) => j.status === 'fertig' && j.job_type !== 'calendar.sync').slice(0, 5);
   if (!data.length) return <p className="text-sm text-muted">Keine Aufträge.</p>;
   return (
     <ul className="divide-y divide-line text-sm">
@@ -243,11 +244,123 @@ function Queue() {
   );
 }
 
+function CalendarSettingsForm() {
+  const { data: google } = useGoogleStatus();
+  const { data, isLoading } = useCalendarSettings(!!google?.connected);
+  const save = useSaveCalendarSettings();
+  const sync = useSyncCalendar();
+  const toast = useToast();
+  const [writeId, setWriteId] = useState('');
+  const [readIds, setReadIds] = useState<string[]>([]);
+  const [approvals, setApprovals] = useState(false);
+  const [publications, setPublications] = useState(false);
+
+  useEffect(() => {
+    if (!data) return;
+    setWriteId(data.write_id);
+    setReadIds(data.calendars.filter((c) => c.read_enabled).map((c) => c.id));
+    setApprovals(data.push_approvals);
+    setPublications(data.push_publications);
+  }, [data]);
+
+  if (!google?.connected) return <p className="text-sm text-muted">Nach dem Verbinden mit Google kannst du hier die Kalender auswählen.</p>;
+  if (isLoading || !data) return <Spinner />;
+  if (!data.calendars.length) {
+    return (
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-muted">Die Kalenderliste wird beim ersten Abgleich geladen.</p>
+        <Button icon={<RefreshCw className="size-4" />} loading={sync.isPending} onClick={() => sync.mutateAsync().catch((err) => toast.error(err))}>
+          Jetzt abgleichen
+        </Button>
+      </div>
+    );
+  }
+
+  const writable = data.calendars.filter((c) => c.access_role === 'owner' || c.access_role === 'writer');
+  async function submit(e: FormEvent) {
+    e.preventDefault();
+    try {
+      await save.mutateAsync({ write_id: writeId, read_ids: readIds, push_approvals: approvals, push_publications: publications });
+      toast.success('Kalender-Einstellungen gespeichert');
+    } catch (err) {
+      toast.error(err);
+    }
+  }
+
+  return (
+    <form onSubmit={submit} className="grid gap-5">
+      <div className="grid gap-5 sm:grid-cols-2">
+        <Field label="Drehtage eintragen in" hint="Die App legt ihre Termine in diesem Kalender an">
+          <select
+            value={writeId}
+            onChange={(e) => setWriteId(e.target.value)}
+            className="h-9 w-full rounded-md border border-line-strong bg-surface px-3 text-sm text-fg"
+          >
+            {writable.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <div>
+          <div className="mb-1 text-[13px] font-medium text-muted">Zusätzlich in Google eintragen</div>
+          <label className="flex cursor-pointer items-center gap-2 py-1 text-sm">
+            <input type="checkbox" checked={approvals} onChange={(e) => setApprovals(e.target.checked)} className="size-4 accent-[var(--accent)]" />
+            Freigabe-Fristen (ganztägig)
+          </label>
+          <label className="flex cursor-pointer items-center gap-2 py-1 text-sm">
+            <input type="checkbox" checked={publications} onChange={(e) => setPublications(e.target.checked)} className="size-4 accent-[var(--accent)]" />
+            Geplante Veröffentlichungen
+          </label>
+        </div>
+      </div>
+      <div>
+        <div className="mb-1 text-[13px] font-medium text-muted">Termine aus diesen Kalendern in der App anzeigen</div>
+        <div className="grid gap-1 sm:grid-cols-2">
+          {data.calendars.map((c) => (
+            <label key={c.id} className="flex cursor-pointer items-center gap-2 py-1 text-sm">
+              <input
+                type="checkbox"
+                checked={readIds.includes(c.id)}
+                onChange={(e) => setReadIds((ids) => (e.target.checked ? [...ids, c.id] : ids.filter((x) => x !== c.id)))}
+                className="size-4 accent-[var(--accent)]"
+              />
+              <span className="size-2.5 shrink-0 rounded-full" style={{ background: c.color ?? 'var(--subtle)' }} />
+              <span className="truncate">{c.name}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <span className={data.last_error ? 'text-xs text-danger' : 'text-xs text-subtle'}>
+          {data.last_error
+            ? `Letzter Abgleich fehlgeschlagen: ${data.last_error}`
+            : data.last_sync_at
+              ? `Zuletzt abgeglichen ${formatDateTime(data.last_sync_at)}, automatisch alle 5 Minuten`
+              : 'Noch nicht abgeglichen'}
+        </span>
+        <div className="flex gap-2">
+          <Button icon={<RefreshCw className="size-4" />} loading={sync.isPending} onClick={() => sync.mutateAsync().catch((err) => toast.error(err))}>
+            Jetzt abgleichen
+          </Button>
+          <Button type="submit" variant="primary" loading={save.isPending}>
+            Speichern
+          </Button>
+        </div>
+      </div>
+    </form>
+  );
+}
+
 export function GoogleSettings() {
   return (
     <>
       <Card title="Google-Verbindung">
         <Connection />
+      </Card>
+      <Card title="Google Calendar">
+        <CalendarSettingsForm />
       </Card>
       <Card title="Drive-Ordnerstruktur">
         <FolderSettings />

@@ -99,6 +99,103 @@ export async function startFakeGoogle() {
     return f;
   }
 
+  // --- Google Calendar ---
+  interface FakeEvent {
+    id: string;
+    status: string;
+    summary?: string;
+    description?: string;
+    location?: string;
+    start: { date?: string; dateTime?: string; timeZone?: string };
+    end: { date?: string; dateTime?: string; timeZone?: string };
+    colorId?: string;
+    extendedProperties?: { private?: Record<string, string> };
+    updated: string;
+    htmlLink: string;
+    _v: number;
+  }
+  const PRIMARY = 'inhaber@beispiel.de';
+  const calendars = new Map<string, { id: string; summary: string; primary?: boolean; accessRole: string; backgroundColor: string; events: Map<string, FakeEvent> }>([
+    [PRIMARY, { id: PRIMARY, summary: 'Inhaber', primary: true, accessRole: 'owner', backgroundColor: '#4285f4', events: new Map() }],
+    ['feiertage@group', { id: 'feiertage@group', summary: 'Feiertage', accessRole: 'reader', backgroundColor: '#0b8043', events: new Map() }],
+  ]);
+  const cal = { version: 0, eventSeq: 0, creates: 0, patches: 0, deletes: 0, invalidateTokens: false };
+  const tick = () => new Date(Date.now() + ++cal.version).toISOString();
+  const calOf = (id: string) => calendars.get(id === 'primary' ? PRIMARY : id);
+
+  app.get('/calendar/v3/users/me/calendarList', auth, (_req, res) => {
+    res.json({ items: [...calendars.values()].map(({ events: _e, ...c }) => c) });
+  });
+  app.get('/calendar/v3/calendars/:cal/events', auth, (req, res) => {
+    const c = calOf(req.params.cal);
+    if (!c) return res.status(404).json({ error: { message: 'Not Found' } });
+    const token = req.query.syncToken as string | undefined;
+    let list = [...c.events.values()];
+    if (token) {
+      if (cal.invalidateTokens || !/^v\d+$/.test(token)) return res.status(410).json({ error: { message: 'Sync token is no longer valid' } });
+      const since = Number(token.slice(1));
+      list = list.filter((e) => e._v > since);
+    } else {
+      list = list.filter((e) => e.status !== 'cancelled');
+    }
+    cal.invalidateTokens = false;
+    res.json({ items: list.map(({ _v, ...e }) => e), nextSyncToken: `v${cal.version}` });
+  });
+  app.post('/calendar/v3/calendars/:cal/events', auth, (req, res) => {
+    const c = calOf(req.params.cal);
+    if (!c) return res.status(404).json({ error: { message: 'Not Found' } });
+    cal.creates++;
+    const updated = tick();
+    const ev: FakeEvent = { ...req.body, id: `ev${++cal.eventSeq}`, status: 'confirmed', updated, htmlLink: `https://calendar.google.com/event?eid=ev${cal.eventSeq}`, _v: cal.version };
+    c.events.set(ev.id, ev);
+    const { _v, ...out } = ev;
+    res.json(out);
+  });
+  app.patch('/calendar/v3/calendars/:cal/events/:id', auth, (req, res) => {
+    const ev = calOf(req.params.cal)?.events.get(req.params.id);
+    if (!ev) return res.status(404).json({ error: { message: 'Not Found' } });
+    if (ev.status === 'cancelled') return res.status(410).json({ error: { message: 'Resource has been deleted' } });
+    cal.patches++;
+    Object.assign(ev, req.body, { updated: tick() });
+    ev._v = cal.version;
+    const { _v, ...out } = ev;
+    res.json(out);
+  });
+  app.delete('/calendar/v3/calendars/:cal/events/:id', auth, (req, res) => {
+    const ev = calOf(req.params.cal)?.events.get(req.params.id);
+    if (!ev) return res.status(404).json({ error: { message: 'Not Found' } });
+    if (ev.status === 'cancelled') return res.status(410).json({ error: { message: 'Resource has been deleted' } });
+    cal.deletes++;
+    ev.status = 'cancelled';
+    ev.updated = tick();
+    ev._v = cal.version;
+    res.status(204).end();
+  });
+
+  // Änderungen "in Google" für Tests
+  const calendarApi = {
+    stats: cal,
+    events: (calId = PRIMARY) => [...calendars.get(calId)!.events.values()],
+    find: (pred: (e: FakeEvent) => boolean, calId = PRIMARY) => [...calendars.get(calId)!.events.values()].find(pred),
+    change(id: string, patch: Partial<FakeEvent>, calId = PRIMARY) {
+      const ev = calendars.get(calId)!.events.get(id)!;
+      Object.assign(ev, patch, { updated: tick() });
+      ev._v = cal.version;
+    },
+    remove(id: string, calId = PRIMARY) {
+      const ev = calendars.get(calId)!.events.get(id)!;
+      ev.status = 'cancelled';
+      ev.updated = tick();
+      ev._v = cal.version;
+    },
+    addExternal(summary: string, start: FakeEvent['start'], end: FakeEvent['end'], calId = PRIMARY) {
+      const ev: FakeEvent = { id: `ext${++cal.eventSeq}`, status: 'confirmed', summary, start, end, updated: tick(), htmlLink: `https://calendar.google.com/x${cal.eventSeq}`, _v: 0 };
+      ev._v = cal.version;
+      calendars.get(calId)!.events.set(ev.id, ev);
+      return ev;
+    },
+  };
+
   const server: Server = app.listen(0, '127.0.0.1');
   await new Promise((r) => server.once('listening', r));
   const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
@@ -107,6 +204,7 @@ export async function startFakeGoogle() {
     base,
     files,
     stats,
+    calendar: calendarApi,
     addFolder: (name: string, parent = 'root') => add(name, FOLDER, parent),
     addFile: (name: string, parent: string) => add(name, 'video/mp4', parent),
     children: (parent: string) => [...files.values()].filter((f) => f.parents.includes(parent) && !f.trashed),

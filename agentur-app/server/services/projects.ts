@@ -271,9 +271,9 @@ export function createProject(db: Database, data: Out<typeof projectCreateInput>
     }
 
     db.run(
-      `INSERT INTO shoots (project_id, shoot_date, start_time, end_time, location)
-       VALUES (:pid, :date, :start, :end, :location)`,
-      { pid: projectId, date: data.shoot_date, start: data.start_time, end: data.end_time, location: data.location },
+      `INSERT INTO shoots (project_id, shoot_date, start_time, end_time, location, updated_at)
+       VALUES (:pid, :date, :start, :end, :location, :now)`,
+      { pid: projectId, date: data.shoot_date, start: data.start_time, end: data.end_time, location: data.location, now },
     );
 
     (template?.items ?? []).forEach((item, i) => {
@@ -493,11 +493,11 @@ export function deleteChecklistItem(db: Database, itemId: number): ProjectDetail
 export function updateShoot(db: Database, id: number, data: Out<typeof shootInput>): ProjectDetail {
   projectRow(db, id);
   db.run(
-    `INSERT INTO shoots (project_id, shoot_date, start_time, end_time, location, location_notes, shotlist_notes)
-     VALUES (:id, :date, :start, :end, :location, :lnotes, :snotes)
+    `INSERT INTO shoots (project_id, shoot_date, start_time, end_time, location, location_notes, shotlist_notes, updated_at)
+     VALUES (:id, :date, :start, :end, :location, :lnotes, :snotes, :now)
      ON CONFLICT(project_id) DO UPDATE SET shoot_date = excluded.shoot_date, start_time = excluded.start_time,
        end_time = excluded.end_time, location = excluded.location, location_notes = excluded.location_notes,
-       shotlist_notes = excluded.shotlist_notes`,
+       shotlist_notes = excluded.shotlist_notes, updated_at = excluded.updated_at`,
     {
       id,
       date: data.shoot_date,
@@ -506,6 +506,7 @@ export function updateShoot(db: Database, id: number, data: Out<typeof shootInpu
       location: data.location,
       lnotes: data.location_notes,
       snotes: data.shotlist_notes,
+      now: nowIso(),
     },
   );
   // Fälligkeit der Phase Drehtag folgt dem Drehdatum
@@ -590,8 +591,8 @@ export function addPublication(db: Database, id: number, data: Out<typeof public
   projectRow(db, id);
   const published = !!data.post_url;
   db.run(
-    `INSERT INTO publications (project_id, platform, planned_date, planned_time, caption, post_url, status, published_at)
-     VALUES (:id, :platform, :date, :time, :caption, :url, :status, :pub)`,
+    `INSERT INTO publications (project_id, platform, planned_date, planned_time, caption, post_url, status, published_at, updated_at)
+     VALUES (:id, :platform, :date, :time, :caption, :url, :status, :pub, :now)`,
     {
       id,
       platform: data.platform,
@@ -601,6 +602,7 @@ export function addPublication(db: Database, id: number, data: Out<typeof public
       url: data.post_url,
       status: published ? 'veroeffentlicht' : 'geplant',
       pub: published ? nowIso() : null,
+      now: nowIso(),
     },
   );
   touch(db, id);
@@ -614,7 +616,7 @@ export function updatePublication(db: Database, pubId: number, data: Out<typeof 
   const published = !!data.post_url;
   db.run(
     `UPDATE publications SET platform = :platform, planned_date = :date, planned_time = :time, caption = :caption,
-       post_url = :url, status = :status, published_at = :pub WHERE id = :id`,
+       post_url = :url, status = :status, published_at = :pub, updated_at = :now WHERE id = :id`,
     {
       id: pubId,
       platform: data.platform,
@@ -624,6 +626,7 @@ export function updatePublication(db: Database, pubId: number, data: Out<typeof 
       url: data.post_url,
       status: published ? 'veroeffentlicht' : 'geplant',
       pub: published ? (pub.published_at ?? nowIso()) : null,
+      now: nowIso(),
     },
   );
   touch(db, pub.project_id);

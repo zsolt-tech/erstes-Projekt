@@ -345,6 +345,7 @@ export interface BackupOverview {
 // ---------------------------------------------------------------------
 
 export type ChangeEntity =
+  | 'calendar'
   | 'google'
   | 'sync'
   | 'customers'
@@ -749,4 +750,74 @@ export interface SyncJob {
   run_after: string;
   created_at: string;
   updated_at: string;
+}
+
+// ---------------------------------------------------------------------
+// Kalender (Etappe 4)
+// ---------------------------------------------------------------------
+
+export const CALENDAR_KINDS = ['drehtag', 'deadline', 'freigabe', 'veroeffentlichung', 'termin'] as const;
+export type CalendarKind = (typeof CALENDAR_KINDS)[number];
+export const CALENDAR_KIND_LABELS: Record<CalendarKind, string> = {
+  drehtag: 'Drehtage',
+  deadline: 'Deadlines',
+  freigabe: 'Freigabe-Fristen',
+  veroeffentlichung: 'Veröffentlichungen',
+  termin: 'Google-Termine',
+};
+
+/** Ein Eintrag in der Kalenderansicht der App */
+export interface CalendarItem {
+  id: string; // z. B. shoot:12, phase:12:3, task:5, approval:12, pub:7, google:44
+  kind: CalendarKind;
+  title: string;
+  start: string; // YYYY-MM-DD (ganztägig) oder YYYY-MM-DDTHH:MM (Ortszeit) bzw. ISO bei Google-Terminen
+  end: string | null;
+  all_day: boolean;
+  url: string | null; // Ziel in der App
+  external_url: string | null; // Link zu Google
+  customer_id: number | null;
+  customer_name: string | null;
+  location: string | null;
+  editable: boolean;
+}
+
+export const calendarMoveInput = z.object({
+  id: z.string().min(3),
+  start: z.string().min(10),
+  end: z.string().nullish(),
+  all_day: z.boolean(),
+});
+
+export interface CalendarInfo {
+  id: string;
+  name: string;
+  color: string | null;
+  primary: boolean;
+  access_role: string | null;
+  read_enabled: boolean;
+}
+
+export interface CalendarSettings {
+  connected: boolean;
+  calendars: CalendarInfo[];
+  write_id: string;
+  push_approvals: boolean;
+  push_publications: boolean;
+  last_sync_at: string | null;
+  last_error: string | null;
+}
+
+export const calendarSettingsInput = z.object({
+  write_id: z.string().min(1),
+  read_ids: z.array(z.string()).max(50),
+  push_approvals: z.boolean(),
+  push_publications: z.boolean(),
+});
+
+export type ShootCalendarState = 'nicht_verbunden' | 'kein_datum' | 'wartet' | 'eingetragen' | 'in_google_geloescht';
+
+export interface ShootCalendar {
+  state: ShootCalendarState;
+  html_link: string | null;
 }

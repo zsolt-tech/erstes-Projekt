@@ -34,6 +34,8 @@ export function projectRouter(db: Database, services: Services): Router {
   const changed = (p: ProjectDetail) => {
     events.changed('projects', p.id);
     events.changed('customers', p.customer_id);
+    events.changed('calendar');
+    services.calendar.requestSync();
     return p;
   };
 
@@ -174,6 +176,7 @@ export function projectRouter(db: Database, services: Services): Router {
     handle((req, res) => {
       const t = tasks.createTask(db, parse(taskInput, req.body));
       events.changed('tasks', t.id);
+      events.changed('calendar');
       res.status(201);
       return t;
     }),
@@ -183,6 +186,7 @@ export function projectRouter(db: Database, services: Services): Router {
     handle((req) => {
       const t = tasks.updateTask(db, parseId(req.params.id), parse(taskInput, req.body));
       events.changed('tasks', t.id);
+      events.changed('calendar');
       return t;
     }),
   );
@@ -192,6 +196,7 @@ export function projectRouter(db: Database, services: Services): Router {
       const { status } = parse(z.object({ status: z.enum(TASK_STATUSES) }), req.body);
       const t = tasks.setTaskStatus(db, parseId(req.params.id), status);
       events.changed('tasks', t.id);
+      events.changed('calendar');
       return t;
     }),
   );

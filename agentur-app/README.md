@@ -3,10 +3,11 @@
 Lokale Web-App zur Verwaltung von Kunden, Projekten und Aufgaben für Videoproduktion und Social-Media-Betreuung.
 Läuft auf deinem Rechner unter `http://localhost:3000`, die Daten liegen in einer lokalen Datei.
 
-Aktueller Stand: **Etappe 3**
+Aktueller Stand: **Etappe 4**
 - Etappe 1: Grundgerüst, Kunden, Einstellungen, Hell-/Dunkelmodus, tägliche Datensicherung
 - Etappe 2: Projekte mit fünf Phasen, Kanban-Board und Liste, Checklisten mit Sperre, Drehtag, Freigaberunden, Veröffentlichungen, Fortschritt, Vorlagen je Kundentyp, Rechnungsstatus, Aufgaben
 - Etappe 3: Google-Anmeldung, automatische Drive-Ordner für Kunden und Projekte, Verknüpfung bestehender Ordner, Erkennung fertiger Videos
+- Etappe 4: Zwei-Wege-Abgleich mit Google Calendar, Kalenderansicht (Tag, Woche, Monat, Liste) mit farbigen Drehtagen, Deadlines, Freigabe-Fristen, Veröffentlichungen und Google-Terminen
 
 Weitere Dokumente:
 - Architektur und Datenmodell: [docs/ARCHITEKTUR.md](docs/ARCHITEKTUR.md)
@@ -166,6 +167,26 @@ Voraussetzung: Google-Zugang nach [docs/GOOGLE-EINRICHTUNG.md](docs/GOOGLE-EINRI
 Die App legt in Drive nur Ordner an. Sie verschiebt, ändert und löscht nichts. „Verknüpfung lösen“ entfernt nur die Zuordnung in der App.
 
 Bestehende Kunden und Projekte aus der Zeit vor der Google-Verbindung bekommen nicht automatisch Ordner, damit keine Doppelungen zu deinen vorhandenen Ordnern entstehen. Dort wählst du jeweils „Ordner anlegen“ oder „Bestehenden verknüpfen“.
+
+---
+
+## Etappe 4 testen (Google Calendar)
+
+Voraussetzung: Google ist verbunden (Etappe 3). Eine neue Anmeldung ist nicht nötig, die Kalender-Berechtigung war schon dabei.
+
+1. **Einstellungen > Google Calendar:** „Drehtage eintragen in“ zeigt deinen Hauptkalender. Unter „Termine aus diesen Kalendern in der App anzeigen“ wählst du, welche Google-Kalender in der App erscheinen. Optional lassen sich auch Freigabe-Fristen und geplante Veröffentlichungen in Google eintragen.
+2. **Drehtag eintragen:** Ein Projekt mit Drehdatum, Uhrzeit und Ort anlegen oder auf der Projektseite (Phase Drehtag) speichern. Nach wenigen Sekunden steht dort „In Google Calendar eingetragen“ mit Link. Der Google-Termin heißt „Drehtag: Kunde – Projekt“, ist blau und enthält Ort, Shotlist und einen Link zur App.
+3. **In der App ändern:** Uhrzeit des Drehtags ändern und speichern. Der Google-Termin wird angepasst, es entsteht kein zweiter.
+4. **In Google ändern:** Den Termin in Google Calendar auf einen anderen Tag oder eine andere Uhrzeit ziehen oder den Ort ändern. Spätestens nach 5 Minuten (oder sofort mit „Jetzt abgleichen“ auf der Kalenderseite) zeigt die Projektseite das neue Datum.
+5. **In Google löschen:** Den Termin in Google löschen und abgleichen. Das Projekt bleibt, auf der Projektseite erscheint „Der Termin wurde in Google Calendar gelöscht“ mit „Erneut eintragen“.
+6. **Kalenderansicht:** Links „Kalender“. Oben umschalten zwischen Tag, Woche, Monat und Liste. Farben: Drehtage blau, Deadlines und Aufgaben orange, Freigabe-Fristen violett, Veröffentlichungen grün, Google-Termine grau. Die Schaltflächen darüber blenden Arten ein und aus.
+7. **Verschieben:** Einen Drehtag, eine Deadline, Aufgabe oder Veröffentlichung im Kalender auf einen anderen Tag ziehen. Die Änderung steht sofort im Projekt und geht beim nächsten Abgleich an Google. Ein Klick auf einen Eintrag öffnet das Projekt; Google-Termine öffnen sich in Google Calendar.
+8. **Kundenseite:** „Termine der nächsten 60 Tage“ listet alle Einträge des Kunden.
+
+Hinweise:
+- Der Abgleich läuft alle 5 Minuten und nach jeder Änderung in der App. Google meldet Änderungen nicht von sich aus an einen lokalen Rechner, daher diese kurze Verzögerung.
+- Ändern sich ein Termin in Google und derselbe Drehtag in der App gleichzeitig, gewinnt die jüngere Änderung.
+- Vergangene Drehtage, die länger als 60 Tage zurückliegen, werden weder eingetragen noch verändert.
 
 ---
 

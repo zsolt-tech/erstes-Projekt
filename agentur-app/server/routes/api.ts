@@ -101,6 +101,7 @@ export function apiRouter(db: Database, config: AppConfig, services: Services): 
       events.changed('customers', customer.id);
       // Interessent wurde zum Kunden: jetzt den Drive-Ordner anlegen
       if (before.status === 'interessent' && customer.status !== 'interessent') services.drive.onCustomerBecameClient(customer.id);
+      if (before.company_name !== customer.company_name) services.calendar.requestSync();
       return customer;
     }),
   );
@@ -130,6 +131,9 @@ export function apiRouter(db: Database, config: AppConfig, services: Services): 
     handle((req) => {
       const result = updateSettings(db, parse(settingsUpdate, req.body));
       events.changed('settings');
+      // Erinnerungsfrist bestimmt die Freigabe-Fristen im Kalender
+      events.changed('calendar');
+      services.calendar.requestSync();
       return result;
     }),
   );

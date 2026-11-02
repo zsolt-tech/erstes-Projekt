@@ -1,7 +1,8 @@
 // Bausteine der Projektdetailseite: Phasenleiste, Checklisten, Drehtag, Freigabe, Veröffentlichungen.
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
-import { Check, Clock, ExternalLink, Lock, Pencil, Plus, RotateCcw, Trash2, X } from 'lucide-react';
+import { CalendarCheck, CalendarX, Check, Clock, ExternalLink, LoaderCircle, Lock, Pencil, Plus, RotateCcw, Trash2, X } from 'lucide-react';
 import { useProjectAction } from '../api/projects';
+import { useRestoreShoot, useShootCalendar } from '../api/calendar';
 import { useTeam } from '../api/hooks';
 import { Dialog, useToast } from './feedback';
 import { Badge, Button, Field, IconButton, Input, Select, Textarea, cx } from './ui';
@@ -316,13 +317,59 @@ export function ShootDetails({ project }: { project: ProjectDetail }) {
         <Textarea value={form.shotlist_notes ?? ''} onChange={(e) => set('shotlist_notes', e.target.value)} rows={3} />
       </Field>
       <div className="flex items-center justify-between gap-3 sm:col-span-4">
-        <p className="text-xs text-subtle">Ab Etappe 4 wird der Drehtag automatisch in Google Calendar eingetragen.</p>
+        <ShootCalendarStatus projectId={project.id} />
         <Button type="submit" variant={dirty ? 'primary' : 'secondary'} loading={pending} disabled={!dirty}>
           Drehtag speichern
         </Button>
       </div>
     </form>
   );
+}
+
+function ShootCalendarStatus({ projectId }: { projectId: number }) {
+  const { data } = useShootCalendar(projectId);
+  const restore = useRestoreShoot(projectId);
+  const toast = useToast();
+  if (!data) return <span />;
+  switch (data.state) {
+    case 'eingetragen':
+      return (
+        <span className="inline-flex items-center gap-1.5 text-xs text-success">
+          <CalendarCheck className="size-4" />
+          In Google Calendar eingetragen
+          {data.html_link && (
+            <a href={data.html_link} target="_blank" rel="noreferrer" className="text-accent hover:underline">
+              öffnen
+            </a>
+          )}
+        </span>
+      );
+    case 'wartet':
+      return (
+        <span className="inline-flex items-center gap-1.5 text-xs text-muted">
+          <LoaderCircle className="size-3.5 animate-spin" /> Wird in Google Calendar eingetragen ...
+        </span>
+      );
+    case 'in_google_geloescht':
+      return (
+        <span className="inline-flex flex-wrap items-center gap-2 text-xs text-warning">
+          <CalendarX className="size-4" />
+          Der Termin wurde in Google Calendar gelöscht.
+          <Button
+            size="sm"
+            variant="ghost"
+            loading={restore.isPending}
+            onClick={() => restore.mutateAsync().then(() => toast.success('Wird erneut eingetragen'), (err) => toast.error(err))}
+          >
+            Erneut eintragen
+          </Button>
+        </span>
+      );
+    case 'kein_datum':
+      return <span className="text-xs text-subtle">Mit Drehdatum wird der Termin in Google Calendar eingetragen.</span>;
+    default:
+      return <span className="text-xs text-subtle">Google ist nicht verbunden; der Drehtag erscheint nur in der App.</span>;
+  }
 }
 
 // ---------------------------------------------------------------------

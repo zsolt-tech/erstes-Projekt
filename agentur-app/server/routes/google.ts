@@ -4,9 +4,10 @@ import { z } from 'zod';
 import type { Services } from '../google/index.ts';
 import { events } from '../lib/events.ts';
 import { handle, parse, parseId } from '../lib/http.ts';
-import { driveLinkInput } from '../../shared/schemas.ts';
+import { calendarMoveInput, calendarSettingsInput, driveLinkInput } from '../../shared/schemas.ts';
+import { HttpError } from '../lib/http.ts';
 
-export function googleRouter({ google, queue, drive }: Services): Router {
+export function googleRouter({ google, queue, drive, calendar }: Services): Router {
   const r = Router();
 
   // --- Verbindung ---
@@ -124,6 +125,58 @@ export function googleRouter({ google, queue, drive }: Services): Router {
       return drive.projectDrive(id);
     }),
   );
+
+  // --- Kalender ---
+  const isDate = (v: unknown): v is string => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v);
+
+  r.get(
+    '/calendar/items',
+    handle((req) => {
+      const { start, end } = req.query;
+      if (!isDate(start) || !isDate(end)) throw new HttpError(400, 'Zeitraum fehlt (start und end als JJJJ-MM-TT)');
+      const cid = typeof req.query.customer_id === 'string' && req.query.customer_id ? parseId(req.query.customer_id) : undefined;
+      return calendar.items(start, end, cid);
+    }),
+  );
+
+  r.post(
+    '/calendar/move',
+    handle((req) => {
+      const d = parse(calendarMoveInput, req.body);
+      calendar.move(d.id, d.start, d.all_day, d.end);
+      return { ok: true };
+    }),
+  );
+
+  r.get(
+    '/calendar/settings',
+    handle(async () => {
+      if (google.connected) await calendar.refreshCalendarList().catch(() => undefined);
+      return calendar.settings();
+    }),
+  );
+
+  r.put(
+    '/calendar/settings',
+    handle((req) => {
+      const result = calendar.updateSettings(parse(calendarSettingsInput, req.body));
+      events.changed('calendar');
+      return result;
+    }),
+  );
+
+  r.post(
+    '/calendar/sync',
+    handle(async () => {
+      if (!google.connected) throw new HttpError(409, 'Google ist nicht verbunden.');
+      queue.enqueue('calendar.sync', { label: 'Kalender abgleichen' });
+      await queue.process();
+      return calendar.settings();
+    }),
+  );
+
+  r.get('/projects/:id/calendar', handle((req) => calendar.shootCalendar(parseId(req.params.id))));
+  r.post('/projects/:id/calendar/restore', handle((req) => calendar.restoreShoot(parseId(req.params.id))));
 
   return r;
 }

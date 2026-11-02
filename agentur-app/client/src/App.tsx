@@ -9,6 +9,7 @@ import { ProjectsPage } from './pages/ProjectsPage';
 import { ProjectDetailPage } from './pages/ProjectDetailPage';
 import { ProjectFormPage } from './pages/ProjectFormPage';
 import { TasksPage } from './pages/TasksPage';
+import { CalendarPage } from './pages/CalendarPage';
 import { NotFoundPage, PlaceholderPage } from './pages/PlaceholderPage';
 
 export function App() {
@@ -46,16 +47,7 @@ export function App() {
         <Route path="projekte/:id" element={<ProjectDetailPage />} />
         <Route path="projekte/:id/bearbeiten" element={<ProjectFormPage />} />
         <Route path="aufgaben" element={<TasksPage />} />
-        <Route
-          path="kalender"
-          element={
-            <PlaceholderPage
-              title="Kalender"
-              stage={4}
-              text="Tages-, Wochen- und Monatsansicht mit Zwei-Wege-Sync zu Google Calendar."
-            />
-          }
-        />
+        <Route path="kalender" element={<CalendarPage />} />
         <Route
           path="zeiten"
           element={<PlaceholderPage title="Zeiterfassung" stage={7} text="Start/Stopp-Timer je Projekt mit Auswertung pro Kunde." />}

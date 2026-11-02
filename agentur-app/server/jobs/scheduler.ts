@@ -14,7 +14,16 @@ interface Job {
 
 export function startScheduler(db: Database, config: AppConfig, services: Services) {
   let lastFinalCheck = 0;
+  let lastCalendarSync = 0;
   const jobs: Job[] = [
+    {
+      name: 'Google Calendar abgleichen',
+      isDue: () => services.google.connected && Date.now() - lastCalendarSync > 5 * 60 * 1000,
+      run: () => {
+        lastCalendarSync = Date.now();
+        services.queue.enqueue('calendar.sync', { label: 'Kalender abgleichen' });
+      },
+    },
     {
       name: 'Google-Warteschlange',
       isDue: () => services.google.connected,
