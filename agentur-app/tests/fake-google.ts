@@ -99,6 +99,14 @@ export async function startFakeGoogle() {
     return f;
   }
 
+  // Gmail: gesendete Nachrichten merken
+  const mails: { raw: string; decoded: string }[] = [];
+  app.post('/gmail/v1/users/me/messages/send', auth, (req, res) => {
+    const decoded = Buffer.from(String(req.body.raw), 'base64url').toString('utf8');
+    mails.push({ raw: req.body.raw, decoded });
+    res.json({ id: `m${mails.length}`, threadId: `t${mails.length}` });
+  });
+
   // --- Google Calendar ---
   interface FakeEvent {
     id: string;
@@ -205,6 +213,7 @@ export async function startFakeGoogle() {
     files,
     stats,
     calendar: calendarApi,
+    mails,
     addFolder: (name: string, parent = 'root') => add(name, FOLDER, parent),
     addFile: (name: string, parent: string) => add(name, 'video/mp4', parent),
     children: (parent: string) => [...files.values()].filter((f) => f.parents.includes(parent) && !f.trashed),

@@ -14,6 +14,7 @@ import {
 import { backupOverview, runBackup } from '../services/backup.ts';
 import { projectRouter } from './projects.ts';
 import { googleRouter } from './google.ts';
+import { briefingRouter } from './briefing.ts';
 import type { Services } from '../google/index.ts';
 import { getSettings, updateSettings } from '../services/settings.ts';
 import {
@@ -30,7 +31,7 @@ import {
   deliverableTypeInput,
   settingsUpdate,
   teamMemberInput,
-  type ChangeEvent,
+  type LiveEvent,
   type CustomerStatus,
 } from '../../shared/schemas.ts';
 
@@ -47,7 +48,7 @@ export function apiRouter(db: Database, config: AppConfig, services: Services): 
       Connection: 'keep-alive',
     });
     res.write('retry: 3000\n\n');
-    const send = (e: ChangeEvent) => res.write(`data: ${JSON.stringify(e)}\n\n`);
+    const send = (e: LiveEvent) => res.write(`data: ${JSON.stringify(e)}\n\n`);
     const ping = setInterval(() => res.write(': ping\n\n'), 25000);
     events.on('event', send);
     req.on('close', () => {
@@ -192,6 +193,7 @@ export function apiRouter(db: Database, config: AppConfig, services: Services): 
 
   r.use(projectRouter(db, services));
   r.use(googleRouter(services));
+  r.use(briefingRouter(db, services));
 
   r.use(() => {
     throw new HttpError(404, 'Unbekannte API-Adresse');

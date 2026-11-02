@@ -15,6 +15,7 @@ import {
 import { Badge, Button, Card, ErrorBox, Field, IconButton, Input, PageHeader, Segmented, Spinner } from '../components/ui';
 import { useToast } from '../components/feedback';
 import { GoogleSettings } from '../components/GoogleSettings';
+import { BottleneckSettings, BriefingSettings } from '../components/BriefingSettings';
 import { useTheme } from '../lib/theme';
 import { formatBytes, formatDateTime } from '../lib/format';
 import type { DeliverableType, TeamMember, Theme } from '../../../shared/schemas';
@@ -354,11 +355,13 @@ export function SettingsPage() {
       <PageHeader title="Einstellungen" />
       <div className="grid gap-5">
         <GeneralSettings />
+        <BriefingSettings />
         <GoogleSettings />
         <div className="grid gap-5 lg:grid-cols-2">
           <DeliverableTypes />
           <Team />
         </div>
+        <BottleneckSettings />
         <Backups />
       </div>
     </>

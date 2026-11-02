@@ -5,12 +5,16 @@ import { GoogleClient } from './client.ts';
 import { DriveService } from './drive.ts';
 import { CalendarService } from './calendar.ts';
 import { SyncQueue } from './queue.ts';
+import { GmailService } from './gmail.ts';
+import { BriefingService } from '../services/briefing.ts';
 
 export interface Services {
   google: GoogleClient;
   queue: SyncQueue;
   drive: DriveService;
   calendar: CalendarService;
+  gmail: GmailService;
+  briefing: BriefingService;
 }
 
 export function createServices(db: Database, config: AppConfig): Services {
@@ -18,5 +22,7 @@ export function createServices(db: Database, config: AppConfig): Services {
   const queue = new SyncQueue(db, google);
   const drive = new DriveService(db, google, queue);
   const calendar = new CalendarService(db, config, google, queue);
-  return { google, queue, drive, calendar };
+  const gmail = new GmailService(google, queue);
+  const briefing = new BriefingService(db, config, { calendar, google, gmail });
+  return { google, queue, drive, calendar, gmail, briefing };
 }

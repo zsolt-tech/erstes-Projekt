@@ -307,6 +307,19 @@ export const settingsSchema = z.object({
     .string()
     .trim()
     .refine((v) => v === '' || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v), 'Ungültige E-Mail-Adresse'),
+  briefing_time: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Uhrzeit im Format HH:MM'),
+  briefing_desktop: z.boolean(),
+  reminder_enabled: z.boolean(),
+  reminder_email: z.boolean(),
+  // Schwellen der Engpass-Erkennung
+  bottleneck_limits: z.object({
+    editing_days: z.number().int().min(1).max(60),
+    upload_days: z.number().int().min(1).max(60),
+    approval_days: z.number().int().min(1).max(60),
+    shoots_per_week: z.number().int().min(1).max(50),
+    editing_parallel: z.number().int().min(1).max(100),
+    deadlines_per_day: z.number().int().min(2).max(50),
+  }),
 });
 export type Settings = z.infer<typeof settingsSchema>;
 export const settingsUpdate = settingsSchema.partial();
@@ -317,6 +330,18 @@ export const DEFAULT_SETTINGS: Settings = {
   drive_root_folder: 'Kunden',
   drive_subfolders: ['01 Rohmaterial', '02 Entwürfe', '03 Fertige Videos', '04 Freigabe'],
   drive_customer_subfolders: ['Scripts', 'Sonstiges'],
+  briefing_time: '09:00',
+  briefing_desktop: true,
+  reminder_enabled: true,
+  reminder_email: false,
+  bottleneck_limits: {
+    editing_days: 5,
+    upload_days: 2,
+    approval_days: 5,
+    shoots_per_week: 3,
+    editing_parallel: 5,
+    deadlines_per_day: 4,
+  },
   briefing_email_enabled: false,
   briefing_email_to: '',
 };
@@ -345,6 +370,8 @@ export interface BackupOverview {
 // ---------------------------------------------------------------------
 
 export type ChangeEntity =
+  | 'briefing'
+  | 'notifications'
   | 'calendar'
   | 'google'
   | 'sync'
@@ -361,6 +388,16 @@ export interface ChangeEvent {
   entity: ChangeEntity;
   id?: number;
 }
+
+/** Hinweis an offene Browserfenster (Browser-Benachrichtigung) */
+export interface NotifyEvent {
+  type: 'notify';
+  title: string;
+  body: string;
+  link: string | null;
+}
+
+export type LiveEvent = ChangeEvent | NotifyEvent;
 
 // ---------------------------------------------------------------------
 // Projekte und Workflow (Etappe 2)
@@ -820,4 +857,58 @@ export type ShootCalendarState = 'nicht_verbunden' | 'kein_datum' | 'wartet' | '
 export interface ShootCalendar {
   state: ShootCalendarState;
   html_link: string | null;
+}
+
+// ---------------------------------------------------------------------
+// Briefing, Engpässe, Benachrichtigungen (Etappe 5)
+// ---------------------------------------------------------------------
+
+export interface Bottleneck {
+  key: string; // stabil, für Benachrichtigungen ohne Doppelung
+  level: 'hoch' | 'mittel';
+  kind: 'phase' | 'drehtag' | 'veroeffentlichung' | 'auslastung' | 'deadlines' | 'paket';
+  text: string;
+  url: string | null;
+}
+
+export interface BriefingData {
+  date: string;
+  generated_at: string;
+  agency_name: string;
+  summary: string;
+  appointments: { time: string | null; title: string; kind: CalendarKind; location: string | null; url: string | null }[];
+  due_today: { title: string; customer: string | null; url: string | null }[];
+  overdue: { title: string; customer: string | null; due_date: string; days: number; url: string | null }[];
+  approvals: { title: string; customer: string; requested_at: string; waiting_days: number; follow_up: boolean; url: string }[];
+  shoots: { date: string; time: string | null; title: string; customer: string; location: string | null; url: string }[];
+  packages: {
+    customer_id: number;
+    customer: string;
+    month: string;
+    items: { type: string; used: number; quantity: number }[];
+    status: 'ok' | 'rueckstand' | 'ueber';
+  }[];
+  warnings: Bottleneck[];
+}
+
+export interface Briefing {
+  id: number;
+  briefing_date: string;
+  generated_at: string;
+  data: BriefingData;
+  text: string;
+  notified_at: string | null;
+  emailed_at: string | null;
+}
+
+export type NotificationType = 'briefing' | 'freigabe_erinnerung' | 'engpass' | 'sync_fehler' | 'backup' | 'system';
+
+export interface AppNotification {
+  id: number;
+  type: NotificationType;
+  title: string;
+  body: string | null;
+  link: string | null;
+  created_at: string;
+  read_at: string | null;
 }

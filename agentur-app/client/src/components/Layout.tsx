@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { useSettings } from '../api/hooks';
 import { useLiveUpdates } from '../lib/live';
+import { NotificationBell } from './Notifications';
 import { useTheme } from '../lib/theme';
 import { cx } from './ui';
 import type { Theme } from '../../../shared/schemas';
@@ -99,6 +100,7 @@ export function Layout() {
         ))}
       </nav>
       <div className="mt-4 flex flex-col gap-0.5 border-t border-white/10 pt-4">
+        <NotificationBell />
         <NavItem to="/einstellungen" label="Einstellungen" icon={Settings} />
         <ThemeSwitch />
       </div>

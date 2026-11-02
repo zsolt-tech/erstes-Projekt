@@ -1,9 +1,9 @@
 // Bausteine der Projektdetailseite: Phasenleiste, Checklisten, Drehtag, Freigabe, Veröffentlichungen.
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
-import { CalendarCheck, CalendarX, Check, Clock, ExternalLink, LoaderCircle, Lock, Pencil, Plus, RotateCcw, Trash2, X } from 'lucide-react';
+import { CalendarCheck, CalendarX, Check, Clock, ExternalLink, LoaderCircle, Lock, Mail, Pencil, Plus, RotateCcw, Trash2, X } from 'lucide-react';
 import { useProjectAction } from '../api/projects';
 import { useRestoreShoot, useShootCalendar } from '../api/calendar';
-import { useTeam } from '../api/hooks';
+import { useCustomer, useTeam } from '../api/hooks';
 import { Dialog, useToast } from './feedback';
 import { Badge, Button, Field, IconButton, Input, Select, Textarea, cx } from './ui';
 import { displayUrl, formatDate, formatDateTime, today } from '../lib/format';
@@ -435,6 +435,7 @@ export function ApprovalPanel({ project }: { project: ProjectDetail }) {
             <Button icon={<RotateCcw className="size-4" />} onClick={() => setCorrection(true)}>
               Korrektur nötig
             </Button>
+            <FollowUpMail project={project} waitingDays={waiting ?? 0} />
           </div>
         </div>
       ) : (
@@ -498,6 +499,32 @@ export function ApprovalPanel({ project }: { project: ProjectDetail }) {
         </div>
       </Dialog>
     </div>
+  );
+}
+
+/** Vorformulierte Nachfass-E-Mail an den Hauptansprechpartner (öffnet das E-Mail-Programm) */
+function FollowUpMail({ project, waitingDays }: { project: ProjectDetail; waitingDays: number }) {
+  const { data: customer } = useCustomer(project.customer_id);
+  const contact = customer?.contacts.find((c) => c.email) ?? null;
+  if (!contact?.email) return null;
+  const subject = `Freigabe: ${project.title}`;
+  const body = [
+    `Hallo ${contact.name},`,
+    '',
+    `vor ${waitingDays === 1 ? 'einem Tag' : `${waitingDays} Tagen`} habe ich Ihnen die Fassung von „${project.title}“ zur Freigabe geschickt.`,
+    'Hatten Sie schon Gelegenheit, sie sich anzusehen? Geben Sie mir gern kurz Bescheid, ob alles passt oder ob Sie noch Änderungswünsche haben.',
+    '',
+    'Viele Grüße',
+  ].join('\n');
+  return (
+    <a
+      href={`mailto:${contact.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`}
+      className="inline-flex h-9 items-center gap-1.5 rounded-md border border-transparent px-3.5 text-sm font-medium text-muted hover:bg-surface-2 hover:text-fg"
+      title={`E-Mail an ${contact.name} <${contact.email}>`}
+    >
+      <Mail className="size-4" />
+      Nachfassen per E-Mail
+    </a>
   );
 }
 

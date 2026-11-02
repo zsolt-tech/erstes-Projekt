@@ -15,7 +15,31 @@ interface Job {
 export function startScheduler(db: Database, config: AppConfig, services: Services) {
   let lastFinalCheck = 0;
   let lastCalendarSync = 0;
+  let lastReminderCheck = 0;
   const jobs: Job[] = [
+    {
+      // Jeden Tag zur eingestellten Uhrzeit; war der Rechner aus, direkt nach dem Start
+      name: 'Tägliches Briefing',
+      isDue: () => services.briefing.isDue(),
+      run: async () => {
+        // Vorher die Google-Termine auffrischen, damit das Briefing aktuell ist (höchstens 20 Sekunden)
+        if (services.google.connected) {
+          services.queue.enqueue('calendar.sync', { label: 'Kalender abgleichen' });
+          await Promise.race([services.queue.process().catch(() => 0), new Promise((r) => setTimeout(r, 20000))]);
+        }
+        const b = services.briefing.generate();
+        console.log(`[Briefing] ${b.briefing_date}: ${b.data.summary}`);
+      },
+    },
+    {
+      name: 'Freigabe-Erinnerungen',
+      isDue: () => Date.now() - lastReminderCheck > 60 * 60 * 1000,
+      run: () => {
+        lastReminderCheck = Date.now();
+        const n = services.briefing.remindApprovals();
+        if (n) console.log(`[Erinnerung] ${n} Freigabe-Erinnerung(en) erstellt`);
+      },
+    },
     {
       name: 'Google Calendar abgleichen',
       isDue: () => services.google.connected && Date.now() - lastCalendarSync > 5 * 60 * 1000,

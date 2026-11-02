@@ -10,6 +10,9 @@ import { createApp } from '../server/app.ts';
 import { loadConfig, type AppConfig } from '../server/env.ts';
 import { createServices, type Services } from '../server/google/index.ts';
 
+// In Tests keine echten Desktop-Benachrichtigungen
+process.env.AGENTUR_NO_DESKTOP = '1';
+
 export interface TestApp {
   db: Database;
   config: AppConfig;

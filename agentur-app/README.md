@@ -3,11 +3,12 @@
 Lokale Web-App zur Verwaltung von Kunden, Projekten und Aufgaben für Videoproduktion und Social-Media-Betreuung.
 Läuft auf deinem Rechner unter `http://localhost:3000`, die Daten liegen in einer lokalen Datei.
 
-Aktueller Stand: **Etappe 4**
+Aktueller Stand: **Etappe 5**
 - Etappe 1: Grundgerüst, Kunden, Einstellungen, Hell-/Dunkelmodus, tägliche Datensicherung
 - Etappe 2: Projekte mit fünf Phasen, Kanban-Board und Liste, Checklisten mit Sperre, Drehtag, Freigaberunden, Veröffentlichungen, Fortschritt, Vorlagen je Kundentyp, Rechnungsstatus, Aufgaben
 - Etappe 3: Google-Anmeldung, automatische Drive-Ordner für Kunden und Projekte, Verknüpfung bestehender Ordner, Erkennung fertiger Videos
 - Etappe 4: Zwei-Wege-Abgleich mit Google Calendar, Kalenderansicht (Tag, Woche, Monat, Liste) mit farbigen Drehtagen, Deadlines, Freigabe-Fristen, Veröffentlichungen und Google-Terminen
+- Etappe 5: Tägliches Briefing um 9:00 Uhr (Startseite, Desktop-Benachrichtigung, optional E-Mail), Freigabe-Erinnerungen, Engpass-Warnungen, Benachrichtigungszentrale
 
 Weitere Dokumente:
 - Architektur und Datenmodell: [docs/ARCHITEKTUR.md](docs/ARCHITEKTUR.md)
@@ -187,6 +188,22 @@ Hinweise:
 - Der Abgleich läuft alle 5 Minuten und nach jeder Änderung in der App. Google meldet Änderungen nicht von sich aus an einen lokalen Rechner, daher diese kurze Verzögerung.
 - Ändern sich ein Termin in Google und derselbe Drehtag in der App gleichzeitig, gewinnt die jüngere Änderung.
 - Vergangene Drehtage, die länger als 60 Tage zurückliegen, werden weder eingetragen noch verändert.
+
+---
+
+## Etappe 5 testen (Briefing und Erinnerungen)
+
+1. **Startseite:** Vor 9:00 Uhr zeigt sie eine Vorschau des Briefings mit dem aktuellen Stand, danach das Briefing des Tages. Oben steht eine Zusammenfassung in einem Satz, darunter: Termine heute (auch aus Google), fällige und überfällige Aufgaben und Phasen, Projekte, die auf Freigabe warten (mit Wartezeit und „nachfassen“), Drehtage der nächsten 7 Tage, Paketverbrauch und Warnungen. Ein Klick auf einen Eintrag öffnet ihn.
+2. **Briefing sofort testen:** Auf der Startseite „Erzeugen und senden“ (oder Einstellungen > Briefing und Benachrichtigungen > „Briefing jetzt testen“).
+   - **macOS:** Beim ersten Mal fragt macOS, ob „Skripteditor“ Mitteilungen senden darf. Bitte erlauben; darüber kommen die Desktop-Hinweise der App. Falls nichts erscheint: Systemeinstellungen > Mitteilungen > Skripteditor > Mitteilungen erlauben.
+   - **Windows:** Der Hinweis erscheint unten rechts als Windows-Benachrichtigung von „Windows PowerShell“.
+   - Links unten bei **Benachrichtigungen** steht ein Zähler; dort sind alle Hinweise gesammelt.
+3. **E-Mail:** Einstellungen > Briefing und Benachrichtigungen > „Briefing zusätzlich per E-Mail“ anhaken (Google muss verbunden sein), optional eine andere Adresse eintragen, speichern, „Briefing jetzt testen“. Die E-Mail kommt von deinem eigenen Google-Konto.
+4. **Uhrzeit:** Die Uhrzeit des Briefings ist einstellbar. War der Rechner um diese Zeit aus oder im Ruhezustand, erscheint das Briefing kurz nach dem Start bzw. Aufwachen.
+5. **Freigabe-Erinnerung:** Ein Projekt in die Freigabe schieben und auf der Projektseite das Anfragedatum auf vor 4 Tagen setzen. Innerhalb einer Stunde (zwischen 9 und 19 Uhr) kommt „Freigabe nachfassen: …“ als Desktop-Hinweis und in den Benachrichtigungen, mit dem Namen des Ansprechpartners. Danach erst wieder nach Ablauf der Frist.
+6. **Nachfassen per E-Mail:** In der Freigabe-Phase eines Projekts öffnet „Nachfassen per E-Mail“ dein E-Mail-Programm mit einer vorformulierten Nachricht an den Ansprechpartner. Der Text ist in Sie-Form und lässt sich vor dem Senden anpassen.
+7. **Browser-Benachrichtigungen (optional):** In den Einstellungen „Browser-Benachrichtigungen auf diesem Rechner“ anhaken und im Browser erlauben. Dann erscheinen Hinweise zusätzlich als Browser-Meldung, solange die App in einem Tab offen ist.
+8. **Engpass-Schwellen:** Einstellungen > Engpass-Erkennung. Dort legst du fest, ab wann eine Warnung erscheint (z. B. länger als 5 Tage in Bearbeitung, mehr als 3 Drehtage in 7 Tagen).
 
 ---
 
