@@ -42,7 +42,7 @@ Der Auftrag enthält Projektnummer, Kunde, Ziel, Prüfprofil und das Kundenfeedb
 ### Was danach in der App passiert
 
 - Der Agent meldet jede Endkontrolle an die App. Die Ergebnisse stehen im Projekt unter „Videoschnitt mit Claude“: bestanden oder zurück, mit Zeitcodes der Fehler.
-- Sind **alle** Videos des Projekts bestanden, hakt die App „Clip-Qualitätsprüfung abgeschlossen“ automatisch ab. Das Projekt kann dann weiter in den Upload. Ein späteres „zurück“ nimmt den Haken wieder weg.
+- Sind **alle** Videos des Projekts bestanden, und zwar so viele, wie im Projekt vorgesehen sind (bei „4 × Reel“ also vier), hakt die App „Clip-Qualitätsprüfung abgeschlossen“ automatisch ab. Vorher meldet sie zum Beispiel „1 von 4 Videos bestanden“. Das Projekt kann dann weiter in den Upload. Ein späteres „zurück“ nimmt den Haken wieder weg. Sollen es weniger Videos werden, den Haken von Hand setzen oder die Anzahl im Projekt anpassen.
 - Fassungen desselben Videos (`reel_01_v2.mp4`, `reel_01_v3.mp4`) zählt die App als ein Video; die jüngste Endkontrolle gilt.
 - Legt der Agent die Videos in „Fertige Videos“, erkennt die App sie dort und hakt auch „Dateien im Ordner Fertige Videos“ ab.
 - Benachrichtigungen (Glocke links unten) melden bestandene und zurückgewiesene Endkontrollen.

@@ -112,7 +112,10 @@ test('Endkontrolle: Ergebnis setzt und entfernt den Qualitäts-Haken', async () 
   });
   assert.equal(ok1.status, 201, JSON.stringify(ok1.body));
   p = (await t.request('GET', `/api/projects/${project.id}`)).body;
-  assert.equal(gateOf(p).is_done, 1, 'Haken gesetzt');
+  assert.equal(p.deliverable_count, 2);
+  assert.equal(gateOf(p).is_done, 0, '1 von 2 Videos bestanden: noch kein Haken');
+  const first = (await t.request('GET', '/api/notifications')).body.items[0];
+  assert.match(first.body, /1 von 2 Videos bestanden/);
 
   await t.request('POST', `/api/projects/${project.id}/quality-checks`, {
     video_name: 'praxis_reel_02.mp4',
@@ -121,7 +124,7 @@ test('Endkontrolle: Ergebnis setzt und entfernt den Qualitäts-Haken', async () 
     issues: [{ t: '0:19', text: 'Bildschirm mit Patientendaten lesbar' }],
   });
   p = (await t.request('GET', `/api/projects/${project.id}`)).body;
-  assert.equal(gateOf(p).is_done, 0, 'ein Video zurück: Haken weg');
+  assert.equal(gateOf(p).is_done, 0, 'ein Video zurück: kein Haken');
   const blocked = await t.request('POST', `/api/projects/${project.id}/move`, { to_phase: 3 });
   assert.equal(blocked.status, 409);
 
@@ -153,7 +156,7 @@ test('Endkontrolle: Ergebnis setzt und entfernt den Qualitäts-Haken', async () 
 });
 
 test('Nach einer Korrekturschleife zählen alte Endkontrollen nicht mehr', async () => {
-  const p = (await t.request('POST', '/api/projects', { customer_id: customer.id, title: 'Korrekturtest' })).body;
+  const p = (await t.request('POST', '/api/projects', { customer_id: customer.id, title: 'Korrekturtest', deliverable_count: 1 })).body;
   await t.request('POST', `/api/projects/${p.id}/move`, { to_phase: 2 });
   await t.request('POST', `/api/projects/${p.id}/quality-checks`, { video_name: 'reel_01.mp4', stage: 'endkontrolle', verdict: 'freigegeben' });
   assert.equal((await t.request('POST', `/api/projects/${p.id}/move`, { to_phase: 4 })).status, 200);
@@ -174,6 +177,16 @@ test('Nach einer Korrekturschleife zählen alte Endkontrollen nicht mehr', async
   cur = (await t.request('GET', `/api/projects/${p.id}`)).body;
   assert.equal(gateOf(cur).is_done, 1);
 
+  // Nur ein Video neu geprüft: zählt zusammen mit den übrigen, schon bestandenen Videos
+  const two = (await t.request('POST', '/api/projects', { customer_id: customer.id, title: 'Zwei Reels', deliverable_count: 2 })).body;
+  await t.request('POST', `/api/projects/${two.id}/move`, { to_phase: 2 });
+  for (const v of ['zwei_01.mp4', 'zwei_02.mp4']) await t.request('POST', `/api/projects/${two.id}/quality-checks`, { video_name: v, stage: 'endkontrolle', verdict: 'freigegeben' });
+  assert.equal((await t.request('POST', `/api/projects/${two.id}/move`, { to_phase: 4 })).status, 200);
+  await t.request('POST', `/api/projects/${two.id}/approval`, { result: 'korrektur', feedback: 'Reel 2: Musik leiser', back_to_editing: true });
+  await t.request('POST', `/api/projects/${two.id}/quality-checks`, { video_name: 'zwei_02_v2.mp4', stage: 'endkontrolle', verdict: 'freigegeben' });
+  const twoNow = (await t.request('GET', `/api/projects/${two.id}`)).body;
+  assert.equal(gateOf(twoNow).is_done, 1, 'Reel 2 neu geprüft, Reel 1 von vorher bestanden');
+
   // "zurück" im Upload sperrt das Weiterrücken
   assert.equal((await t.request('POST', `/api/projects/${p.id}/move`, { to_phase: 3 })).status, 200);
   await t.request('POST', `/api/projects/${p.id}/quality-checks`, { video_name: 'reel_01_final.mp4', stage: 'endkontrolle', verdict: 'zurueck' });
@@ -191,7 +204,7 @@ test('Fassungen eines Videos gelten als dasselbe Video', async () => {
   assert.equal(videoKey('reel_01_final_v2.mp4'), 'reel 01');
   assert.notEqual(videoKey('reel_02.mp4'), 'reel 01');
 
-  const p = (await t.request('POST', '/api/projects', { customer_id: customer.id, title: 'Fassungstest' })).body;
+  const p = (await t.request('POST', '/api/projects', { customer_id: customer.id, title: 'Fassungstest', deliverable_count: 1 })).body;
   await t.request('POST', `/api/projects/${p.id}/quality-checks`, { video_name: 'teaser_v2.mp4', stage: 'endkontrolle', verdict: 'zurueck' });
   await t.request('POST', `/api/projects/${p.id}/quality-checks`, { video_name: 'teaser_v3.mp4', stage: 'endkontrolle', verdict: 'freigegeben' });
   const after = (await t.request('GET', `/api/projects/${p.id}`)).body;

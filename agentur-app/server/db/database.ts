@@ -24,6 +24,8 @@ export class Database {
     this.raw.exec('PRAGMA journal_mode = WAL;');
     this.raw.exec('PRAGMA foreign_keys = ON;');
     this.raw.exec('PRAGMA busy_timeout = 5000;');
+    // Kleinschreibung auch für Umlaute und Akzente (SQLite selbst kennt nur A-Z), für die Suche
+    this.raw.function('lower_de', { deterministic: true }, (v: unknown) => (v === null || v === undefined ? null : String(v).toLocaleLowerCase('de-DE')));
   }
 
   private prepare(sql: string) {

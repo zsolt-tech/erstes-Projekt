@@ -1,6 +1,7 @@
 // Aufgabenliste, Schnellerfassung und Bearbeitungsdialog.
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
+import { useSingleFlight } from '../lib/singleFlight';
 import { Plus, Trash2 } from 'lucide-react';
 import { ApiError } from '../api/client';
 import { useCustomers, useTeam } from '../api/hooks';
@@ -106,10 +107,12 @@ export function TaskQuickAdd({ customerId, projectId, phase }: { customerId?: nu
   const toast = useToast();
   const [title, setTitle] = useState('');
   const [due, setDue] = useState('');
+  const once = useSingleFlight();
 
   async function submit(e: FormEvent) {
     e.preventDefault();
     if (!title.trim()) return;
+    await once(async () => {
     try {
       await save.mutateAsync({
         data: { title, due_date: due || null, customer_id: customerId ?? null, project_id: projectId ?? null, phase: phase ?? null },
@@ -119,6 +122,7 @@ export function TaskQuickAdd({ customerId, projectId, phase }: { customerId?: nu
     } catch (err) {
       toast.error(err);
     }
+    });
   }
 
   return (

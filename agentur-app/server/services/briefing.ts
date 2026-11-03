@@ -24,6 +24,9 @@ const shortDate = (d: string) => `${WEEKDAYS[weekday(d)]} ${d.slice(8, 10)}.${d.
 const longDate = (d: string) => `${LONG_DAYS[weekday(d)]}, ${Number(d.slice(8, 10))}. ${MONTHS[Number(d.slice(5, 7)) - 1]} ${d.slice(0, 4)}`;
 const monthName = (m: string) => `${MONTHS[Number(m.slice(5, 7)) - 1]} ${m.slice(0, 4)}`;
 
+/** "seit heute", "seit 1 Tag", "seit 5 Tagen" */
+const seit = (n: number) => (n <= 0 ? 'seit heute' : `seit ${plural(n, 'Tag', 'Tagen')}`);
+
 function timeOf(start: string, allDay: boolean): string | null {
   if (allDay) return null;
   if (/Z$|[+-]\d{2}:\d{2}$/.test(start)) return timeBerlin(new Date(start)); // Google-Zeitpunkt
@@ -52,7 +55,8 @@ export class BriefingService {
       .map((i) => ({ time: timeOf(i.start, i.all_day), title: i.title, kind: i.kind, location: i.location, url: i.url }))
       .sort((a, b) => (a.time ?? '').localeCompare(b.time ?? ''));
 
-    // Fällig: Aufgaben und Phasenfristen (die Phase Drehtag steht schon bei den Terminen)
+    // Fällig: Aufgaben und Phasenfristen. Ein Drehtag von heute steht bei den Terminen; ein vergangener Drehtag,
+    // nach dem das Projekt noch nicht in die Bearbeitung gewechselt ist, gilt als überfällig
     const due = db.all<{ title: string; customer: string | null; due_date: string; url: string | null }>(
       `SELECT 'Aufgabe: ' || t.title AS title, c.company_name AS customer, t.due_date,
               CASE WHEN t.project_id IS NOT NULL THEN '/projekte/' || t.project_id ELSE '/aufgaben' END AS url
@@ -62,7 +66,8 @@ export class BriefingService {
        SELECT p.current_phase || '|' || p.title, c.company_name, ph.due_date, '/projekte/' || p.id
        FROM projects p JOIN customers c ON c.id = p.customer_id
        JOIN project_phases ph ON ph.project_id = p.id AND ph.phase = p.current_phase
-       WHERE p.status = 'aktiv' AND p.current_phase > 1 AND ph.due_date <= :date AND c.archived_at IS NULL
+       WHERE p.status = 'aktiv' AND c.archived_at IS NULL
+         AND ((p.current_phase > 1 AND ph.due_date <= :date) OR (p.current_phase = 1 AND ph.due_date < :date))
        ORDER BY 3`,
       { date },
     ).map((r) => {
@@ -166,7 +171,7 @@ export class BriefingService {
     section('Überfällig', d.overdue.map((x) => `${x.title}${cust(x.customer)}, seit ${plural(x.days, 'Tag', 'Tagen')}`));
     section(
       'Warten auf Freigabe',
-      d.approvals.map((a) => `${a.title} (${a.customer}), seit ${plural(a.waiting_days, 'Tag', 'Tagen')}${a.follow_up ? ', nachfassen' : ''}`),
+      d.approvals.map((a) => `${a.title} (${a.customer}), ${seit(a.waiting_days)}${a.follow_up ? ', nachfassen' : ''}`),
     );
     section('Drehtage der nächsten 7 Tage', d.shoots.map((s) => `${shortDate(s.date)}${s.time ? `, ${s.time}` : ''}: ${s.title} (${s.customer})${s.location ? `, ${s.location}` : ''}`));
     if (d.packages.length) {
@@ -203,7 +208,7 @@ export class BriefingService {
     section(
       'Warten auf Freigabe',
       d.approvals.map(
-        (a) => `${link(a.title, a.url)}${cust(a.customer)}, seit ${plural(a.waiting_days, 'Tag', 'Tagen')}${a.follow_up ? ' <b style="color:#9a6200">nachfassen</b>' : ''}`,
+        (a) => `${link(a.title, a.url)}${cust(a.customer)}, ${seit(a.waiting_days)}${a.follow_up ? ' <b style="color:#9a6200">nachfassen</b>' : ''}`,
       ),
     );
     section('Drehtage der nächsten 7 Tage', d.shoots.map((s) => `<b>${shortDate(s.date)}${s.time ? `, ${s.time}` : ''}</b> ${link(s.title, s.url)}${cust(s.customer)}`));

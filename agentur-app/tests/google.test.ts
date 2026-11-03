@@ -150,6 +150,17 @@ test('Abgebrochenes Anlegen wird vervollständigt, gleichnamige Kunden teilen ke
   assert.notEqual(finals[0], finals[1], 'gleichnamige Projekte haben eigene Ordner');
 });
 
+test('Interessent wird Kunde: auch vorher angelegte Projekte bekommen ihre Ordner', async () => {
+  const lead = (await t.request('POST', '/api/customers', { company_name: 'Bäckerei Interessent', status: 'interessent' })).body;
+  const p = (await t.request('POST', '/api/projects', { customer_id: lead.id, title: 'Probedreh', service_month: '2026-11' })).body;
+  await flush();
+  assert.equal((await t.request('GET', `/api/projects/${p.id}/drive`)).body.state, 'fehlt');
+  await t.request('PUT', `/api/customers/${lead.id}`, { company_name: 'Bäckerei Interessent', status: 'aktiv' });
+  await flush();
+  assert.equal((await t.request('GET', `/api/customers/${lead.id}/drive`)).body.state, 'bereit');
+  assert.equal((await t.request('GET', `/api/projects/${p.id}/drive`)).body.state, 'bereit', 'Projektordner nach der Umwandlung');
+});
+
 test('Upload-Erkennung: Datei in „Fertige Videos“ hakt den Checkpunkt ab', async () => {
   const p = t.db.get<{ id: number }>("SELECT id FROM projects WHERE title = 'Reels November'")!;
   let drive = (await t.request('POST', `/api/projects/${p.id}/drive/check`)).body;

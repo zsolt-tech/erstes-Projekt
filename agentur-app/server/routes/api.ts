@@ -100,6 +100,11 @@ export function apiRouter(db: Database, config: AppConfig, services: Services): 
     handle((req) => {
       const id = parseId(req.params.id);
       const before = getCustomer(db, id);
+      // In einem anderen Fenster inzwischen gespeichert: nicht stillschweigend überschreiben
+      const expected = (req.body as { expected_updated_at?: unknown } | undefined)?.expected_updated_at;
+      if (typeof expected === 'string' && expected !== before.updated_at) {
+        throw new HttpError(409, 'Dieser Kunde wurde inzwischen in einem anderen Fenster geändert. Bitte die Seite neu laden und die Änderung erneut eintragen.');
+      }
       const customer = updateCustomer(db, id, parse(customerInput, req.body));
       events.changed('customers', customer.id);
       // Interessent wurde zum Kunden: jetzt den Drive-Ordner anlegen

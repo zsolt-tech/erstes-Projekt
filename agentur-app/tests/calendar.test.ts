@@ -2,6 +2,7 @@ import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { startTestApp, type TestApp } from './helpers.ts';
 import { startFakeGoogle } from './fake-google.ts';
+import { addDays, todayBerlin } from '../server/lib/time.ts';
 
 let t: TestApp;
 let g: Awaited<ReturnType<typeof startFakeGoogle>>;
@@ -148,15 +149,18 @@ test('Kalenderansicht: alle Arten, Verschieben in der App, Freigabe-Fristen opti
   const p2 = (await t.request('POST', '/api/projects', { customer_id: customerId, title: 'Imagefilm', shoot_date: '2026-11-03' })).body;
   await t.request('PATCH', `/api/checklist/${gateOf(p2).id}`, { is_done: true });
   await t.request('POST', `/api/projects/${p2.id}/move`, { to_phase: 4 });
-  await t.request('PUT', `/api/projects/${p2.id}/approval`, { requested_date: '2026-11-16' });
+  // Anfrage von gestern (ein Datum in der Zukunft lehnt die App ab)
+  const requested = addDays(todayBerlin(), -1);
+  assert.equal((await t.request('PUT', `/api/projects/${p2.id}/approval`, { requested_date: requested })).status, 200);
   await t.request('POST', `/api/projects/${projectId}/publications`, { platform: 'instagram', planned_date: '2026-11-20', planned_time: '18:00' });
   await t.request('POST', '/api/tasks', { title: 'Musik lizenzieren', project_id: projectId, due_date: '2026-11-14' });
 
   const items = (await t.request('GET', '/api/calendar/items?start=2026-11-01&end=2026-12-01')).body;
   const kinds = new Set(items.map((i: any) => i.kind));
   for (const k of ['drehtag', 'deadline', 'freigabe', 'veroeffentlichung', 'termin']) assert.ok(kinds.has(k), k);
-  const approval = items.find((i: any) => i.kind === 'freigabe');
-  assert.equal(approval.start, '2026-11-19', 'Anfrage plus 3 Tage');
+  const around = (await t.request('GET', `/api/calendar/items?start=${addDays(requested, -1)}&end=${addDays(requested, 10)}`)).body;
+  const approval = around.find((i: any) => i.kind === 'freigabe');
+  assert.equal(approval.start, addDays(requested, 3), 'Anfrage plus 3 Tage');
   assert.equal(approval.editable, false);
   const pub = items.find((i: any) => i.kind === 'veroeffentlichung');
   assert.equal(pub.start, '2026-11-20T18:00');

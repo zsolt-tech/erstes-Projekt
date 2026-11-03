@@ -9,6 +9,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Button, Card, ErrorBox, Field, Input, PageHeader, Select, Spinner, Textarea } from '../components/ui';
 import { useToast } from '../components/feedback';
 import { currentMonth, formatMonth } from '../lib/format';
+import { useUnsavedChanges } from '../lib/unsaved';
 import {
   CHECKLIST_KIND_LABELS,
   PRIORITIES,
@@ -86,6 +87,8 @@ export function ProjectFormPage() {
   const [form, setForm] = useState<FormState>(() => empty(search.get('kunde') ?? ''));
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
+  const [dirty, setDirty] = useState(false);
+  useUnsavedChanges(dirty);
   const touched = useRef<Set<keyof FormState>>(new Set());
   const initialized = useRef(false);
 
@@ -136,6 +139,7 @@ export function ProjectFormPage() {
 
   function update<K extends keyof FormState>(key: K, value: FormState[K]) {
     touched.current.add(key);
+    setDirty(true);
     setForm((f) => ({ ...f, [key]: value }));
   }
 
@@ -180,6 +184,7 @@ export function ProjectFormPage() {
       qc.invalidateQueries({ queryKey: ['projects', 'list'] });
       qc.invalidateQueries({ queryKey: ['customers'] });
       toast.success(isEdit ? 'Änderungen gespeichert' : 'Projekt angelegt');
+      setDirty(false);
       navigate(`/projekte/${saved.id}`, { replace: true });
     } catch (err) {
       if (err instanceof ApiError && Object.keys(err.fields).length) {

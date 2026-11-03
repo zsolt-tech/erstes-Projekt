@@ -1,5 +1,5 @@
 // Bausteine der Projektdetailseite: Phasenleiste, Checklisten, Drehtag, Freigabe, Veröffentlichungen.
-import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { CalendarCheck, CalendarX, Check, Clock, ExternalLink, LoaderCircle, Lock, Mail, Pencil, Plus, RotateCcw, Trash2, X } from 'lucide-react';
 import { useProjectAction } from '../api/projects';
 import { useRestoreShoot, useShootCalendar } from '../api/calendar';
@@ -25,9 +25,14 @@ import {
 export function useRun() {
   const action = useProjectAction();
   const toast = useToast();
+  // Doppelklick: dieselbe Aktion (gleiche Adresse, gleiche Daten) läuft nicht zweimal, auch nicht direkt danach
+  const recent = useRef(new Set<string>());
   return {
     pending: action.isPending,
     async run(method: 'POST' | 'PUT' | 'PATCH' | 'DELETE', url: string, body?: unknown, success?: string) {
+      const key = `${method} ${url} ${JSON.stringify(body ?? null)}`;
+      if (recent.current.has(key)) return null;
+      recent.current.add(key);
       try {
         const result = await action.mutateAsync({ method, url, body });
         if (success) toast.success(success);
@@ -35,6 +40,8 @@ export function useRun() {
       } catch (err) {
         toast.error(err);
         return null;
+      } finally {
+        setTimeout(() => recent.current.delete(key), 800);
       }
     },
   };
@@ -411,7 +418,7 @@ export function ApprovalPanel({ project }: { project: ProjectDetail }) {
         <Stat label="Freigaberunden" value={project.approval_rounds.length} />
         <Stat
           label="Wartet seit"
-          value={open && waiting !== null ? (waiting === 1 ? '1 Tag' : `${waiting} Tagen`) : '–'}
+          value={open && waiting !== null ? (waiting <= 0 ? 'heute' : waiting === 1 ? '1 Tag' : `${waiting} Tagen`) : '–'}
           tone={open && waiting !== null && waiting >= threshold ? 'danger' : undefined}
         />
       </div>
@@ -429,6 +436,7 @@ export function ApprovalPanel({ project }: { project: ProjectDetail }) {
               <CommitInput
                 type="date"
                 value={berlinDate(open.requested_at)}
+                max={today()}
                 onCommit={(v) => v && run('PUT', `/projects/${project.id}/approval`, { requested_date: v })}
                 className="w-44"
               />
@@ -517,7 +525,7 @@ function FollowUpMail({ project, waitingDays }: { project: ProjectDetail; waitin
   const body = [
     `Hallo ${contact.name},`,
     '',
-    `vor ${waitingDays === 1 ? 'einem Tag' : `${waitingDays} Tagen`} habe ich Ihnen die Fassung von „${project.title}“ zur Freigabe geschickt.`,
+    `${waitingDays <= 0 ? 'Heute' : waitingDays === 1 ? 'Gestern' : `Vor ${waitingDays} Tagen`} habe ich Ihnen die Fassung von „${project.title}“ zur Freigabe geschickt.`,
     'Hatten Sie schon Gelegenheit, sie sich anzusehen? Geben Sie mir gern kurz Bescheid, ob alles passt oder ob Sie noch Änderungswünsche haben.',
     '',
     'Viele Grüße',

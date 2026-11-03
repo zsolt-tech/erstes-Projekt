@@ -550,7 +550,7 @@ export async function approvalProtocol(db: Database, projectId: number): Promise
     checks.map((q) => [
       isoDe(q.created_at),
       q.video_name,
-      q.verdict === 'freigegeben' ? { text: 'bestanden', color: COLOR.success } : q.verdict === 'zurueck' ? { text: 'überarbeitet', color: COLOR.warning } : 'offen',
+      q.verdict === 'freigegeben' ? { text: 'bestanden', color: COLOR.success } : q.verdict === 'zurueck' ? { text: 'zurück', color: COLOR.warning } : 'offen',
       q.summary ?? (q.issues.length ? q.issues.map((i) => (i.t ? `${i.t} ${i.text}` : i.text)).join('; ') : ''),
     ]),
     'Keine Endkontrolle erfasst.',

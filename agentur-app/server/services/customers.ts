@@ -28,7 +28,7 @@ export function listCustomers(db: Database, filter: CustomerListFilter = {}): Cu
     params.status = filter.status;
   }
   if (filter.q && filter.q.trim()) {
-    const like = (col: string) => `${col} LIKE :q ESCAPE '\\'`;
+    const like = (col: string) => `lower_de(${col}) LIKE lower_de(:q) ESCAPE '\\'`;
     where.push(`(${like('c.company_name')} OR ${like('c.industry')} OR ${like('c.city')}
       OR EXISTS (SELECT 1 FROM contacts x WHERE x.customer_id = c.id AND (${like('x.name')} OR ${like('x.email')} OR ${like('x.phone')})))`);
     params.q = likeContains(filter.q);

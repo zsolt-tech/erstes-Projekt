@@ -84,8 +84,8 @@ export function dashboard(db: Database, services: Services): DashboardData {
 
   const todayItems = services.calendar.items(today, addDays(today, 1));
   const upcoming = services.calendar.items(addDays(today, 1), addDays(today, 15));
-  // Nächste 7 Tage: heute und die folgenden sechs Tage
-  const week = [...todayItems, ...upcoming.filter((i) => i.start.slice(0, 10) < addDays(today, 7))];
+  // Nächste 7 Tage wie im Briefing: morgen bis in 7 Tagen (heute steht unter „Heute“)
+  const week = upcoming.filter((i) => i.start.slice(0, 10) <= addDays(today, 7));
   const count = (sql: string, params: unknown[] = []) => db.get<{ n: number }>(sql, params as never)!.n;
 
   return {
@@ -104,7 +104,12 @@ export function dashboard(db: Database, services: Services): DashboardData {
       open_approvals: briefing.approvals.length,
       longest_approval_days: briefing.approvals.length ? Math.max(...briefing.approvals.map((a) => a.waiting_days)) : null,
       shoots_next_7: week.filter((i) => i.kind === 'drehtag').length,
-      publications_next_7: week.filter((i) => i.kind === 'veroeffentlichung').length,
+      // Nur noch geplante, nicht schon veröffentlichte Beiträge
+      publications_next_7: count(
+        `SELECT COUNT(*) AS n FROM publications pu JOIN projects p ON p.id = pu.project_id JOIN customers c ON c.id = p.customer_id
+         WHERE pu.status = 'geplant' AND pu.planned_date > ? AND pu.planned_date <= ? AND p.status <> 'abgebrochen' AND c.archived_at IS NULL`,
+        [today, addDays(today, 7)],
+      ),
     },
     phases,
     lead_time: leadTimes(db, today),

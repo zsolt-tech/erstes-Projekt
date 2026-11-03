@@ -51,7 +51,7 @@ test('Dashboard: Kennzahlen, Phasen, heute, 14 Tage und Durchlaufzeit', async ()
   assert.equal(d.kpis.active_projects, 3, 'ohne abgeschlossene und ohne Projekte archivierter Kunden');
   assert.equal(d.kpis.overdue_tasks, 1);
   assert.equal(d.kpis.overdue_deadlines, 1);
-  assert.equal(d.kpis.shoots_next_7, 2);
+  assert.equal(d.kpis.shoots_next_7, 1, 'morgen bis in 7 Tagen, heute zählt unter Heute');
   assert.deepEqual(d.phases.map((p: any) => p.count), [2, 1, 0, 0, 0]);
   assert.equal(d.phases[1].overdue, 1);
 

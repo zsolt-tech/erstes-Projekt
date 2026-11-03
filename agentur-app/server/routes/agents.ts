@@ -19,7 +19,10 @@ export function agentRouter(db: Database, config: AppConfig, services: Services)
     handle((req) => {
       const kind = String(req.query.kind ?? 'videoschnitt') as AgentKind;
       if (!KINDS.includes(kind)) throw new HttpError(400, 'Unbekannter Agent');
-      const dauer = Number(req.query.dauer) || undefined;
+      const dauer = req.query.dauer === undefined || req.query.dauer === '' ? undefined : Number(req.query.dauer);
+      if (dauer !== undefined && (!Number.isFinite(dauer) || dauer < 5 || dauer > 600)) {
+        throw new HttpError(400, 'Länge des Highlight-Reels bitte zwischen 5 und 600 Sekunden angeben');
+      }
       return { prompt: agentPrompt(db, config, services, parseId(req.params.id), kind, { dauer }) };
     }),
   );

@@ -109,7 +109,10 @@ export function CalendarPage() {
         end: e.end ? (e.allDay ? ymd(e.end) : local(e.end)) : null,
         all_day: e.allDay,
       });
-      toast.success('Verschoben');
+      // Wechsel zwischen ganztägig und mit Uhrzeit ausdrücklich melden
+      toast.success(
+        arg.oldEvent.allDay === e.allDay ? 'Verschoben' : e.allDay ? 'Verschoben, jetzt ganztägig ohne Uhrzeit' : 'Verschoben, jetzt mit Uhrzeit',
+      );
     } catch (err) {
       arg.revert();
       toast.error(err);

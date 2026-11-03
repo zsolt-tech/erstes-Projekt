@@ -275,6 +275,14 @@ export class DriveService {
     if (!this.google.connected || this.mapping(customerId, null, 'kunde')) return;
     const c = this.customer(customerId);
     this.queue.enqueue('drive.customer_folder', { customer_id: customerId, label: `Kundenordner „${c.company_name}“ anlegen` });
+    // Projekte aus der Interessenten-Zeit bekommen ihre Ordner gleich mit (die Warteschlange arbeitet der Reihe nach)
+    for (const p of this.db.all<{ id: number; title: string }>(
+      `SELECT p.id, p.title FROM projects p WHERE p.customer_id = ? AND p.status IN ('aktiv','pausiert')
+         AND NOT EXISTS (SELECT 1 FROM drive_folders f WHERE f.project_id = p.id AND f.role = 'projekt')`,
+      [customerId],
+    )) {
+      this.queue.enqueue('drive.project_folders', { project_id: p.id, label: `Projektordner „${p.title}“ anlegen` });
+    }
   }
 
   /** Neues Projekt: Ordner anlegen, sofern der Kunde schon einen Ordner hat oder er gerade angelegt wird */

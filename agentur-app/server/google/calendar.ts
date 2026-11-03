@@ -12,6 +12,7 @@ import { HttpError } from '../lib/http.ts';
 import { events } from '../lib/events.ts';
 import { addDays, berlinMidnightIso, berlinParts, nowIso, todayBerlin, TIME_ZONE } from '../lib/time.ts';
 import { getSetting, getSettings, setSetting } from '../services/settings.ts';
+import { followShootDate } from '../services/projects.ts';
 import { GoogleApiError, type GoogleClient } from './client.ts';
 import type { SyncQueue } from './queue.ts';
 import {
@@ -735,6 +736,7 @@ export class CalendarService {
       // Auch in der App seit dem letzten Abgleich geändert: die jüngere Änderung gewinnt
       if (s.updated_at && row.synced_at && s.updated_at > row.synced_at && s.updated_at > googleTime) return false;
       const date = startLocal.slice(0, 10);
+      const oldDate = this.db.get<{ shoot_date: string | null }>('SELECT shoot_date FROM shoots WHERE project_id = ?', [id])?.shoot_date ?? null;
       const sameDayEnd = endLocal && endLocal.slice(0, 10) === date ? endLocal.slice(11, 16) : null;
       this.db.run(
         'UPDATE shoots SET shoot_date = :date, start_time = :start, end_time = :end, location = :location, updated_at = :now WHERE project_id = :id',
@@ -747,7 +749,7 @@ export class CalendarService {
           now: googleTime,
         },
       );
-      this.db.run('UPDATE project_phases SET due_date = ? WHERE project_id = ? AND phase = 1', [date, id]);
+      followShootDate(this.db, id, oldDate, date);
       events.changed('projects', id);
       return true;
     }
@@ -935,9 +937,10 @@ export class CalendarService {
       let endTime = !allDay && end && end.slice(0, 10) === date ? end.slice(11, 16) : null;
       // Ohne eingetragene Endzeit zeigt der Kalender 2 Stunden an; beim bloßen Verschieben keine Endzeit erfinden
       if (before && !before.end_time && endTime && time && end === addMinutesLocal(`${date}T${time}`, SHOOT_DEFAULT_MINUTES)) endTime = null;
+      const oldDate = this.db.get<{ shoot_date: string | null }>('SELECT shoot_date FROM shoots WHERE project_id = ?', [projectId])?.shoot_date ?? null;
       const r = this.db.run('UPDATE shoots SET shoot_date = ?, start_time = ?, end_time = ?, updated_at = ? WHERE project_id = ?', [date, time, endTime, now, projectId]);
       if (!r.changes) throw new HttpError(404, 'Drehtag nicht gefunden');
-      this.db.run('UPDATE project_phases SET due_date = ? WHERE project_id = ? AND phase = 1', [date, projectId]);
+      followShootDate(this.db, projectId, oldDate, date);
       events.changed('projects', projectId);
     } else if (type === 'phase') {
       const r = this.db.run('UPDATE project_phases SET due_date = ? WHERE project_id = ? AND phase = ?', [date, Number(a), Number(b)]);

@@ -1,6 +1,6 @@
 // Rahmen der App: Seitenleiste mit Navigation, Inhaltsbereich.
 import { useEffect, useState } from 'react';
-import { NavLink, Outlet, useLocation } from 'react-router-dom';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
   Building2,
   CalendarDays,
@@ -22,6 +22,8 @@ import { useSettings } from '../api/hooks';
 import { useLiveUpdates } from '../lib/live';
 import { NotificationBell } from './Notifications';
 import { ErrorBoundary } from './ErrorBoundary';
+import { useConfirm } from './feedback';
+import { hasUnsavedChanges } from '../lib/unsaved';
 import { useTheme } from '../lib/theme';
 import { cx } from './ui';
 import type { Theme } from '../../../shared/schemas';
@@ -80,6 +82,29 @@ export function Layout() {
   const connected = useLiveUpdates();
   const [menuOpen, setMenuOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
+  const confirm = useConfirm();
+
+  // Ungespeicherte Formulare: vor dem Wechsel auf eine andere Seite der App nachfragen
+  useEffect(() => {
+    const onClick = (e: MouseEvent) => {
+      if (!hasUnsavedChanges() || e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      const a = (e.target as Element | null)?.closest?.('a');
+      if (!a || !a.href || a.target === '_blank' || a.hasAttribute('download')) return;
+      const url = new URL(a.href);
+      if (url.origin !== window.location.origin || (url.pathname === window.location.pathname && url.search === window.location.search)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      void confirm({
+        title: 'Änderungen verwerfen?',
+        text: 'Im Formular gibt es ungespeicherte Änderungen. Wenn du die Seite wechselst, gehen sie verloren.',
+        confirmLabel: 'Verwerfen und wechseln',
+        danger: true,
+      }).then((ok) => ok && navigate(url.pathname + url.search + url.hash));
+    };
+    document.addEventListener('click', onClick, true);
+    return () => document.removeEventListener('click', onClick, true);
+  }, [confirm, navigate]);
   useEffect(() => setMenuOpen(false), [location.pathname]);
 
   const sidebar = (

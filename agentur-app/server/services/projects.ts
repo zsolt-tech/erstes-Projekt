@@ -103,7 +103,8 @@ export function listProjects(db: Database, filter: ProjectFilter = {}): ProjectL
     params.status = scope;
   }
   if (filter.q?.trim()) {
-    where.push("(p.title LIKE :q ESCAPE '\\' OR c.company_name LIKE :q ESCAPE '\\' OR p.notes LIKE :q ESCAPE '\\' OR p.description LIKE :q ESCAPE '\\')");
+    const like = (col: string) => `lower_de(${col}) LIKE lower_de(:q) ESCAPE '\\'`;
+    where.push(`(${like('p.title')} OR ${like('c.company_name')} OR ${like('p.notes')} OR ${like('p.description')})`);
     params.q = likeContains(filter.q);
   }
   const rows = db.all<RawListRow>(
@@ -491,8 +492,41 @@ export function deleteChecklistItem(db: Database, itemId: number): ProjectDetail
 // Drehtag
 // ---------------------------------------------------------------------
 
+/**
+ * Drehtag neu eingetragen oder verschoben: Fristen der noch offenen Phasen 2 bis 5 folgen.
+ * Verschoben: um dieselbe Zahl Tage. Erstmals eingetragen: Abstände aus der Projektvorlage.
+ */
+export function followShootDate(db: Database, projectId: number, before: string | null, after: string | null): void {
+  if (!after || before === after) return;
+  db.run('UPDATE project_phases SET due_date = ? WHERE project_id = ? AND phase = 1', [after, projectId]);
+  if (before) {
+    const delta = daysBetween(before, after);
+    for (const ph of db.all<{ phase: number; due_date: string }>(
+      'SELECT phase, due_date FROM project_phases WHERE project_id = ? AND phase > 1 AND completed_at IS NULL AND due_date IS NOT NULL',
+      [projectId],
+    )) {
+      db.run('UPDATE project_phases SET due_date = ? WHERE project_id = ? AND phase = ?', [addDays(ph.due_date, delta), projectId, ph.phase]);
+    }
+    return;
+  }
+  const tpl = db.get<{ phase_offsets_json: string | null }>(
+    'SELECT t.phase_offsets_json FROM projects p JOIN project_templates t ON t.id = p.template_id WHERE p.id = ?',
+    [projectId],
+  );
+  const offsets = JSON.parse(tpl?.phase_offsets_json || '{}') as Record<string, number>;
+  for (const [phase, offset] of Object.entries(offsets)) {
+    if (Number(phase) < 2) continue;
+    db.run('UPDATE project_phases SET due_date = ? WHERE project_id = ? AND phase = ? AND due_date IS NULL AND completed_at IS NULL', [
+      addDays(after, offset),
+      projectId,
+      Number(phase),
+    ]);
+  }
+}
+
 export function updateShoot(db: Database, id: number, data: Out<typeof shootInput>): ProjectDetail {
   projectRow(db, id);
+  const before = db.get<{ shoot_date: string | null }>('SELECT shoot_date FROM shoots WHERE project_id = ?', [id])?.shoot_date ?? null;
   db.run(
     `INSERT INTO shoots (project_id, shoot_date, start_time, end_time, location, location_notes, shotlist_notes, updated_at)
      VALUES (:id, :date, :start, :end, :location, :lnotes, :snotes, :now)
@@ -510,10 +544,8 @@ export function updateShoot(db: Database, id: number, data: Out<typeof shootInpu
       now: nowIso(),
     },
   );
-  // Fälligkeit der Phase Drehtag folgt dem Drehdatum
-  if (data.shoot_date) {
-    db.run('UPDATE project_phases SET due_date = ? WHERE project_id = ? AND phase = 1', [data.shoot_date, id]);
-  }
+  // Fälligkeiten folgen dem Drehdatum
+  followShootDate(db, id, before, data.shoot_date);
   touch(db, id);
   return getProject(db, id);
 }
@@ -565,6 +597,7 @@ export function decideApproval(db: Database, id: number, data: Out<typeof approv
 
 export function setApprovalRequestDate(db: Database, id: number, date: string): ProjectDetail {
   projectRow(db, id);
+  if (date > todayBerlin()) throw new HttpError(400, 'Das Datum der Anfrage darf nicht in der Zukunft liegen');
   const r = db.run(
     'UPDATE approval_rounds SET requested_at = :at WHERE project_id = :id AND responded_at IS NULL',
     { id, at: `${date}T10:00:00.000Z` },

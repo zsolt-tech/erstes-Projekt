@@ -499,7 +499,7 @@ export function DashboardPage() {
           sub={k.longest_approval_days !== null ? `längste ${seit(k.longest_approval_days)}` : 'keine offen'}
           to="/projekte"
         />
-        <StatTile label="Drehtage in 7 Tagen" value={k.shoots_next_7} sub={`${anzahl(k.publications_next_7, 'Veröffentlichung', 'Veröffentlichungen')} geplant`} to="/kalender" />
+        <StatTile label="Drehtage, nächste 7 Tage" value={k.shoots_next_7} sub={`${anzahl(k.publications_next_7, 'Veröffentlichung', 'Veröffentlichungen')} geplant`} to="/kalender" />
         <StatTile
           label="Durchlaufzeit Dreh bis Veröffentlichung"
           value={data.lead_time.avg_days === null ? '–' : `${num.format(data.lead_time.avg_days)} Tage`}
@@ -508,12 +508,12 @@ export function DashboardPage() {
         />
       </div>
 
-      <div className="mb-5 grid min-w-0 gap-5 lg:grid-cols-[3fr_2fr]">
+      <div className="mb-5 grid min-w-0 grid-cols-1 gap-5 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
         <PhaseBars phases={data.phases} />
         <Warnings warnings={data.warnings} />
       </div>
 
-      <div className="mb-5 grid min-w-0 gap-5 lg:grid-cols-2">
+      <div className="mb-5 grid min-w-0 grid-cols-1 gap-5 lg:grid-cols-2">
         <Today data={data} now={now} />
         <Upcoming items={data.upcoming} now={now} />
       </div>
@@ -522,7 +522,7 @@ export function DashboardPage() {
         <RunningProjects projects={data.projects} />
       </div>
 
-      <div className="grid min-w-0 gap-5 lg:grid-cols-2">
+      <div className="grid min-w-0 grid-cols-1 gap-5 lg:grid-cols-2">
         <LeadTime lead={data.lead_time} />
         <Packages packages={data.packages} />
       </div>

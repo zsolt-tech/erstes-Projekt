@@ -47,8 +47,8 @@ export function useCustomer(id: number | undefined, month?: string) {
 export function useSaveCustomer() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, data }: { id?: number; data: CustomerInput }) =>
-      id ? api.put<Customer>(`/customers/${id}`, data) : api.post<Customer>('/customers', data),
+    mutationFn: ({ id, data, expectedUpdatedAt }: { id?: number; data: CustomerInput; expectedUpdatedAt?: string }) =>
+      id ? api.put<Customer>(`/customers/${id}`, { ...data, expected_updated_at: expectedUpdatedAt }) : api.post<Customer>('/customers', data),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['customers'] }),
   });
 }

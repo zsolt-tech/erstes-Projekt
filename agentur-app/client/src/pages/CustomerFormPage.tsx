@@ -7,6 +7,8 @@ import { useCustomer, useDeliverableTypes, useSaveCustomer, useSettings } from '
 import { Button, Card, ErrorBox, Field, IconButton, Input, PageHeader, Select, Spinner, Textarea, cx } from '../components/ui';
 import { useToast } from '../components/feedback';
 import { centsToInput, inputToCents, today } from '../lib/format';
+import { useSingleFlight } from '../lib/singleFlight';
+import { useUnsavedChanges } from '../lib/unsaved';
 import {
   CUSTOMER_STATUSES,
   CUSTOMER_STATUS_LABELS,
@@ -220,20 +222,19 @@ export function CustomerFormPage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [dirty, setDirty] = useState(false);
   const initialized = useRef(false);
+  // Stand beim Öffnen: Speichern scheitert mit Hinweis, wenn der Kunde inzwischen woanders geändert wurde
+  const loadedVersion = useRef<string | undefined>(undefined);
+  const once = useSingleFlight();
 
   useEffect(() => {
     if (isEdit && customer && !initialized.current) {
       setForm(fromCustomer(customer));
+      loadedVersion.current = customer.updated_at;
       initialized.current = true;
     }
   }, [isEdit, customer]);
 
-  useEffect(() => {
-    if (!dirty) return;
-    const warn = (e: BeforeUnloadEvent) => e.preventDefault();
-    window.addEventListener('beforeunload', warn);
-    return () => window.removeEventListener('beforeunload', warn);
-  }, [dirty]);
+  useUnsavedChanges(dirty);
 
   const activeTypes = useMemo(() => types.filter((t) => t.active), [types]);
 
@@ -284,8 +285,9 @@ export function CustomerFormPage() {
       toast.error('Bitte die markierten Felder prüfen.');
       return;
     }
+    await once(async () => {
     try {
-      const saved = await save.mutateAsync({ id, data });
+      const saved = await save.mutateAsync({ id, data, expectedUpdatedAt: loadedVersion.current });
       setDirty(false);
       toast.success(isEdit ? 'Änderungen gespeichert' : 'Kunde angelegt');
       navigate(`/kunden/${saved.id}`, { replace: true });
@@ -297,6 +299,7 @@ export function CustomerFormPage() {
         toast.error(err);
       }
     }
+    });
   }
 
   if (isEdit && isLoading) return <Spinner />;

@@ -52,33 +52,40 @@ export function videoKey(name: string): string {
 }
 
 /**
- * Qualitäts-Haken aus den Endkontrollen ableiten: erledigt, wenn für jedes Video die
- * jüngste Endkontrolle "freigegeben" lautet; ein "zurück" nimmt den Haken wieder weg.
- * Es zählen nur Endkontrollen seit dem letzten Eintritt in die Bearbeitung, damit nach einer
- * Korrekturschleife alte Ergebnisse den Haken nicht wieder setzen. Ohne solche Ergebnisse
- * bleibt der Haken, wie er ist (auch ein von Hand gesetzter).
+ * Qualitäts-Haken aus den Endkontrollen ableiten: erledigt, wenn für jedes Video die jüngste
+ * Endkontrolle "freigegeben" lautet und so viele Videos geprüft sind wie im Projekt vorgesehen;
+ * ein "zurück" nimmt den Haken wieder weg. Nach einer Korrekturschleife setzen alte Ergebnisse
+ * allein den Haken nicht wieder. Ohne neue Ergebnisse bleibt der Haken, wie er ist (auch ein von Hand gesetzter).
  */
-function syncGate(db: Database, projectId: number): 'gesetzt' | 'entfernt' | 'unveraendert' {
+function syncGate(db: Database, projectId: number): { gate: 'gesetzt' | 'entfernt' | 'unveraendert'; passed: number; required: number } {
+  const required = db.get<{ n: number }>('SELECT deliverable_count AS n FROM projects WHERE id = ?', [projectId])?.n ?? 1;
   const since = db.get<{ entered_at: string | null }>(
     'SELECT entered_at FROM project_phases WHERE project_id = ? AND phase = 2',
     [projectId],
   )?.entered_at;
-  const checks = db.all<{ video_name: string; verdict: string }>(
-    `SELECT video_name, verdict FROM quality_checks
-     WHERE project_id = :id AND stage = 'endkontrolle' AND verdict <> 'offen' AND (:since IS NULL OR created_at >= :since)
+  const checks = db.all<{ video_name: string; verdict: string; created_at: string }>(
+    `SELECT video_name, verdict, created_at FROM quality_checks
+     WHERE project_id = :id AND stage = 'endkontrolle' AND verdict <> 'offen'
      ORDER BY created_at, id`,
-    { id: projectId, since: since ?? null },
+    { id: projectId },
   );
-  if (!checks.length) return 'unveraendert';
+  if (!checks.length) return { gate: 'unveraendert', passed: 0, required };
+  // Nach einer Korrekturschleife erst wieder entscheiden, wenn seitdem mindestens ein Video neu geprüft wurde.
+  // Dann zählt je Video das jüngste Ergebnis, auch von vorher (Feedback betrifft oft nur ein Video).
+  if (since && !checks.some((c) => c.created_at >= since)) return { gate: 'unveraendert', passed: 0, required };
   const latest = new Map<string, string>();
   for (const c of checks) latest.set(videoKey(c.video_name), c.verdict);
-  const ok = [...latest.values()].every((v) => v === 'freigegeben');
+  const passed = [...latest.values()].filter((v) => v === 'freigegeben').length;
+  const allPassed = passed === latest.size;
+  // Alle gemeldeten Videos bestanden, aber noch nicht so viele wie im Projekt vorgesehen (z. B. 1 von 2 Reels): abwarten
+  if (allPassed && passed < required) return { gate: 'unveraendert', passed, required };
+  const ok = allPassed;
   const r = db.run(
     `UPDATE checklist_items SET is_done = :done, done_at = CASE WHEN :done = 1 THEN COALESCE(done_at, :now) ELSE NULL END
      WHERE project_id = :id AND auto_key = 'quality_check' AND is_done <> :done`,
     { id: projectId, done: ok ? 1 : 0, now: nowIso() },
   );
-  return r.changes ? (ok ? 'gesetzt' : 'entfernt') : 'unveraendert';
+  return { gate: r.changes ? (ok ? 'gesetzt' : 'entfernt') : 'unveraendert', passed, required };
 }
 
 export function recordQualityCheck(db: Database, projectId: number, data: z.output<typeof qualityCheckInput>): QualityCheck[] {
@@ -106,7 +113,8 @@ export function recordQualityCheck(db: Database, projectId: number, data: z.outp
     );
     const final = data.stage === 'endkontrolle' && data.verdict !== 'offen';
     // Vorprüfungen und offene Ergebnisse ändern den Haken nicht
-    const gate = final ? syncGate(db, projectId) : 'unveraendert';
+    const sync = final ? syncGate(db, projectId) : null;
+    const gate = sync?.gate ?? 'unveraendert';
     db.run('UPDATE projects SET updated_at = ? WHERE id = ?', [nowIso(), projectId]);
     if (final) {
       const passed = data.verdict === 'freigegeben';
@@ -116,8 +124,14 @@ export function recordQualityCheck(db: Database, projectId: number, data: z.outp
         body: [
           `${p.title}${passed ? '' : ` – ${data.video_name}`}`,
           data.summary,
-          !passed && data.issues.length ? `${data.issues.length} Punkte offen` : null,
-          gate === 'gesetzt' ? 'Clip-Qualitätsprüfung abgehakt.' : gate === 'entfernt' ? 'Haken bei der Clip-Qualitätsprüfung entfernt.' : null,
+          !passed && data.issues.length ? `${data.issues.length} ${data.issues.length === 1 ? 'Punkt' : 'Punkte'} offen` : null,
+          gate === 'gesetzt'
+            ? 'Clip-Qualitätsprüfung abgehakt.'
+            : gate === 'entfernt'
+              ? 'Haken bei der Clip-Qualitätsprüfung entfernt.'
+              : passed && sync && sync.passed < sync.required
+                ? `${sync.passed} von ${sync.required} Videos bestanden, der Haken folgt mit dem letzten.`
+                : null,
         ]
           .filter(Boolean)
           .join('. '),

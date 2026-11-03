@@ -46,7 +46,7 @@ export function ProjectCardBody({ p, dragging }: { p: ProjectListItem; dragging?
         {p.current_phase === 4 && p.approval_waiting_days !== null && (
           <Badge tone={p.approval_waiting_days >= 3 ? 'danger' : 'violet'}>
             <Clock className="mr-1 size-3" />
-            wartet {p.approval_waiting_days === 1 ? '1 Tag' : `${p.approval_waiting_days} Tage`}
+            wartet {p.approval_waiting_days <= 0 ? 'seit heute' : p.approval_waiting_days === 1 ? '1 Tag' : `${p.approval_waiting_days} Tage`}
           </Badge>
         )}
         {p.correction_count > 0 && (

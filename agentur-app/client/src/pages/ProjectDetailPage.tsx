@@ -1,5 +1,5 @@
 // Projektdetailseite: Phasenleiste, Phasenbereiche, Rechnung, Aufgaben, Verlauf.
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, CircleCheck, FileText, Lock, Pencil, RotateCcw, Trash2 } from 'lucide-react';
 import { useProject, useTasks } from '../api/projects';
@@ -23,36 +23,44 @@ import { centsToInput, formatDate, formatEuro, formatMonth, inputToCents } from 
 import { INVOICE_STATUSES, INVOICE_STATUS_LABELS, PHASE_LABELS, type InvoiceStatus, type Phase, type ProjectDetail, type Task } from '../../../shared/schemas';
 
 function InvoiceCard({ project }: { project: ProjectDetail }) {
-  const { run, pending } = useRun();
+  const { run } = useRun();
   const [number, setNumber] = useState(project.invoice_number ?? '');
   const [amount, setAmount] = useState(centsToInput(project.invoice_amount_cents));
   const [error, setError] = useState<string>();
-  useEffect(() => {
-    setNumber(project.invoice_number ?? '');
-    setAmount(centsToInput(project.invoice_amount_cents));
-  }, [project.invoice_number, project.invoice_amount_cents]);
+  // Jedes Feld nur zurücksetzen, wenn sich sein eigener Wert auf dem Server ändert (sonst geht Getipptes verloren)
+  useEffect(() => setNumber(project.invoice_number ?? ''), [project.invoice_number]);
+  useEffect(() => setAmount(centsToInput(project.invoice_amount_cents)), [project.invoice_amount_cents]);
 
-  const save = (patch: { invoice_status?: InvoiceStatus; invoice_number?: string; invoice_amount_cents?: number | null }) =>
-    run('PUT', `/projects/${project.id}/invoice`, {
-      invoice_status: project.invoice_status,
-      invoice_number: project.invoice_number,
-      invoice_amount_cents: project.invoice_amount_cents,
-      invoice_date: project.invoice_date,
-      paid_date: project.paid_date,
-      ...patch,
+  // Speichern nacheinander und immer mit den aktuell eingetippten Werten: ein Klick auf „Gestellt“ direkt nach dem
+  // Eintippen des Betrags geht so nicht verloren und überschreibt den Betrag nicht mit dem alten Stand
+  const latest = useRef({ project, number, amount });
+  latest.current = { project, number, amount };
+  const chain = useRef<Promise<unknown>>(Promise.resolve());
+  const save = (patch: { invoice_status?: InvoiceStatus }) => {
+    chain.current = chain.current.then(() => {
+      const { project: p, number: n, amount: a } = latest.current;
+      const cents = inputToCents(a);
+      return run('PUT', `/projects/${p.id}/invoice`, {
+        invoice_status: patch.invoice_status ?? p.invoice_status,
+        invoice_number: n,
+        invoice_amount_cents: Number.isNaN(cents) ? p.invoice_amount_cents : cents,
+        invoice_date: p.invoice_date,
+        paid_date: p.paid_date,
+      });
     });
+  };
 
   return (
     <Card title="Rechnung">
       <div className="grid gap-3">
         <Segmented<InvoiceStatus>
           value={project.invoice_status}
-          onChange={(v) => !pending && save({ invoice_status: v })}
+          onChange={(v) => save({ invoice_status: v })}
           options={INVOICE_STATUSES.map((s) => ({ value: s, label: INVOICE_STATUS_LABELS[s] }))}
         />
         <div className="grid grid-cols-2 gap-3">
           <Field label="Rechnungsnummer">
-            <Input value={number} onChange={(e) => setNumber(e.target.value)} onBlur={() => number !== (project.invoice_number ?? '') && save({ invoice_number: number })} />
+            <Input value={number} onChange={(e) => setNumber(e.target.value)} onBlur={() => number !== (project.invoice_number ?? '') && save({})} />
           </Field>
           <Field label="Betrag (EUR)" error={error}>
             <Input
@@ -64,7 +72,7 @@ function InvoiceCard({ project }: { project: ProjectDetail }) {
                 const cents = inputToCents(amount);
                 if (Number.isNaN(cents)) return setError('Ungültiger Betrag');
                 setError(undefined);
-                if (cents !== project.invoice_amount_cents) save({ invoice_amount_cents: cents });
+                if (cents !== project.invoice_amount_cents) save({});
               }}
             />
           </Field>
@@ -211,7 +219,7 @@ export function ProjectDetailPage() {
         <PhaseStepper project={project} selected={phase} onSelect={setSelected} />
       </Card>
 
-      <div className="grid gap-5 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
         <div className="grid min-w-0 grid-cols-1 content-start gap-5 lg:col-span-2">
           <Card title={`${phase} · ${PHASE_LABELS[phase]}${phase === project.current_phase && active ? ' (aktuelle Phase)' : ''}`}>
             <div className="grid gap-6">

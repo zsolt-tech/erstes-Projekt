@@ -58,7 +58,7 @@ function BriefingView({ data }: { data: BriefingData }) {
   return (
     <div className="grid gap-6">
       <p className="text-[15px] leading-relaxed text-fg">{data.summary}</p>
-      <div className="grid gap-x-8 gap-y-6 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-x-8 gap-y-6 lg:grid-cols-2">
         <Section title="Termine heute" count={data.appointments.length} empty="Keine Termine.">
           <ul>
             {data.appointments.map((a, i) => (
@@ -99,7 +99,7 @@ function BriefingView({ data }: { data: BriefingData }) {
                 to={a.url}
                 meta={
                   <span className="flex items-center gap-2">
-                    seit {tage(a.waiting_days)}
+                    {a.waiting_days <= 0 ? 'seit heute' : `seit ${tage(a.waiting_days)}`}
                     {a.follow_up && <Badge tone="warning">nachfassen</Badge>}
                   </span>
                 }
