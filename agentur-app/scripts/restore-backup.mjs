@@ -66,7 +66,11 @@ try {
 
 fs.mkdirSync(dataDir, { recursive: true });
 if (fs.existsSync(dbFile)) {
-  const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+  // Zeitstempel in Berliner Zeit wie bei den täglichen Sicherungen (z. B. 2026-11-03_12-04-12)
+  const stamp = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Berlin', dateStyle: 'short', timeStyle: 'medium' })
+    .format(new Date())
+    .replace(' ', '_')
+    .replace(/:/g, '-');
   const safety = path.join(dataDir, `vor-wiederherstellung-${stamp}.sqlite`);
   // VACUUM INTO übernimmt auch noch nicht zurückgeschriebene Änderungen aus der WAL-Datei
   const current = new DatabaseSync(dbFile);

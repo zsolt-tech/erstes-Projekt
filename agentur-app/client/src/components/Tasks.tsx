@@ -52,7 +52,7 @@ export function TaskRow({ task, onEdit, showLinks = true }: { task: Task; onEdit
         type="checkbox"
         checked={done}
         onChange={toggle}
-        aria-label={done ? 'Als offen markieren' : 'Als erledigt markieren'}
+        aria-label={done ? `„${task.title}“ wieder öffnen` : `„${task.title}“ als erledigt markieren`}
         className="mt-0.5 size-4 shrink-0 cursor-pointer accent-[var(--accent)]"
       />
       <div className="min-w-0 flex-1">

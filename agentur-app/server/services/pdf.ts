@@ -165,14 +165,20 @@ class Pdf {
     const w = (this.width - gap * (items.length - 1)) / items.length;
     this.ensureSpace(60);
     const y = this.doc.y;
+    // Beschriftungen dürfen umbrechen; die Werte stehen in allen Kacheln auf gleicher Höhe darunter
+    this.doc.font(FONT.regular).fontSize(8.5);
+    const labelH = Math.max(...items.map((it) => this.doc.heightOfString(it.label, { width: w - 20 })));
+    const valueY = y + 9 + labelH + 4;
+    const h = valueY - y + 20 + 8;
+    this.ensureSpace(h + 10);
     items.forEach((it, i) => {
       const x = this.left + i * (w + gap);
-      this.doc.save().roundedRect(x, y, w, 52, 4).fillColor(COLOR.soft).fill().restore();
+      this.doc.save().roundedRect(x, y, w, h, 4).fillColor(COLOR.soft).fill().restore();
       this.doc.font(FONT.regular).fontSize(8.5).fillColor(COLOR.muted).text(it.label, x + 10, y + 9, { width: w - 20 });
-      this.doc.font(FONT.bold).fontSize(16).fillColor(COLOR.text).text(it.value, x + 10, y + 24, { width: w - 20 });
+      this.doc.font(FONT.bold).fontSize(16).fillColor(COLOR.text).text(it.value, x + 10, valueY, { width: w - 20 });
     });
     this.doc.x = this.left;
-    this.doc.y = y + 62;
+    this.doc.y = y + h + 10;
   }
 
   /** Tabelle mit Kopfzeile, Umbruch innerhalb der Zellen und Seitenwechsel */
@@ -188,12 +194,20 @@ class Pdf {
       this.ensureSpace(40);
       const y = this.doc.y;
       let x = this.left;
-      this.doc.font(FONT.bold).fontSize(8.5).fillColor(COLOR.muted);
+      let bottom = y + 14;
+      this.doc.font(FONT.bold).fillColor(COLOR.muted);
       columns.forEach((c, i) => {
-        this.doc.text(c.label.toUpperCase(), x + pad, y, { width: widths[i] - pad * 2, align: c.align ?? 'left', characterSpacing: 0.4 });
+        const label = c.label.toUpperCase();
+        const w = widths[i] - pad * 2;
+        // Überschrift nicht mitten im Wort umbrechen: notfalls etwas kleiner setzen
+        let size = 8.5;
+        while (size > 6.5 && this.doc.fontSize(size).widthOfString(label, { characterSpacing: 0.4 }) > w && !label.includes(' ')) size -= 0.5;
+        this.doc.fontSize(size).text(label, x + pad, y, { width: w, align: c.align ?? 'left', characterSpacing: 0.4 });
+        bottom = Math.max(bottom, y + this.doc.heightOfString(label, { width: w, characterSpacing: 0.4 }) + 4);
         x += widths[i];
       });
-      this.doc.y = y + 14;
+      this.doc.fontSize(8.5);
+      this.doc.y = bottom;
       this.rule();
       this.doc.y += 4;
     };
@@ -372,10 +386,10 @@ export async function monthlyReport(db: Database, customerId: number, month: str
   pdf.h2('Gebuchtes Paket');
   pdf.table(
     [
-      { label: 'Leistung', width: 3 },
+      { label: 'Leistung', width: 2.6 },
       { label: 'Gebucht', width: 1.3, align: 'right' },
-      { label: 'Umgesetzt', width: 1.3, align: 'right' },
-      { label: 'Veröffentlicht', width: 1.4, align: 'right' },
+      { label: 'Umgesetzt', width: 1.4, align: 'right' },
+      { label: 'Veröffentlicht', width: 1.8, align: 'right' },
     ],
     c.package_usage.items.map((i) => [
       i.deliverable_type_name,
@@ -529,9 +543,9 @@ export async function approvalProtocol(db: Database, projectId: number): Promise
   pdf.table(
     [
       { label: 'Datum', width: 1.3 },
-      { label: 'Video', width: 2.4 },
-      { label: 'Urteil', width: 1.4 },
-      { label: 'Ergebnis', width: 3.6 },
+      { label: 'Video', width: 3 },
+      { label: 'Urteil', width: 1.3 },
+      { label: 'Ergebnis', width: 3.1 },
     ],
     checks.map((q) => [
       isoDe(q.created_at),
